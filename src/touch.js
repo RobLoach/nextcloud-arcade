@@ -70,8 +70,9 @@ const STYLE = `
 }
 .arcade-touch-select { position: absolute; bottom: 24px; left: 50%; transform: translateX(-108%); }
 .arcade-touch-start { position: absolute; bottom: 24px; left: 50%; transform: translateX(8%); }
-.arcade-touch-l { position: absolute; top: 16px; left: 20px; }
-.arcade-touch-r { position: absolute; top: 16px; right: 20px; }
+/* Below the top-right chrome cluster, so the R shoulder stays tappable. */
+.arcade-touch-l { position: absolute; top: 60px; left: 20px; }
+.arcade-touch-r { position: absolute; top: 60px; right: 20px; }
 `
 
 /**

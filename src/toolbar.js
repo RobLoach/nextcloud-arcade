@@ -28,6 +28,15 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 	const toolbar = document.createElement('div')
 	toolbar.className = 'arcade-toolbar'
 
+	// The top-right cluster carries the chrome for leaving the game. Like
+	// the actions and close buttons that live in it, it only exists where
+	// a close URL is passed -- the app page.
+	let topbar = null
+	if (closeUrl !== '') {
+		topbar = document.createElement('div')
+		topbar.className = 'arcade-topbar'
+	}
+
 	const status = document.createElement('span')
 	status.className = 'arcade-toolbar-status'
 	let statusTimer = null
@@ -39,7 +48,7 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 		}, 3000)
 	}
 
-	const button = (iconPath, label, onClick) => {
+	const button = (iconPath, label, onClick, parent = toolbar) => {
 		const element = document.createElement('button')
 		element.type = 'button'
 		element.title = label
@@ -49,7 +58,7 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 			event.stopPropagation()
 			onClick(element)
 		})
-		toolbar.appendChild(element)
+		parent.appendChild(element)
 		return element
 	}
 
@@ -282,7 +291,7 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 				galleryPanel?.element.classList.add('hidden')
 				galleryButton?.classList.remove('active')
 			}
-		})
+		}, topbar)
 		actionsButton.setAttribute('aria-haspopup', 'true')
 		actionsButton.setAttribute('aria-expanded', 'false')
 	}
@@ -316,7 +325,7 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 				console.error('Arcade failed to exit', error)
 			}
 			window.location.href = closeUrl
-		})
+		}, topbar)
 	}
 
 	// The keys the player itself listens for, as they were set. A key that
@@ -372,6 +381,8 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 		if (action !== undefined) {
 			event.preventDefault()
 			event.stopPropagation()
+			// A hotkey is activity too: bring the chrome back for it.
+			wakeChrome()
 			action()
 		}
 	}
@@ -386,21 +397,89 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 	if (galleryPanel !== null) {
 		container.appendChild(galleryPanel.element)
 	}
-	if (actionsMenu !== null) {
-		container.appendChild(actionsMenu)
+	if (topbar !== null) {
+		// The actions menu hangs from the topbar, so it opens downward and
+		// stays aligned to it however the container is sized.
+		if (actionsMenu !== null) {
+			topbar.appendChild(actionsMenu)
+		}
+		container.appendChild(topbar)
 	}
+
+	// The chrome fades away over an idle game, so it does not sit on the
+	// picture -- and a stray click cannot hit an invisible close button,
+	// because the hidden clusters take no pointer events. Any movement
+	// brings it back.
+	const IDLE_HIDE_DELAY = 3000
+	let idleTimer = null
+	const chromeBusy = () => paused
+		|| (actionsMenu !== null && !actionsMenu.classList.contains('hidden'))
+		|| (statesPanel !== null && !statesPanel.element.classList.contains('hidden'))
+		|| (galleryPanel !== null && !galleryPanel.element.classList.contains('hidden'))
+		|| container.querySelector('.arcade-resume') !== null
+		|| toolbar.contains(document.activeElement) || toolbar.matches(':hover')
+		|| (topbar !== null && (topbar.contains(document.activeElement) || topbar.matches(':hover')))
+	const scheduleHide = () => {
+		clearTimeout(idleTimer)
+		idleTimer = setTimeout(() => {
+			if (chromeBusy()) {
+				// Try again later: a menu, panel or pause holds it open.
+				scheduleHide()
+				return
+			}
+			container.classList.add('arcade-chrome-hidden')
+		}, IDLE_HIDE_DELAY)
+	}
+	const wakeChrome = () => {
+		container.classList.remove('arcade-chrome-hidden')
+		scheduleHide()
+	}
+	const onPointerMove = () => wakeChrome()
+	const onPointerDown = (event) => {
+		// A touch tap on hidden chrome is left to onTouchReveal below,
+		// which can still swallow it: pointerdown comes first, and waking
+		// here would make the tap look like a plain one there.
+		if (event.pointerType === 'touch' && container.classList.contains('arcade-chrome-hidden')) {
+			return
+		}
+		wakeChrome()
+	}
+	const onTouchReveal = (event) => {
+		if (!container.classList.contains('arcade-chrome-hidden')) {
+			return
+		}
+		// The first tap only brings the chrome back, so it cannot also
+		// press whatever sits beneath. The virtual gamepad is the game's
+		// own input, though: dropping a press mid-play would be worse, so
+		// taps on it go through and merely reveal.
+		if (!(event.target instanceof Element) || event.target.closest('.arcade-touch') === null) {
+			event.preventDefault()
+			event.stopPropagation()
+		}
+		wakeChrome()
+	}
+	container.addEventListener('pointermove', onPointerMove)
+	container.addEventListener('pointerdown', onPointerDown)
+	container.addEventListener('touchstart', onTouchReveal, { capture: true, passive: false })
+	scheduleHide()
 
 	return () => {
 		clearTimeout(statusTimer)
 		clearInterval(autosaveTimer)
+		clearTimeout(idleTimer)
 		document.removeEventListener('visibilitychange', onVisibilityChange)
 		document.removeEventListener('keydown', onKeyDown, true)
 		document.removeEventListener('click', onDocumentClick)
+		container.removeEventListener('pointermove', onPointerMove)
+		container.removeEventListener('pointerdown', onPointerDown)
+		container.removeEventListener('touchstart', onTouchReveal, true)
+		container.classList.remove('arcade-chrome-hidden')
 		touchControls?.detach()
 		statesPanel?.element.remove()
 		galleryPanel?.element.remove()
 		actionsMenu?.remove()
 		container.querySelector('.arcade-resume')?.remove()
+		topbar?.remove()
 		toolbar.remove()
 	}
 }
