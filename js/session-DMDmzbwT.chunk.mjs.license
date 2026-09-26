@@ -6,7 +6,7 @@ SPDX-FileCopyrightText: arianrhodsandlot
 
 This file is generated from multiple sources. Included packages:
 - @robloach/nextcloud-arcade
-	- version: 0.39.2
+	- version: 0.39.3
 	- license: AGPL-3.0-or-later
 - fflate
 	- version: 0.8.3
