@@ -50,6 +50,37 @@ export function davUrl(path) {
 }
 
 /**
+ * Look up the Nextcloud file id of a file over WebDAV.
+ *
+ * @param {string} path path of the file, relative to the user folder
+ * @return {Promise<string>} the file id
+ */
+export async function fileIdOf(path) {
+	const response = await fetch(davUrl(path), {
+		method: 'PROPFIND',
+		headers: {
+			'Content-Type': 'application/xml; charset=utf-8',
+			Depth: '0',
+			requesttoken: getRequestToken() ?? '',
+		},
+		credentials: 'same-origin',
+		body: '<?xml version="1.0"?>'
+			+ '<d:propfind xmlns:d="DAV:" xmlns:oc="http://owncloud.org/ns">'
+			+ '<d:prop><oc:fileid/></d:prop>'
+			+ '</d:propfind>',
+	})
+	if (!response.ok) {
+		throw new Error(`${response.status} ${response.statusText}`)
+	}
+	const multistatus = new DOMParser().parseFromString(await response.text(), 'application/xml')
+	const fileId = multistatus.getElementsByTagNameNS('http://owncloud.org/ns', 'fileid')[0]?.textContent ?? ''
+	if (fileId === '') {
+		throw new Error('No file id in the PROPFIND response')
+	}
+	return fileId
+}
+
+/**
  * Turn the fetched file into a playable ROM, extracting zip archives and
  * detecting the system from the (inner) file name.
  *

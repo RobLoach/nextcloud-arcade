@@ -6,7 +6,7 @@ import { ICONS, icon } from './icons.js'
 import { createGalleryPanel } from './panels/gallery.js'
 import { offerResume } from './panels/resume.js'
 import { createStatesPanel } from './panels/states.js'
-import { davUrl } from './player.js'
+import { davUrl, fileIdOf } from './player.js'
 import { shortNameForPath } from './systems.js'
 import { attachTouchControls, isTouchDevice } from './touch.js'
 
@@ -246,6 +246,7 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 	// is kept to the app page -- the one place a close URL is passed.
 	let actionsMenu = null
 	let actionsButton = null
+	let refreshSidebarItem = null
 	const closeActionsMenu = () => {
 		actionsMenu?.classList.add('hidden')
 		actionsButton?.classList.remove('active')
@@ -273,20 +274,49 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 		item(ICONS.fullscreen, t('arcade', 'Full screen'), () => fullscreenButton.click())
 		item(ICONS.menu, t('arcade', 'RetroArch menu'), toggleRetroArchMenu)
 		item(ICONS.restart, t('arcade', 'Restart'), restartGame)
+		// Without the sidebar, the details live one page away: in the Files
+		// app, with the file's details pane open. Leaving the game is like
+		// closing it, so the game is left where it was first.
+		const openFilesDetails = async () => {
+			const missing = window.OCA === undefined
+				? 'OCA'
+				: window.OCA.Files === undefined ? 'OCA.Files' : 'OCA.Files.Sidebar'
+			console.warn(`arcade: cannot open the Files sidebar, window.${missing} is undefined; opening the Files app instead`)
+			if (settings.autosave_on_close !== false && statesPanel !== null) {
+				flash(t('arcade', 'Saving the game …'))
+				await statesPanel.save(AUTO_SLOT)
+			}
+			const absolute = romPath.startsWith('/') ? romPath : `/${romPath}`
+			const dir = absolute.replace(/\/[^/]*$/, '') || '/'
+			let target
+			try {
+				const fileId = await fileIdOf(romPath)
+				target = generateUrl('/apps/files/files/' + fileId) + '?dir=' + encodeURIComponent(dir) + '&opendetails=true'
+			} catch (error) {
+				console.warn('arcade: could not resolve the file id, opening the folder instead', error)
+				target = generateUrl('/apps/files') + '?dir=' + encodeURIComponent(dir)
+			}
+			window.location.href = target
+		}
 		// The full Files sidebar. Whether the page carries it is only known
 		// for sure when it is asked for, so the item always shows and the
 		// click looks for it.
-		item(ICONS.sidebar, t('arcade', 'Open sidebar'), () => {
+		const sidebarItem = item(ICONS.sidebar, t('arcade', 'Open sidebar'), () => {
 			if (window.OCA?.Files?.Sidebar === undefined) {
-				const missing = window.OCA === undefined
-					? 'OCA'
-					: window.OCA.Files === undefined ? 'OCA.Files' : 'OCA.Files.Sidebar'
-				console.warn(`arcade: cannot open the Files sidebar, window.${missing} is undefined`)
-				flash(t('arcade', 'The Files sidebar is not available on this page'))
+				openFilesDetails()
 				return
 			}
 			window.OCA.Files.Sidebar.open(romPath.startsWith('/') ? romPath : `/${romPath}`)
 		})
+		// What the item does depends on the page, so its face follows suit
+		// each time the menu opens.
+		refreshSidebarItem = () => {
+			const available = window.OCA?.Files?.Sidebar !== undefined
+			sidebarItem.innerHTML = icon(available ? ICONS.sidebar : ICONS.information)
+			sidebarItem.appendChild(document.createTextNode(
+				available ? t('arcade', 'Open sidebar') : t('arcade', 'Details'),
+			))
+		}
 		if (romPath) {
 			const link = document.createElement('a')
 			link.className = 'arcade-actions-item'
@@ -311,6 +341,7 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 				hideStates()
 				galleryPanel?.element.classList.add('hidden')
 				galleryButton?.classList.remove('active')
+				refreshSidebarItem?.()
 			}
 		}, topbar)
 		actionsButton.setAttribute('aria-haspopup', 'true')
