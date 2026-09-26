@@ -15,6 +15,7 @@ use OCP\BackgroundJob\IJobList;
 use OCP\EventDispatcher\IEventDispatcher;
 use OCP\Files\Folder;
 use OCP\Files\IRootFolder;
+use OCP\Files\Node;
 use OCP\IRequest;
 use PHPUnit\Framework\TestCase;
 
@@ -56,6 +57,8 @@ class PageControllerTest extends TestCase {
 		string $ifNoneMatch = '',
 		array $suggestions = [],
 		?IEventDispatcher $eventDispatcher = null,
+		?IInitialState $initialState = null,
+		?Node $fileNode = null,
 	): PageController {
 		$request = $this->createStub(IRequest::class);
 		$request->method('getHeader')->willReturnCallback(
@@ -71,6 +74,12 @@ class PageControllerTest extends TestCase {
 		$libraryFolder = $this->createStub(Folder::class);
 		$userFolder = $this->createStub(Folder::class);
 		$userFolder->method('get')->willReturn($libraryFolder);
+		$userFolder->method('getFirstNodeById')->willReturn($fileNode);
+		$userFolder->method('getRelativePath')->willReturnCallback(
+			static fn (string $path): ?string => str_starts_with($path, '/alice/files/')
+				? substr($path, strlen('/alice/files'))
+				: null,
+		);
 		$rootFolder = $this->createStub(IRootFolder::class);
 		$rootFolder->method('getUserFolder')->willReturn($userFolder);
 
@@ -87,7 +96,7 @@ class PageControllerTest extends TestCase {
 		return new PageController(
 			'arcade',
 			$request,
-			$this->createStub(IInitialState::class),
+			$initialState ?? $this->createStub(IInitialState::class),
 			$settingsService,
 			$libraryService,
 			$recentService,
@@ -96,6 +105,48 @@ class PageControllerTest extends TestCase {
 			$eventDispatcher ?? $this->createStub(IEventDispatcher::class),
 			'alice',
 		);
+	}
+
+	/**
+	 * @param array<string, mixed> $states filled with what index() provides
+	 */
+	private function capturingState(array &$states): IInitialState {
+		$initialState = $this->createStub(IInitialState::class);
+		$initialState->method('provideInitialState')->willReturnCallback(
+			static function (string $key, mixed $value) use (&$states): void {
+				$states[$key] = $value;
+			},
+		);
+		return $initialState;
+	}
+
+	public function testIndexResolvesTheFileIdToTheRelativePath(): void {
+		$node = $this->createStub(Node::class);
+		$node->method('getPath')->willReturn('/alice/files/ROMs/Mario.zip');
+		$states = [];
+
+		$this->controller(
+			initialState: $this->capturingState($states),
+			fileNode: $node,
+		)->index(fileId: 42);
+
+		$this->assertSame('/ROMs/Mario.zip', $states['file']);
+	}
+
+	public function testIndexTreatsAnUnresolvableFileIdLikeNoFile(): void {
+		$states = [];
+
+		$this->controller(initialState: $this->capturingState($states))->index(fileId: 999);
+
+		$this->assertSame('', $states['file']);
+	}
+
+	public function testIndexStillRespectsThePlainFileParameter(): void {
+		$states = [];
+
+		$this->controller(initialState: $this->capturingState($states))->index('/Games/Mario.nes');
+
+		$this->assertSame('/Games/Mario.nes', $states['file']);
 	}
 
 	public function testIndexAsksForTheFilesSidebar(): void {

@@ -64,17 +64,21 @@ function slotName(slot) {
 
 /**
  * Starts the game the way the file menu entry does: in the Viewer when it
- * knows the mimetype, on the app page otherwise.
+ * knows the mimetype, on the app page otherwise -- by file id where the
+ * sidebar knows one, so the link survives renames and moves.
  *
  * @param {string} file path of the game
  * @param {string} mime its mimetype
+ * @param {number|string} fileId the Nextcloud file id, when known
  */
-function play(file, mime) {
+function play(file, mime, fileId) {
 	if (window.OCA?.Viewer !== undefined && romMimes().includes(mime)) {
 		window.OCA.Viewer.open({ path: file })
 		return
 	}
-	window.location.href = generateUrl('/apps/arcade/?file={file}', { file })
+	window.location.href = fileId
+		? generateUrl('/apps/arcade/?fileId={fileId}', { fileId })
+		: generateUrl('/apps/arcade/?file={file}', { file })
 }
 
 /**
@@ -97,9 +101,10 @@ function addRow(list, label, value) {
  * @param {object} game what the endpoint answered
  * @param {string} file path of the game
  * @param {string} mime its mimetype
+ * @param {number|string} fileId the Nextcloud file id, when known
  * @return {HTMLElement} the filled tab
  */
-function render(game, file, mime) {
+function render(game, file, mime, fileId) {
 	const container = document.createElement('div')
 	container.className = 'arcade-sidebar'
 
@@ -108,7 +113,7 @@ function render(game, file, mime) {
 	button.className = 'primary arcade-sidebar-play'
 	button.innerHTML = icon(ICONS.gamepad)
 	button.appendChild(document.createTextNode(t('arcade', 'Play')))
-	button.addEventListener('click', () => play(file, mime))
+	button.addEventListener('click', () => play(file, mime, fileId))
 	container.appendChild(button)
 
 	const list = document.createElement('dl')
@@ -170,7 +175,7 @@ async function show(fileInfo) {
 			return
 		}
 		mountPoint.textContent = ''
-		mountPoint.appendChild(render(game, file, fileInfo?.mimetype ?? ''))
+		mountPoint.appendChild(render(game, file, fileInfo?.mimetype ?? '', fileInfo?.id ?? 0))
 	} catch (error) {
 		console.debug('Arcade could not describe the game', error)
 		if (mine !== generation || mountPoint === null) {

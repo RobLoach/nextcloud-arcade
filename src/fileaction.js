@@ -23,7 +23,7 @@ const settings = loadState('arcade', 'settings', null)
  * @param {string} path file path relative to the user folder
  * @return {boolean} whether the file sits under the library folder
  */
-export function insideLibrary(path) {
+function insideLibrary(path) {
 	const library = settings?.library_folder
 	if (typeof library !== 'string' || library === '' || typeof path !== 'string') {
 		return false
@@ -50,8 +50,9 @@ export function insideLibrary(path) {
  * mimetype Nextcloud has not been taught yet -- a file action is handed the
  * whole node, so it can go by the extension, and by the folder the game
  * sits in, the way the Arcade page does. Zips are the one exception: the
- * Viewer claims application/zip outright, but only plays the ones inside
- * the games library, and this entry follows the same rule.
+ * Viewer does not claim them at all, since an archive is not guaranteed to
+ * be a game, so this entry offers the ones inside the games library and
+ * plays them on the app page.
  *
  * It is added to `window._nc_fileactions` by hand rather than through
  * `registerFileAction` from `@nextcloud/files`: importing that package costs
@@ -91,9 +92,9 @@ function playable(node) {
 	if (node?.type === 'folder' || typeof node?.basename !== 'string') {
 		return false
 	}
-	// Zips are only offered inside the games library, the same rule the
-	// Viewer component applies, so the two entry points agree. Every
-	// other ROM type names its system and stays ungated.
+	// Zips are only offered inside the games library: outside of it, an
+	// archive is left to Nextcloud as if this app were not installed.
+	// Every other ROM type names its system and stays ungated.
 	if ((node.mime ?? '') === 'application/zip' || node.basename.toLowerCase().endsWith('.zip')) {
 		return insideLibrary(node.path ?? '')
 	}
@@ -119,14 +120,17 @@ const action = {
 		if (node === undefined) {
 			return null
 		}
-		// The viewer plays it in place when it knows the mimetype. It
-		// handles zips too, working out for itself what is inside.
-		if (window.OCA?.Viewer !== undefined
-			&& (romMimes().includes(node.mime) || node.mime === 'application/zip')) {
+		// The viewer plays it in place when it knows the ROM mimetype.
+		// Everything else -- zips included, which the Viewer no longer
+		// claims -- goes to the app page, by file id when the node
+		// carries one so the link survives renames and moves.
+		if (window.OCA?.Viewer !== undefined && romMimes().includes(node.mime)) {
 			window.OCA.Viewer.open({ path: node.path })
 			return null
 		}
-		window.location.href = generateUrl('/apps/arcade/?file={file}', { file: node.path })
+		window.location.href = node.fileid
+			? generateUrl('/apps/arcade/?fileId={fileId}', { fileId: node.fileid })
+			: generateUrl('/apps/arcade/?file={file}', { file: node.path })
 		return null
 	},
 }
