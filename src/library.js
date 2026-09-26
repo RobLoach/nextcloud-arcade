@@ -171,6 +171,11 @@ function formatPlayTime(seconds) {
  * @return {string} the URL that plays the game
  */
 function gameUrl(game) {
+	// By file id where there is one, so the link survives renames and
+	// moves; the path form stays as the fallback.
+	if (game.id) {
+		return generateUrl('/apps/arcade/?fileId={fileId}', { fileId: game.id })
+	}
 	return generateUrl('/apps/arcade/?file={file}', { file: game.path })
 }
 

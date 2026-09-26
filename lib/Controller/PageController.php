@@ -50,7 +50,18 @@ class PageController extends Controller {
 	#[NoCSRFRequired]
 	#[NoAdminRequired]
 	#[FrontpageRoute(verb: 'GET', url: '/')]
-	public function index(string $file = ''): TemplateResponse {
+	public function index(string $file = '', int $fileId = 0): TemplateResponse {
+		// Play links carry the file id, which survives renames and moves;
+		// ?file= keeps working for old bookmarks. The frontend is path-based
+		// throughout, so the id is resolved to a path right here, and an id
+		// that resolves to nothing behaves like an unknown path.
+		if ($fileId > 0 && $this->userId !== null) {
+			$userFolder = $this->rootFolder->getUserFolder($this->userId);
+			$node = $userFolder->getFirstNodeById($fileId);
+			if ($node !== null) {
+				$file = $userFolder->getRelativePath($node->getPath()) ?? $file;
+			}
+		}
 		$this->initialState->provideInitialState('file', $file);
 		$this->initialState->provideInitialState('systems', CoreMap::SYSTEMS);
 		// The words that say nothing about a system, so the browser can
