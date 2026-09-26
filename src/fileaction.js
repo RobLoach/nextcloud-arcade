@@ -1,9 +1,47 @@
+import { loadState } from '@nextcloud/initial-state'
 import { translate as t } from '@nextcloud/l10n'
 import { generateUrl } from '@nextcloud/router'
 import { ICONS, icon } from './icons.js'
 import { isPlayable, romMimes, systemForFolderPath } from './systems.js'
 
 const ACTION_ID = 'arcade-play'
+
+// The user's settings, as LoadViewerListener puts them on Files pages. On
+// public share pages, or wherever else the listener did not run, there is
+// no state to read: null then, and zips are treated as outside the library
+// below -- without knowing where the library is, claiming an arbitrary
+// archive would be a guess.
+const settings = loadState('arcade', 'settings', null)
+
+/**
+ * Whether a path lies inside the user's games library folder.
+ *
+ * Zips carry no mimetype of their own that says "game", so only the ones
+ * inside the library are claimed; every other archive is left to Nextcloud
+ * as if this app were not installed.
+ *
+ * @param {string} path file path relative to the user folder
+ * @return {boolean} whether the file sits under the library folder
+ */
+export function insideLibrary(path) {
+	const library = settings?.library_folder
+	if (typeof library !== 'string' || library === '' || typeof path !== 'string') {
+		return false
+	}
+	const file = path.startsWith('/') ? path : `/${path}`
+	// The server stores the folder as '/Games': leading slash, no trailing
+	// one. Trailing slashes are stripped anyway so a hand-fed value cannot
+	// break the prefix match below.
+	const folder = library.replace(/\/+$/, '')
+	if (folder === '') {
+		// A library of '/' means the whole user folder: everything is in.
+		return true
+	}
+	// Prefix match with the separator included, so '/GamesBackup' does not
+	// pass as inside '/Games'. Exact case on purpose: Nextcloud paths are
+	// case-sensitive, and the settings hold the folder as it is named.
+	return file.startsWith(`${folder}/`)
+}
 
 /**
  * A "Play with Arcade" entry in the file menu.
@@ -12,7 +50,8 @@ const ACTION_ID = 'arcade-play'
  * mimetype Nextcloud has not been taught yet -- a file action is handed the
  * whole node, so it can go by the extension, and by the folder the game
  * sits in, the way the Arcade page does. Zips are the one exception: the
- * Viewer claims application/zip outright and looks inside when opened.
+ * Viewer claims application/zip outright, but only plays the ones inside
+ * the games library, and this entry follows the same rule.
  *
  * It is added to `window._nc_fileactions` by hand rather than through
  * `registerFileAction` from `@nextcloud/files`: importing that package costs
@@ -51,6 +90,12 @@ function nodesOf(context) {
 function playable(node) {
 	if (node?.type === 'folder' || typeof node?.basename !== 'string') {
 		return false
+	}
+	// Zips are only offered inside the games library, the same rule the
+	// Viewer component applies, so the two entry points agree. Every
+	// other ROM type names its system and stays ungated.
+	if ((node.mime ?? '') === 'application/zip' || node.basename.toLowerCase().endsWith('.zip')) {
+		return insideLibrary(node.path ?? '')
 	}
 	return isPlayable(node.basename, node.mime ?? '')
 		|| systemForFolderPath(node.path ?? '') !== null
