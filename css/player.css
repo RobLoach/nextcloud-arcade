@@ -4,11 +4,11 @@
    scrim in every theme; sizes and radii follow the Nextcloud variables. */
 
 .arcade-player-container { position: relative; }
-.arcade-toolbar {
+/* The two chrome clusters: the control bar along the bottom and the
+   leave-the-game cluster in the top corner share one pill dress. */
+.arcade-toolbar,
+.arcade-topbar {
 	position: absolute;
-	bottom: calc(var(--default-grid-baseline, 4px) * 2);
-	left: 50%;
-	transform: translateX(-50%);
 	display: flex;
 	gap: var(--default-grid-baseline, 4px);
 	align-items: center;
@@ -17,11 +17,30 @@
 	padding: var(--default-grid-baseline, 4px) calc(var(--default-grid-baseline, 4px) * 2);
 	z-index: 20100;
 	opacity: 0.4;
-	transition: opacity var(--animation-quick, 100ms);
+	transition: opacity 200ms;
+}
+.arcade-toolbar {
+	bottom: calc(var(--default-grid-baseline, 4px) * 2);
+	left: 50%;
+	transform: translateX(-50%);
+}
+.arcade-topbar {
+	top: calc(var(--default-grid-baseline, 4px) * 2 + env(safe-area-inset-top, 0px));
+	inset-inline-end: calc(var(--default-grid-baseline, 4px) * 2 + env(safe-area-inset-right, 0px));
 }
 .arcade-toolbar:hover,
-.arcade-toolbar:focus-within { opacity: 1; }
-.arcade-toolbar button {
+.arcade-toolbar:focus-within,
+.arcade-topbar:hover,
+.arcade-topbar:focus-within { opacity: 1; }
+/* Idle: after a while without movement the chrome goes away entirely,
+   and takes no clicks, so a hidden button cannot be hit by accident. */
+.arcade-player-container.arcade-chrome-hidden .arcade-toolbar,
+.arcade-player-container.arcade-chrome-hidden .arcade-topbar {
+	opacity: 0;
+	pointer-events: none;
+}
+.arcade-toolbar > button,
+.arcade-topbar > button {
 	background-color: transparent;
 	border: none;
 	min-height: 34px;
@@ -34,9 +53,12 @@
 	align-items: center;
 	justify-content: center;
 }
-.arcade-toolbar button:hover { background-color: rgba(255, 255, 255, 0.2); }
-.arcade-toolbar button.active { background-color: rgba(255, 255, 255, 0.35); }
-.arcade-toolbar svg { width: 20px; height: 20px; fill: #fff; }
+.arcade-toolbar > button:hover,
+.arcade-topbar > button:hover { background-color: rgba(255, 255, 255, 0.2); }
+.arcade-toolbar > button.active,
+.arcade-topbar > button.active { background-color: rgba(255, 255, 255, 0.35); }
+.arcade-toolbar > button svg,
+.arcade-topbar > button svg { width: 20px; height: 20px; fill: #fff; }
 .arcade-toolbar-status { color: #fff; font-size: 12px; margin-inline-start: 6px; white-space: nowrap; }
 .arcade-states {
 	position: absolute;
@@ -179,12 +201,13 @@
 
 /* The three-dots actions menu, dressed like a core action menu: the theme's
    own background and shadow rather than the scrim of the panels, because it
-   is chrome of the page and not part of the game picture. */
+   is chrome of the page and not part of the game picture. It hangs from
+   the topbar, opening downward and aligned to its end. */
 .arcade-actions-menu {
 	position: absolute;
-	bottom: 56px;
-	left: 50%;
-	transform: translateX(-50%);
+	top: 100%;
+	inset-inline-end: 0;
+	margin-top: var(--default-grid-baseline, 4px);
 	display: flex;
 	flex-direction: column;
 	min-width: 200px;
