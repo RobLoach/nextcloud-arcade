@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace OCA\Arcade\Tests\Unit;
 
 use OCA\Arcade\Controller\BiosController;
-use OCA\Arcade\CoreMap;
 use OCA\Arcade\Service\BiosService;
 use OCP\AppFramework\Http;
 use OCP\IRequest;
@@ -25,64 +24,65 @@ class TestableBiosController extends BiosController {
 }
 
 /**
- * The admin endpoints an administrator manages the BIOS store with.
+ * The admin endpoints an administrator manages their BIOS files with. The
+ * files live in the administrator's own system folder; the instance-wide
+ * store only shows through as the read-only fallback it is.
  */
 class BiosControllerTest extends TestCase {
 	private BiosService&MockObject $biosService;
 
-	private function controller(string $body = ''): TestableBiosController {
+	private function controller(string $body = '', ?string $userId = 'admin'): TestableBiosController {
 		$this->biosService = $this->createMock(BiosService::class);
 		$controller = new TestableBiosController(
 			'arcade',
 			$this->createStub(IRequest::class),
 			$this->biosService,
-			'admin',
+			$userId,
 		);
 		$controller->body = $body;
 		return $controller;
 	}
 
-	public function testStatusNamesEverySystemThatWantsABios(): void {
+	public function testStatusIsTheStatusOfTheAskingAdministrator(): void {
 		$controller = $this->controller();
-		$this->biosService->method('stored')->willReturn([
-			'gb_bios.bin' => 100,
-			'stray.bin' => 5,
-		]);
+		$status = [
+			'folder' => '/System',
+			'systems' => [[
+				'system' => ['id' => 'gb', 'name' => 'Game Boy'],
+				'files' => [['name' => 'gb_bios.bin', 'present' => true, 'source' => 'folder', 'size' => 100]],
+			]],
+			'extra' => [['name' => 'stray.bin', 'size' => 5, 'source' => 'store']],
+		];
+		$this->biosService->expects($this->once())->method('statusFor')
+			->with('admin')
+			->willReturn($status);
 
-		$data = $controller->status()->getData();
+		$response = $controller->status();
 
-		$expected = array_filter(CoreMap::SYSTEMS, fn (array $system): bool => $system['bios'] !== []);
-		$this->assertCount(count($expected), $data['systems']);
-		foreach ($data['systems'] as $entry) {
-			$id = $entry['system']['id'];
-			$this->assertSame(CoreMap::SYSTEMS[$id]['label'], $entry['system']['name']);
-			$this->assertSame(CoreMap::SYSTEMS[$id]['bios'], array_column($entry['files'], 'name'));
-			foreach ($entry['files'] as $file) {
-				if ($file['name'] === 'gb_bios.bin') {
-					$this->assertTrue($file['present']);
-					$this->assertSame(100, $file['size']);
-				} else {
-					$this->assertFalse($file['present']);
-					$this->assertSame(0, $file['size']);
-				}
-			}
-		}
-		$this->assertSame([['name' => 'stray.bin', 'size' => 5]], $data['extra']);
+		$this->assertSame(Http::STATUS_OK, $response->getStatus());
+		$this->assertSame($status, $response->getData());
+	}
+
+	public function testStatusNeedsSomebodyToAskFor(): void {
+		$controller = $this->controller(userId: null);
+		$this->biosService->expects($this->never())->method('statusFor');
+
+		$this->assertSame(Http::STATUS_UNAUTHORIZED, $controller->status()->getStatus());
 	}
 
 	public function testUploadRefusesANameNoCoreAsksFor(): void {
 		$controller = $this->controller('firmware');
-		$this->biosService->expects($this->never())->method('write');
+		$this->biosService->expects($this->never())->method('storeUpload');
 
 		$response = $controller->upload('malware.php');
 
 		$this->assertSame(Http::STATUS_BAD_REQUEST, $response->getStatus());
 	}
 
-	public function testUploadStoresUnderTheCanonicalName(): void {
+	public function testUploadStoresUnderTheCanonicalNameInTheFolder(): void {
 		$controller = $this->controller('the firmware');
-		$this->biosService->expects($this->once())->method('write')
-			->with('gb_bios.bin', 'the firmware')
+		$this->biosService->expects($this->once())->method('storeUpload')
+			->with('admin', 'gb_bios.bin', 'the firmware')
 			->willReturn(true);
 
 		$response = $controller->upload('GB_BIOS.BIN');
@@ -96,7 +96,7 @@ class BiosControllerTest extends TestCase {
 
 	public function testUploadRefusesAFileTooBigToBeABios(): void {
 		$controller = $this->controller(str_repeat('x', 16 * 1024 * 1024 + 1));
-		$this->biosService->expects($this->never())->method('write');
+		$this->biosService->expects($this->never())->method('storeUpload');
 
 		$response = $controller->upload('gb_bios.bin');
 
@@ -105,18 +105,27 @@ class BiosControllerTest extends TestCase {
 
 	public function testUploadRefusesAnEmptyBody(): void {
 		$controller = $this->controller('');
-		$this->biosService->expects($this->never())->method('write');
+		$this->biosService->expects($this->never())->method('storeUpload');
 
 		$response = $controller->upload('gb_bios.bin');
 
 		$this->assertSame(Http::STATUS_BAD_REQUEST, $response->getStatus());
 	}
 
-	public function testRemoveTakesAFileOut(): void {
+	public function testUploadSaysWhenTheFolderCannotTakeIt(): void {
+		$controller = $this->controller('the firmware');
+		$this->biosService->method('storeUpload')->willReturn(false);
+
+		$response = $controller->upload('gb_bios.bin');
+
+		$this->assertSame(Http::STATUS_INTERNAL_SERVER_ERROR, $response->getStatus());
+	}
+
+	public function testRemoveTakesAFileOutOfTheFolder(): void {
 		$controller = $this->controller();
-		$this->biosService->expects($this->once())->method('remove')
-			->with('gb_bios.bin')
-			->willReturn(true);
+		$this->biosService->expects($this->once())->method('deleteFor')
+			->with('admin', 'gb_bios.bin')
+			->willReturn('deleted');
 
 		$response = $controller->remove('GB_BIOS.bin');
 
@@ -125,16 +134,26 @@ class BiosControllerTest extends TestCase {
 
 	public function testRemoveRefusesANameNoCoreAsksFor(): void {
 		$controller = $this->controller();
-		$this->biosService->expects($this->never())->method('remove');
+		$this->biosService->expects($this->never())->method('deleteFor');
 
 		$response = $controller->remove('../config.php');
 
 		$this->assertSame(Http::STATUS_BAD_REQUEST, $response->getStatus());
 	}
 
+	public function testRemoveLeavesTheInstanceStoreToOcc(): void {
+		$controller = $this->controller();
+		$this->biosService->method('deleteFor')->willReturn('store');
+
+		$response = $controller->remove('gb_bios.bin');
+
+		$this->assertSame(Http::STATUS_CONFLICT, $response->getStatus());
+		$this->assertSame(['storeOnly' => true], $response->getData());
+	}
+
 	public function testRemoveSaysWhenThereWasNothingToRemove(): void {
 		$controller = $this->controller();
-		$this->biosService->method('remove')->willReturn(false);
+		$this->biosService->method('deleteFor')->willReturn('missing');
 
 		$response = $controller->remove('gb_bios.bin');
 

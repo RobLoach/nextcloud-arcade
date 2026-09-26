@@ -241,7 +241,10 @@ function formatBiosSize(bytes) {
 }
 
 /**
- * Ask the server which BIOS files it holds, and show every row accordingly.
+ * Ask the server what the system folder and the instance store hold, and
+ * show every row accordingly. A file from the store cannot be removed
+ * here -- that store belongs to occ arcade:bios -- so its row says where
+ * it comes from instead of offering a remove.
  */
 async function refreshBios() {
 	const section = document.getElementById('arcade-bios-section')
@@ -255,6 +258,10 @@ async function refreshBios() {
 		console.error('Could not read the BIOS status', error)
 		return
 	}
+	const folder = section.querySelector('.arcade-bios-folder')
+	if (folder !== null && status.folder) {
+		folder.textContent = t('arcade', 'Your System folder is {folder}.', { folder: status.folder })
+	}
 	const files = new Map()
 	for (const entry of status.systems ?? []) {
 		for (const file of entry.files ?? []) {
@@ -266,23 +273,31 @@ async function refreshBios() {
 		if (file === undefined) {
 			return
 		}
-		row.querySelector('.arcade-bios-state').textContent = file.present
-			? t('arcade', 'Present ({size})', { size: formatBiosSize(file.size) })
-			: t('arcade', 'Missing')
+		const fromStore = file.present && file.source === 'store'
+		let state = t('arcade', 'Missing')
+		if (fromStore) {
+			state = t('arcade', 'Present ({size}, instance store, managed with occ arcade:bios)',
+				{ size: formatBiosSize(file.size) })
+		} else if (file.present) {
+			state = t('arcade', 'Present ({size})', { size: formatBiosSize(file.size) })
+		}
+		row.querySelector('.arcade-bios-state').textContent = state
 		row.querySelector('.arcade-bios-input').classList.toggle('hidden', file.present)
-		row.querySelector('.arcade-bios-remove').classList.toggle('hidden', !file.present)
+		row.querySelector('.arcade-bios-remove').classList.toggle('hidden', !file.present || fromStore)
 	})
 	const extra = section.querySelector('.arcade-bios-extra')
 	const strays = (status.extra ?? [])
-		.map((file) => `${file.name} (${formatBiosSize(file.size)})`)
+		.map((file) => file.source === 'store'
+			? t('arcade', '{name} ({size}, instance store)', { name: file.name, size: formatBiosSize(file.size) })
+			: `${file.name} (${formatBiosSize(file.size)})`)
 	extra.classList.toggle('hidden', strays.length === 0)
 	extra.textContent = strays.length === 0
 		? ''
-		: t('arcade', 'Also in the store, though no system asks for it: {names}', { names: strays.join(', ') })
+		: t('arcade', 'Also there, though no system asks for it: {names}', { names: strays.join(', ') })
 }
 
 /**
- * Send the file just picked to the store, under the name of its row.
+ * Send the file just picked to the system folder, under the name of its row.
  *
  * @param {HTMLInputElement} input the file input of a BIOS row
  */
@@ -318,7 +333,7 @@ async function uploadBios(input) {
 }
 
 /**
- * Take the file of a row back out of the store.
+ * Take the file of a row back out of the system folder.
  *
  * @param {HTMLElement} button the remove button of a BIOS row
  */
@@ -332,8 +347,14 @@ async function removeBios(button) {
 		})
 		status.textContent = t('arcade', 'Removed')
 	} catch (error) {
-		console.error('Could not remove the BIOS file', error)
-		status.textContent = t('arcade', 'Could not remove the file')
+		// 409 says the file only lives in the instance store, which is not
+		// this page's to delete; anything else really did go wrong.
+		if (String(error?.message ?? '').startsWith('409')) {
+			status.textContent = t('arcade', 'This file comes from the instance store; manage it with occ arcade:bios')
+		} else {
+			console.error('Could not remove the BIOS file', error)
+			status.textContent = t('arcade', 'Could not remove the file')
+		}
 	}
 	await refreshBios()
 	setTimeout(() => {

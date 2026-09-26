@@ -12,7 +12,7 @@ $thumbnailTypes = $_['thumbnailTypes'];
 	<div class="section">
 		<h2 class="inlineblock"><?php p($l->t('Player')); ?></h2>
 		<span class="msg" aria-live="polite"></span>
-		<p class="settings-hint"><?php p($l->t('Configure how the Arcade retro game player behaves. Changes are saved as they are made.')); ?></p>
+		<p class="settings-hint"><?php p($l->t('Configure how the Arcade retro game player behaves.')); ?></p>
 		<?php foreach ([
 			'arcade-smooth' => ['video_smooth', $l->t('Smooth video filtering (bilinear)')],
 			'arcade-global-events' => ['respond_to_global_events', $l->t('Capture gamepad and keyboard input for the whole page while playing')],

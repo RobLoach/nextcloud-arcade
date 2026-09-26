@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace OCA\Arcade\Controller;
 
-use OCA\Arcade\CoreMap;
 use OCA\Arcade\Service\BiosService;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
@@ -20,7 +19,9 @@ use OCP\IRequest;
 /**
  * Hands out the BIOS files the instance holds, for the players that need
  * one and whose own system folder has not got it, and lets an administrator
- * manage that store from the settings page instead of the occ command.
+ * manage the BIOS files of their own system folder from the settings page.
+ * The instance-wide store itself is only filled by occ arcade:bios; here it
+ * shows up as the fallback it is.
  *
  * @psalm-suppress UnusedClass
  */
@@ -58,50 +59,32 @@ class BiosController extends Controller {
 	}
 
 	/**
-	 * What every system that wants a BIOS has and has not got, for the
-	 * administrator. Admin-only, so no NoAdminRequired here.
+	 * What every system that wants a BIOS has and has not got, seen the
+	 * way the player of the asking administrator would see it: their own
+	 * system folder first, the store of the instance as the fallback.
+	 * Admin-only, so no NoAdminRequired here.
 	 */
 	#[FrontpageRoute(verb: 'GET', url: '/arcade/bios/status')]
 	public function status(): JSONResponse {
-		$stored = $this->biosService->stored();
-		$systems = [];
-		$claimed = [];
-		foreach (CoreMap::SYSTEMS as $id => $system) {
-			if ($system['bios'] === []) {
-				continue;
-			}
-			$files = [];
-			foreach ($system['bios'] as $name) {
-				$claimed[$name] = true;
-				$files[] = [
-					'name' => $name,
-					'present' => array_key_exists($name, $stored),
-					'size' => $stored[$name] ?? 0,
-				];
-			}
-			$systems[] = [
-				'system' => ['id' => $id, 'name' => $system['label']],
-				'files' => $files,
-			];
+		if ($this->userId === null) {
+			return new JSONResponse([], Http::STATUS_UNAUTHORIZED);
 		}
-		$extra = [];
-		foreach ($stored as $name => $size) {
-			if (!isset($claimed[$name])) {
-				$extra[] = ['name' => $name, 'size' => $size];
-			}
-		}
-		return new JSONResponse(['systems' => $systems, 'extra' => $extra]);
+		return new JSONResponse($this->biosService->statusFor($this->userId));
 	}
 
 	/**
-	 * Takes one BIOS file, sent as the raw request body, and only under a
-	 * name some core actually asks for. Admin-only, but a modest limit is
-	 * cheap insurance: uploading a full BIOS set one file at a time is a few
-	 * dozen requests, so sixty a minute never troubles a real administrator.
+	 * Takes one BIOS file, sent as the raw request body, into the system
+	 * folder of the asking administrator, and only under a name some core
+	 * actually asks for. Admin-only, but a modest limit is cheap insurance:
+	 * uploading a full BIOS set one file at a time is a few dozen requests,
+	 * so sixty a minute never troubles a real administrator.
 	 */
 	#[UserRateLimit(limit: 60, period: 60)]
 	#[FrontpageRoute(verb: 'POST', url: '/arcade/bios')]
 	public function upload(string $name = ''): JSONResponse {
+		if ($this->userId === null) {
+			return new JSONResponse([], Http::STATUS_UNAUTHORIZED);
+		}
 		$canonical = BiosService::canonicalName($name);
 		if ($canonical === null) {
 			return new JSONResponse(
@@ -116,7 +99,7 @@ class BiosController extends Controller {
 				Http::STATUS_BAD_REQUEST,
 			);
 		}
-		if (!$this->biosService->write($canonical, $data)) {
+		if (!$this->biosService->storeUpload($this->userId, $canonical, $data)) {
 			return new JSONResponse(
 				['error' => 'The file could not be stored'],
 				Http::STATUS_INTERNAL_SERVER_ERROR,
@@ -126,12 +109,19 @@ class BiosController extends Controller {
 	}
 
 	/**
-	 * Takes a BIOS file back out of the store, by name. Admin-only; the same
-	 * generous ceiling as the upload covers clearing a whole store.
+	 * Takes a BIOS file back out of the system folder of the asking
+	 * administrator, by name. A file that only lives in the instance-wide
+	 * store cannot be deleted from here -- that store belongs to
+	 * occ arcade:bios -- so the answer is 409 with storeOnly: true, which
+	 * the settings page turns into a note rather than an error. Admin-only;
+	 * the same generous ceiling as the upload covers clearing a whole set.
 	 */
 	#[UserRateLimit(limit: 60, period: 60)]
 	#[FrontpageRoute(verb: 'DELETE', url: '/arcade/bios')]
 	public function remove(string $name = ''): JSONResponse {
+		if ($this->userId === null) {
+			return new JSONResponse([], Http::STATUS_UNAUTHORIZED);
+		}
 		$canonical = BiosService::canonicalName($name);
 		if ($canonical === null) {
 			return new JSONResponse(
@@ -139,7 +129,11 @@ class BiosController extends Controller {
 				Http::STATUS_BAD_REQUEST,
 			);
 		}
-		if (!$this->biosService->remove($canonical)) {
+		$result = $this->biosService->deleteFor($this->userId, $canonical);
+		if ($result === 'store') {
+			return new JSONResponse(['storeOnly' => true], Http::STATUS_CONFLICT);
+		}
+		if ($result === 'missing') {
 			return new JSONResponse([], Http::STATUS_NOT_FOUND);
 		}
 		return new JSONResponse([]);

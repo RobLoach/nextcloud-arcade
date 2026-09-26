@@ -8,13 +8,14 @@ $settings = ['core_options' => $_['storedCoreOptions']];
 $systems = $_['systems'];
 $thumbnailTypes = $_['thumbnailTypes'];
 $storedTypes = $_['storedThumbnailTypes'];
+$systemFolder = $_['systemFolder'];
 ?>
 
 <div id="arcade-settings" data-scope="admin">
 	<div class="section">
 		<h2 class="inlineblock"><?php p($l->t('Folders')); ?></h2>
 		<span class="msg" aria-live="polite"></span>
-		<p class="settings-hint"><?php p($l->t('The folders users start with. Everybody can pick their own afterwards. Changes are saved as they are made.')); ?></p>
+		<p class="settings-hint"><?php p($l->t('The folders users start with. Everybody can pick their own afterwards.')); ?></p>
 
 		<?php foreach ([
 			'library_folder' => $l->t('Games library folder'),
@@ -37,10 +38,12 @@ $storedTypes = $_['storedThumbnailTypes'];
 	        settings form now, rendered and saved by the server itself:
 	        see \OCA\Arcade\Settings\DeclarativeAdmin. */ ?>
 
+	<?php if ($systemFolder !== ''): ?>
 	<div class="section" id="arcade-bios-section">
 		<h2 class="inlineblock"><?php p($l->t('BIOS')); ?></h2>
 		<span class="msg" aria-live="polite"></span>
-		<p class="settings-hint"><?php p($l->t('A few consoles will not start without the firmware file of the real hardware. Copy these files from a console you own; a file added here is offered to every player on this instance.')); ?></p>
+		<p class="settings-hint"><?php p($l->t('A few consoles will not start without the firmware file of the real hardware. Copy these files from a console you own; they go into your System folder. Files added instance-wide with occ arcade:bios are offered to every player as a fallback.')); ?></p>
+		<p class="settings-hint arcade-bios-folder"></p>
 		<?php foreach ($systems as $systemId => $system): ?>
 			<?php if ($system['bios'] === []) { continue; } ?>
 			<div class="arcade-bios-system">
@@ -58,6 +61,12 @@ $storedTypes = $_['storedThumbnailTypes'];
 		<?php endforeach; ?>
 		<p class="arcade-bios-extra hidden"></p>
 	</div>
+	<?php else: ?>
+	<div class="section">
+		<h2 class="inlineblock"><?php p($l->t('BIOS')); ?></h2>
+		<p class="settings-hint"><?php p($l->t('Set the System folder above to manage BIOS files here.')); ?></p>
+	</div>
+	<?php endif; ?>
 
 	<div class="section">
 		<h2 class="inlineblock"><?php p($l->t('Core options')); ?></h2>
