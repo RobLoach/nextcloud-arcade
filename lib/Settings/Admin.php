@@ -9,6 +9,7 @@ use OCA\Arcade\CoreMap;
 use OCA\Arcade\CoreOptions;
 use OCA\Arcade\Service\SettingsService;
 use OCP\AppFramework\Http\TemplateResponse;
+use OCP\IUserSession;
 use OCP\Settings\ISettings;
 use OCP\Util;
 
@@ -19,6 +20,7 @@ use OCP\Util;
 class Admin implements ISettings {
 	public function __construct(
 		private SettingsService $settingsService,
+		private IUserSession $userSession,
 	) {
 	}
 
@@ -34,7 +36,24 @@ class Admin implements ISettings {
 			'systems' => CoreMap::SYSTEMS,
 			'thumbnailTypes' => SettingsService::THUMBNAIL_LABELS,
 			'storedThumbnailTypes' => $this->settingsService->getThumbnailTypes(),
+			// The BIOS section manages this folder, so without one there
+			// is nothing to manage and the template leaves it out.
+			'systemFolder' => $this->systemFolder(),
 		]);
+	}
+
+	/**
+	 * The resolved system folder of the administrator looking at the page:
+	 * their own setting, or the instance default, or '' when neither says
+	 * anything.
+	 */
+	public function systemFolder(): string {
+		$user = $this->userSession->getUser();
+		if ($user === null) {
+			return '';
+		}
+		$folder = $this->settingsService->getUserSettings($user->getUID())['system_folder'] ?? '';
+		return is_string($folder) ? $folder : '';
 	}
 
 	public function getSection(): string {
