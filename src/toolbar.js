@@ -92,10 +92,12 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 	}
 	document.addEventListener('visibilitychange', onVisibilityChange)
 
-	button(ICONS.restart, t('arcade', 'Restart'), () => {
+	// Restarting lives in the actions menu, but keeps a handler of its
+	// own so a hotkey could reach it without a button to click.
+	const restartGame = () => {
 		instance.restart()
 		flash(t('arcade', 'Restarted'))
-	})
+	}
 
 	// Saving needs a logged-in user and somewhere of their own to put it,
 	// so on a public share, or without a saves folder, there is none.
@@ -170,10 +172,11 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 	})
 
 	// RetroArch's built-in menu, with core options, control remapping, etc.
-	button(ICONS.menu, t('arcade', 'RetroArch menu'), (element) => {
+	// It sits in the actions menu; the handler stays separate so a hotkey
+	// could reach it too.
+	const toggleRetroArchMenu = () => {
 		instance.sendCommand('MENU_TOGGLE')
-		element.classList.toggle('active')
-	})
+	}
 
 	const screenshotButton = button(ICONS.screenshot, t('arcade', 'Screenshot'), async () => {
 		try {
@@ -260,12 +263,22 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 		}
 
 		item(ICONS.fullscreen, t('arcade', 'Full screen'), () => fullscreenButton.click())
-		// The full Files sidebar, when the page carries it.
-		if (romPath && window.OCA?.Files?.Sidebar !== undefined) {
-			item(ICONS.sidebar, t('arcade', 'Open sidebar'), () => {
-				window.OCA.Files.Sidebar.open(romPath.startsWith('/') ? romPath : `/${romPath}`)
-			})
-		}
+		item(ICONS.menu, t('arcade', 'RetroArch menu'), toggleRetroArchMenu)
+		item(ICONS.restart, t('arcade', 'Restart'), restartGame)
+		// The full Files sidebar. Whether the page carries it is only known
+		// for sure when it is asked for, so the item always shows and the
+		// click looks for it.
+		item(ICONS.sidebar, t('arcade', 'Open sidebar'), () => {
+			if (window.OCA?.Files?.Sidebar === undefined) {
+				const missing = window.OCA === undefined
+					? 'OCA'
+					: window.OCA.Files === undefined ? 'OCA.Files' : 'OCA.Files.Sidebar'
+				console.warn(`arcade: cannot open the Files sidebar, window.${missing} is undefined`)
+				flash(t('arcade', 'The Files sidebar is not available on this page'))
+				return
+			}
+			window.OCA.Files.Sidebar.open(romPath.startsWith('/') ? romPath : `/${romPath}`)
+		})
 		if (romPath) {
 			const link = document.createElement('a')
 			link.className = 'arcade-actions-item'
