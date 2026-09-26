@@ -9,10 +9,10 @@ const ACTION_ID = 'arcade-play'
  * A "Play with Arcade" entry in the file menu.
  *
  * The Viewer only ever matches a mimetype, so it cannot offer a game whose
- * mimetype Nextcloud has not been taught yet, and it cannot offer a zipped
- * one at all -- a .zip says nothing about what is inside. A file action is
- * handed the whole node, so it can go by the extension, and by the folder
- * the game sits in, the way the Arcade page does.
+ * mimetype Nextcloud has not been taught yet -- a file action is handed the
+ * whole node, so it can go by the extension, and by the folder the game
+ * sits in, the way the Arcade page does. Zips are the one exception: the
+ * Viewer claims application/zip outright and looks inside when opened.
  *
  * It is added to `window._nc_fileactions` by hand rather than through
  * `registerFileAction` from `@nextcloud/files`: importing that package costs
@@ -74,8 +74,10 @@ const action = {
 		if (node === undefined) {
 			return null
 		}
-		// The viewer plays it in place when it knows the mimetype.
-		if (window.OCA?.Viewer !== undefined && romMimes().includes(node.mime)) {
+		// The viewer plays it in place when it knows the mimetype. It
+		// handles zips too, working out for itself what is inside.
+		if (window.OCA?.Viewer !== undefined
+			&& (romMimes().includes(node.mime) || node.mime === 'application/zip')) {
 			window.OCA.Viewer.open({ path: node.path })
 			return null
 		}

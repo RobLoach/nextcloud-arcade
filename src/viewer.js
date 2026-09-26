@@ -46,6 +46,9 @@ const ArcadeViewer = {
 			started: false,
 			errorMessage: null,
 			stopSession: null,
+			// A zip that holds no game: shown as a download offer instead.
+			notAGame: false,
+			downloadUrl: '',
 		}
 	},
 
@@ -82,26 +85,75 @@ const ArcadeViewer = {
 				if (!isPlayable(this.basename, this.mime)) {
 					throw new Error(t('arcade', 'Unsupported ROM type: {file}', { file: this.basename }))
 				}
-				const { startSession } = await import('./session.js')
-				this.stopSession = await startSession({
-					canvas: this.$refs.canvas,
-					container: this.$el,
-					filename: this.filename,
-					basename: this.basename,
-					source: this.source,
-				})
+				// session.js pulls in player.js, so asking for both costs
+				// one download; the emulator's weight still only lands here.
+				const [{ startSession }, { NotAGameError, davUrl }] = await Promise.all([
+					import('./session.js'),
+					import('./player.js'),
+				])
+				try {
+					this.stopSession = await startSession({
+						canvas: this.$refs.canvas,
+						container: this.$el,
+						filename: this.filename,
+						basename: this.basename,
+						source: this.source,
+					})
+				} catch (error) {
+					if (!(error instanceof NotAGameError)) {
+						throw error
+					}
+					// An archive of something else entirely. Offering it
+					// for download beats both an emulator error and core's
+					// "no plugin available" page this handler replaced.
+					this.notAGame = true
+					this.downloadUrl = this.source ?? davUrl(this.filename)
+				}
 			} catch (error) {
 				console.error('Arcade failed to start', error)
 				this.errorMessage = t('arcade', 'Could not start the emulator: {error}', { error: error.message })
 			}
 			this.$emit('update:loaded', true)
 		},
+
+		/**
+		 * The panel shown for an archive that holds no game: the file
+		 * name and a way to download it, in place of core's "no plugin
+		 * available" error.
+		 *
+		 * @param {Function} h the render function of the Viewer's Vue
+		 * @return {object} the panel
+		 */
+		renderNotAGame(h) {
+			// href and download are given both flat and under attrs, the
+			// same hedge as beforeDestroy/beforeUnmount above: Vue 2 reads
+			// attrs, Vue 3 reads the flat keys, each ignores the rest.
+			const link = {
+				href: this.downloadUrl,
+				download: this.basename,
+			}
+			return h('div', {
+				style: { color: '#fff', textAlign: 'center' },
+			}, [
+				h('p', {}, t('arcade', 'This archive does not look like a game')),
+				h('p', { style: { fontWeight: 'bold' } }, this.basename),
+				h('a', {
+					attrs: link,
+					...link,
+					style: { color: '#fff', textDecoration: 'underline' },
+				}, t('arcade', 'Download')),
+			])
+		},
 	},
 
 	render(h) {
-		const child = this.errorMessage !== null
-			? h('p', { style: { color: '#fff' } }, this.errorMessage)
-			: h('canvas', {
+		let child
+		if (this.notAGame) {
+			child = this.renderNotAGame(h)
+		} else if (this.errorMessage !== null) {
+			child = h('p', { style: { color: '#fff' } }, this.errorMessage)
+		} else {
+			child = h('canvas', {
 				ref: 'canvas',
 				style: {
 					width: '100%',
@@ -110,6 +162,7 @@ const ArcadeViewer = {
 					backgroundColor: '#000',
 				},
 			})
+		}
 		return h('div', {
 			class: 'arcade-viewer',
 			style: {
@@ -132,7 +185,10 @@ function register() {
 	window.OCA.Viewer.registerHandler({
 		id: 'arcade',
 		group: null,
-		mimes: romMimes(),
+		// Zips keep their server mimetype on purpose, so they are claimed
+		// here as well: one may hold a game, and one that holds anything
+		// else gets a download offer instead of "no plugin available".
+		mimes: [...romMimes(), 'application/zip'],
 		component: ArcadeViewer,
 	})
 	return true
