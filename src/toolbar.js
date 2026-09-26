@@ -178,6 +178,14 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 		instance.sendCommand('MENU_TOGGLE')
 	}
 
+	// Inside the Files Viewer there is no actions menu of ours -- the
+	// Viewer's own knows nothing of the emulator -- so the two commands
+	// keep their old place in the pill there.
+	if (closeUrl === '') {
+		button(ICONS.menu, t('arcade', 'RetroArch menu'), toggleRetroArchMenu)
+		button(ICONS.restart, t('arcade', 'Restart'), restartGame)
+	}
+
 	const screenshotButton = button(ICONS.screenshot, t('arcade', 'Screenshot'), async () => {
 		try {
 			const blob = await instance.screenshot()
