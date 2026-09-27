@@ -7,7 +7,7 @@
 	<description><![CDATA[Play retro console games straight from your NextCloud files.
 
 Arcade runs the RetroArch libretro cores in the browser, so nothing is uploaded anywhere else. It comes with a games library with box art, save states, screenshots, SRAM and BIOS handling, touch controls, and configurable keys — all kept in folders of your own choosing.]]></description>
-	<version>0.39.3</version>
+	<version>0.39.4</version>
 	<licence>AGPL-3.0-or-later</licence>
 	<author homepage="https://robloach.net">Rob Loach</author>
 	<namespace>Arcade</namespace>
