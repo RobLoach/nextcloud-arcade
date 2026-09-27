@@ -5,4 +5,4 @@
 // file into css/, which holds handwritten stylesheets only.
 import '@nextcloud/dialogs/style.css'
 
-export { FilePickerType, getFilePickerBuilder } from '@nextcloud/dialogs'
+export { getFilePickerBuilder } from '@nextcloud/dialogs'
