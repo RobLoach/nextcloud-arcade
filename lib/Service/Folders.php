@@ -33,4 +33,16 @@ final class Folders {
 		}
 		return $node instanceof Folder ? $node : null;
 	}
+
+	/**
+	 * The id Nextcloud gave the file at a path in a user's files, null
+	 * when nothing can be found there.
+	 */
+	public static function fileId(IRootFolder $rootFolder, string $userId, string $path): ?int {
+		try {
+			return $rootFolder->getUserFolder($userId)->get($path)->getId();
+		} catch (\Throwable) {
+			return null;
+		}
+	}
 }

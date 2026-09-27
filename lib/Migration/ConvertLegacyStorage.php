@@ -169,7 +169,7 @@ class ConvertLegacyStorage implements IRepairStep {
 			if (ctype_digit($key) || $entry['path'] === '') {
 				continue;
 			}
-			$id = $this->fileId($userId, $entry['path']);
+			$id = Folders::fileId($this->rootFolder, $userId, $entry['path']);
 			if ($id === null) {
 				// The game is gone; its files keep the name they had.
 				continue;
@@ -375,7 +375,7 @@ class ConvertLegacyStorage implements IRepairStep {
 					if ($path === '') {
 						continue;
 					}
-					$id = $this->fileId($userId, $path);
+					$id = Folders::fileId($this->rootFolder, $userId, $path);
 					if ($id === null) {
 						continue;
 					}
@@ -412,11 +412,4 @@ class ConvertLegacyStorage implements IRepairStep {
 		return $suffixes;
 	}
 
-	private function fileId(string $userId, string $path): ?int {
-		try {
-			return $this->rootFolder->getUserFolder($userId)->get($path)->getId();
-		} catch (\Throwable) {
-			return null;
-		}
-	}
 }

@@ -489,7 +489,7 @@ class StateService {
 		string $romPath,
 		string $path,
 	): ?Folder {
-		$id = $this->fileId($userId, $romPath);
+		$id = Folders::fileId($this->rootFolder, $userId, $romPath);
 		$was = $id === null ? null : ($this->gamesOf($userId)[(string)$id] ?? null);
 		if ($was === null || $was === $romPath) {
 			return null;
@@ -543,7 +543,7 @@ class StateService {
 	 * instance works them out.
 	 */
 	private function checksumOf(string $userId, string $romPath): string {
-		$id = $this->fileId($userId, $romPath);
+		$id = Folders::fileId($this->rootFolder, $userId, $romPath);
 		if ($id === null) {
 			return '';
 		}
@@ -795,21 +795,13 @@ class StateService {
 	 * left behind is still found and removed.
 	 */
 	private function key(string $userId, string $romPath): string {
-		$id = $this->fileId($userId, $romPath);
+		$id = Folders::fileId($this->rootFolder, $userId, $romPath);
 		return $id === null ? $this->pathKey($romPath) : (string)$id;
 	}
 
 	/** What a game is filed under when its file (and so its id) is gone. */
 	private function pathKey(string $romPath): string {
 		return hash('sha256', $romPath);
-	}
-
-	private function fileId(string $userId, string $romPath): ?int {
-		try {
-			return $this->rootFolder->getUserFolder($userId)->get($romPath)->getId();
-		} catch (\Throwable) {
-			return null;
-		}
 	}
 
 	private function userKey(string $userId): string {
