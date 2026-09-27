@@ -224,7 +224,7 @@ class SettingsService {
 			'audio_volume' => 0,
 			'audio_latency' => 64,
 			'respond_to_global_events' => true,
-			'pause_when_hidden' => true,
+			'pause_when_hidden' => false,
 			'autosave_on_close' => true,
 			'autoload_on_start' => false,
 			'autosave_interval' => 0,

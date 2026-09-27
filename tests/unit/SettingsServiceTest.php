@@ -148,7 +148,7 @@ class SettingsServiceTest extends TestCase {
 		$this->assertSame(0, $settings['runahead_frames'], 'and so is run-ahead');
 		$this->assertSame(0, $settings['audio_volume']);
 		$this->assertSame(64, $settings['audio_latency']);
-		$this->assertTrue($settings['pause_when_hidden']);
+		$this->assertFalse($settings['pause_when_hidden'], 'a background tab does not pause unless asked');
 		$this->assertTrue($settings['autosave_on_close']);
 		$this->assertFalse($settings['autoload_on_start'], 'a game does not resume by itself unless asked');
 		$this->assertSame(0, $settings['autosave_interval'], 'and does not save by itself either');
