@@ -1,6 +1,7 @@
 import { translate as t } from '@nextcloud/l10n'
 import { AUTO_SLOT, api, stateUrl } from '../api.js'
 import { disableSramSync } from '../player.js'
+import { createPanel } from './panel.js'
 
 /**
  * Build the save states panel.
@@ -13,16 +14,7 @@ import { disableSramSync } from '../player.js'
  * @return {{element: HTMLElement, refresh: Function, load: Function}} the panel
  */
 export function createStatesPanel({ instance, romPath, flash, onDone }) {
-	const element = document.createElement('div')
-	element.className = 'arcade-states hidden'
-
-	element.setAttribute('role', 'dialog')
-	element.setAttribute('aria-modal', 'false')
-	element.setAttribute('aria-label', t('arcade', 'Save states'))
-
-	const heading = document.createElement('h3')
-	heading.textContent = t('arcade', 'Save states')
-	element.appendChild(heading)
+	const element = createPanel('arcade-states', t('arcade', 'Save states'))
 
 	const slotsContainer = document.createElement('div')
 	element.appendChild(slotsContainer)

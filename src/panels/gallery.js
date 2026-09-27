@@ -2,6 +2,7 @@ import { translate as t } from '@nextcloud/l10n'
 import { generateUrl } from '@nextcloud/router'
 import { api } from '../api.js'
 import { ICONS, icon } from '../icons.js'
+import { createPanel } from './panel.js'
 
 /**
  * Build the panel listing the screenshots taken of a game.
@@ -12,16 +13,7 @@ import { ICONS, icon } from '../icons.js'
  * @return {{element: HTMLElement, refresh: Function}} the panel
  */
 export function createGalleryPanel({ romPath, flash }) {
-	const element = document.createElement('div')
-	element.className = 'arcade-gallery hidden'
-
-	element.setAttribute('role', 'dialog')
-	element.setAttribute('aria-modal', 'false')
-	element.setAttribute('aria-label', t('arcade', 'Screenshots'))
-
-	const heading = document.createElement('h3')
-	heading.textContent = t('arcade', 'Screenshots')
-	element.appendChild(heading)
+	const element = createPanel('arcade-gallery', t('arcade', 'Screenshots'))
 
 	const grid = document.createElement('div')
 	grid.className = 'arcade-gallery-grid'
