@@ -9,6 +9,7 @@ use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\BackgroundJob\IJob;
 use OCP\BackgroundJob\IJobList;
 use OCP\IAppConfig;
+use OCP\ICacheFactory;
 use OCP\IL10N;
 use OCP\SetupCheck\SetupResult;
 use PHPUnit\Framework\TestCase;
@@ -23,6 +24,8 @@ class ArcadeSetupCheckTest extends TestCase {
 	private string $mode = 'cron';
 	private int $lastCron = self::NOW - 60;
 	private bool $queued = false;
+	private bool $distributedCache = true;
+	private bool $localCache = true;
 
 	private function check(): ArcadeSetupCheck {
 		$l = $this->createStub(IL10N::class);
@@ -48,7 +51,11 @@ class ArcadeSetupCheckTest extends TestCase {
 		$time = $this->createStub(ITimeFactory::class);
 		$time->method('getTime')->willReturn(self::NOW);
 
-		return new ArcadeSetupCheck($l, $appConfig, $jobList, $time);
+		$cacheFactory = $this->createStub(ICacheFactory::class);
+		$cacheFactory->method('isAvailable')->willReturnCallback(fn (): bool => $this->distributedCache);
+		$cacheFactory->method('isLocalCacheAvailable')->willReturnCallback(fn (): bool => $this->localCache);
+
+		return new ArcadeSetupCheck($l, $appConfig, $jobList, $time, $cacheFactory);
 	}
 
 	public function testItIsASystemCheckWithAName(): void {
@@ -99,5 +106,27 @@ class ArcadeSetupCheckTest extends TestCase {
 		$this->queued = true;
 		$result = $this->check()->run();
 		$this->assertSame(SetupResult::INFO, $result->getSeverity());
+	}
+
+	public function testNoMemoryCacheAtAllIsAWarningAboutRescanning(): void {
+		$this->distributedCache = false;
+		$this->localCache = false;
+		$result = $this->check()->run();
+		$this->assertSame(SetupResult::WARNING, $result->getSeverity());
+		$this->assertStringContainsString('rescans the game library on every request', (string)$result->getDescription());
+		$this->assertSame(ArcadeSetupCheck::CACHE_DOC_LINK, $result->getLinkToDoc());
+	}
+
+	public function testALocalCacheAloneIsCacheEnough(): void {
+		$this->distributedCache = false;
+		$this->assertSame(SetupResult::SUCCESS, $this->check()->run()->getSeverity());
+	}
+
+	public function testBrokenCronOutranksTheMissingCache(): void {
+		$this->mode = 'ajax';
+		$this->distributedCache = false;
+		$this->localCache = false;
+		$description = (string)$this->check()->run()->getDescription();
+		$this->assertStringContainsString('AJAX', $description, 'the jobs warning comes first; the cache one waits its turn');
 	}
 }

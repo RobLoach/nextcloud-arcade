@@ -47,6 +47,8 @@ class LibraryService {
 	public const SUGGEST_TOP = 3;
 	/** Bumped when the shape of a cached entry changes. */
 	private const CACHE_VERSION = 7;
+	/** Bumped when the shape of a cached fallbacks entry changes. */
+	private const FALLBACKS_CACHE_VERSION = 1;
 	/**
 	 * Extensions that mean something else at least as often as they mean
 	 * a game, so they only count with corroboration.
@@ -64,6 +66,15 @@ class LibraryService {
 	 * @var array<string, array<string, array{id: int, mtime: int}>>
 	 */
 	private array $screenshots = [];
+
+	/**
+	 * The etag of each folder asked about, by path. One request asks for
+	 * the thumbnails folder twice over -- for the cache key and for
+	 * thumbnailsVersion() -- and an etag cannot change within a request.
+	 *
+	 * @var array<string, string>
+	 */
+	private array $folderEtags = [];
 
 	public function __construct(
 		private ICacheFactory $cacheFactory,
@@ -157,6 +168,47 @@ class LibraryService {
 			return;
 		}
 
+		$fallbacks = $this->fallbacksFor($userId, $userFolder, $settings, $missing);
+
+		foreach ($lists as &$games) {
+			foreach ($games as &$game) {
+				if (empty($game['thumbnails']) && isset($fallbacks[$game['path']])) {
+					$game['fallback'] = $fallbacks[$game['path']];
+				}
+			}
+			unset($game);
+		}
+	}
+
+	/**
+	 * The fallback of every art-less game, from the cache when nothing it
+	 * is built from has changed. With a saves folder set, working it out
+	 * costs a folder listing per art-less game, which is too much to pay
+	 * on every request. A new screenshot or state thumbnail moves the etag
+	 * of its folder -- Nextcloud propagates etags up the tree -- so the
+	 * key goes stale exactly when the answer does.
+	 *
+	 * @param array<string, mixed> $settings
+	 * @param array<string, array<string, mixed>> $missing the art-less games, by path
+	 * @return array<string, array{type: string, fileId?: int, slot?: int}>
+	 */
+	private function fallbacksFor(string $userId, Folder $userFolder, array $settings, array $missing): array {
+		$cache = Caches::create($this->cacheFactory, Application::APP_ID . '_library');
+		$key = implode('|', [
+			'fallbacks',
+			self::FALLBACKS_CACHE_VERSION,
+			$userId,
+			$this->folderEtag($userFolder, (string)($settings['screenshots_folder'] ?? '')),
+			$this->folderEtag($userFolder, (string)($settings['saves_folder'] ?? '')),
+		]);
+		$cached = $cache->get($key);
+		if (is_array($cached) && is_array($cached['paths'] ?? null) && is_array($cached['fallbacks'] ?? null)
+			&& array_diff_key($missing, array_fill_keys($cached['paths'], true)) === []) {
+			// Only when the entry answers for every game asked about now: a
+			// game that lost its thumbnail since is not in an older entry.
+			return $cached['fallbacks'];
+		}
+
 		// The listing asks three times over -- for the page, the recently
 		// played and the favorites -- and the folder cannot change in
 		// between, so it is walked once.
@@ -167,9 +219,9 @@ class LibraryService {
 		$fallbacks = [];
 		foreach ($missing as $path => $game) {
 			$screenshot = null;
-			foreach ($this->thumbnailService->screenshotKeys($game['basename']) as $key) {
-				if (isset($screenshots[$key])) {
-					$screenshot = $screenshots[$key];
+			foreach ($this->thumbnailService->screenshotKeys($game['basename']) as $name) {
+				if (isset($screenshots[$name])) {
+					$screenshot = $screenshots[$name];
 					break;
 				}
 			}
@@ -182,14 +234,14 @@ class LibraryService {
 			}
 		}
 
-		foreach ($lists as &$games) {
-			foreach ($games as &$game) {
-				if (empty($game['thumbnails']) && isset($fallbacks[$game['path']])) {
-					$game['fallback'] = $fallbacks[$game['path']];
-				}
-			}
-			unset($game);
-		}
+		// The paths answered for ride along, so an entry that knows nothing
+		// of a game is never taken for "looked, and there is none".
+		$cache->set(
+			$key,
+			['paths' => array_keys($missing), 'fallbacks' => $fallbacks],
+			(int)($settings['cache_ttl'] ?? self::CACHE_TTL),
+		);
+		return $fallbacks;
 	}
 
 	/**
@@ -227,7 +279,7 @@ class LibraryService {
 	 * @return list<array<string, mixed>>
 	 */
 	public function getGames(string $userId, Folder $folder, Folder $userFolder, string $folderPath, array $settings, bool $refresh): array {
-		$cache = $this->cacheFactory->createDistributed(Application::APP_ID . '_library');
+		$cache = Caches::create($this->cacheFactory, Application::APP_ID . '_library');
 		// Nextcloud propagates etags up the tree, so the library folder's
 		// etag changes whenever anything inside it does.
 		$key = implode('|', [
@@ -268,7 +320,7 @@ class LibraryService {
 
 	/**
 	 * The games as they are cached: without what a line of PHP can put
-	 * back, and gzipped, so five thousand of them stay well under the
+	 * back, and packed, so five thousand of them stay well under the
 	 * megabyte a memcached entry is allowed.
 	 *
 	 * @param list<array<string, mixed>> $games
@@ -279,38 +331,21 @@ class LibraryService {
 			unset($game['basename']);
 			return $game;
 		}, $games);
-		$encoded = json_encode($lean);
-		$compressed = $encoded === false ? false : gzcompress($encoded, 6);
-		if ($compressed === false) {
-			// A library that cannot be compressed is cached as it always was.
-			return $games;
-		}
-		// Base64, because a distributed cache may run what it holds through
-		// json_encode, which cannot carry raw bytes and would quietly cache
-		// nothing at all.
-		return 'gz:' . base64_encode($compressed);
+		$packed = CachePacker::pack($lean);
+		// A library that cannot be packed is cached as it always was.
+		return is_array($packed) ? $games : $packed;
 	}
 
 	/**
-	 * A cached entry back into games, whichever way it was stored: gzipped
-	 * JSON from deflate(), or a plain array from before it existed or from
-	 * a deflate() that could not compress.
+	 * A cached entry back into games, whichever way it was stored: packed
+	 * by deflate(), or a plain array from before the packing existed or
+	 * from a deflate() that could not compress.
 	 *
 	 * @return list<array<string, mixed>>|null null when there is no usable entry
 	 */
 	private function inflate(mixed $cached): ?array {
-		if (is_string($cached)) {
-			if (str_starts_with($cached, 'gz:')) {
-				$binary = base64_decode(substr($cached, 3), true);
-				$encoded = $binary === false ? false : @gzuncompress($binary);
-			} else {
-				// Cached before the bytes were wrapped for the caches that
-				// json_encode what they hold.
-				$encoded = @gzuncompress($cached);
-			}
-			$cached = json_decode($encoded === false ? $cached : $encoded, true);
-		}
-		if (!is_array($cached)) {
+		$cached = CachePacker::unpack($cached);
+		if ($cached === null) {
 			return null;
 		}
 		foreach ($cached as &$game) {
@@ -349,10 +384,14 @@ class LibraryService {
 		if ($path === '') {
 			return '';
 		}
+		$known = $this->folderEtags[$path] ?? null;
+		if ($known !== null) {
+			return $known;
+		}
 		try {
-			return $userFolder->get($path)->getEtag();
+			return $this->folderEtags[$path] = $userFolder->get($path)->getEtag();
 		} catch (NotFoundException) {
-			return '';
+			return $this->folderEtags[$path] = '';
 		}
 	}
 

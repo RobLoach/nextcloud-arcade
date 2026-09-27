@@ -78,7 +78,7 @@ class CleanupTest extends TestCase {
 		$stateService->method('countLegacyFiles')->willReturnCallback(fn (): int => $this->legacy);
 
 		$userManager = $this->createStub(IUserManager::class);
-		$userManager->method('callForAllUsers')->willReturnCallback(
+		$userManager->method('callForSeenUsers')->willReturnCallback(
 			function (\Closure $callback): void {
 				foreach ($this->users as $uid) {
 					$user = $this->createStub(IUser::class);

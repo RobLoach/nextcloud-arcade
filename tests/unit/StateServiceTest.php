@@ -27,6 +27,8 @@ class StateServiceTest extends TestCase {
 	private array $appData = [];
 	/** Everything the user folder holds, by path. */
 	private array $files = [];
+	/** Every path asked of the user folder, for counting lookups. */
+	private array $asked = [];
 	/** The id Nextcloud gave each path, for the paths that have one. */
 	private array $ids = [];
 	/** What each file id hashes to, for the ROMs that have been read. */
@@ -226,6 +228,7 @@ class StateServiceTest extends TestCase {
 		$folder->method('get')->willReturnCallback(
 			function (string $name) use ($prefix) {
 				$path = $this->join($prefix, $name);
+				$this->asked[] = $path;
 				if (isset($this->files[$path])) {
 					return $this->userFile($path);
 				}
@@ -625,6 +628,38 @@ class StateServiceTest extends TestCase {
 		$service = $this->service('/Saves');
 		$service->save(self::USER, '/Games/Unsorted/Mystery.zip', 1, 'a state');
 		$this->assertSame('a state', $this->files['Saves/Mystery/Slot 1.state'] ?? null);
+	}
+
+	public function testTheGameFolderIsOnlyResolvedOncePerRequest(): void {
+		// The states listing asks twice -- list() for the slots, hasSram()
+		// for the battery save -- and the folder cannot move in between.
+		$service = $this->service('/Saves');
+		$service->save(self::USER, self::GAME, 1, 'a save');
+
+		$this->asked = [];
+		$service->list(self::USER, self::GAME);
+		$service->hasSram(self::USER, self::GAME);
+
+		$this->assertNotContains(
+			'Saves/Nintendo/Mario',
+			$this->asked,
+			'the folder resolved for the save is remembered for the rest of the request',
+		);
+	}
+
+	public function testDeletingAGameDropsItsFolderFromTheMemo(): void {
+		$service = $this->service('/Saves');
+		$service->save(self::USER, self::GAME, 1, 'a save');
+
+		$service->deleteAllForGame(self::USER, self::GAME);
+
+		$this->assertSame([], $service->list(self::USER, self::GAME), 'nothing left to list');
+		$service->save(self::USER, self::GAME, 2, 'saved again');
+		$this->assertSame(
+			'saved again',
+			$service->load(self::USER, self::GAME, 2),
+			'a fresh save after the delete starts a fresh folder, not the remembered one',
+		);
 	}
 
 	public function testOnlySlotsThatAreOfferedCanBeWritten(): void {
