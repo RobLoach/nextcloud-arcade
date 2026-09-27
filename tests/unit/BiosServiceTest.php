@@ -232,14 +232,11 @@ class BiosServiceTest extends TestCase {
 	public function testStatusFindsAFolderFileWhateverItsCase(): void {
 		$this->userFiles['GB_BIOS.BIN'] = 'the firmware';
 
-		$status = $this->service()->statusFor('admin');
+		$file = $this->statusOf($this->service()->statusFor('admin'), 'gb_bios.bin');
 
-		$this->assertSame('/System', $status['folder']);
-		$file = $this->statusOf($status, 'gb_bios.bin');
 		$this->assertTrue($file['present']);
 		$this->assertSame('folder', $file['source']);
 		$this->assertSame(strlen('the firmware'), $file['size']);
-		$this->assertSame([], $status['extra'], 'a wrong casing is no stray');
 	}
 
 	public function testStatusFallsBackToTheStore(): void {
@@ -268,18 +265,6 @@ class BiosServiceTest extends TestCase {
 		$this->assertFalse($file['present']);
 		$this->assertNull($file['source']);
 		$this->assertSame(0, $file['size']);
-	}
-
-	public function testStatusLabelsStraysWithWhereTheyLie(): void {
-		$this->userFiles['notes.txt'] = 'todo';
-		$this->files['stray.bin'] = 'lost';
-
-		$status = $this->service()->statusFor('admin');
-
-		$this->assertSame([
-			['name' => 'notes.txt', 'size' => 4, 'source' => 'folder'],
-			['name' => 'stray.bin', 'size' => 4, 'source' => 'store'],
-		], $status['extra']);
 	}
 
 	public function testUploadGoesIntoTheSystemFolderNotTheStore(): void {

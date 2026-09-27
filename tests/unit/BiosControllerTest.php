@@ -75,12 +75,10 @@ class BiosControllerTest extends TestCase {
 	public function testStatusIsTheStatusOfTheAskingAdministrator(): void {
 		$controller = $this->controller();
 		$status = [
-			'folder' => '/System',
 			'systems' => [[
 				'system' => ['id' => 'gb', 'name' => 'Game Boy'],
 				'files' => [['name' => 'gb_bios.bin', 'present' => true, 'source' => 'folder', 'size' => 100]],
 			]],
-			'extra' => [['name' => 'stray.bin', 'size' => 5, 'source' => 'store']],
 		];
 		$this->biosService->expects($this->once())->method('statusFor')
 			->with('admin')
