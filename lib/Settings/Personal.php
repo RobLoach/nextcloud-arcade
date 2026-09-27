@@ -23,10 +23,7 @@ class Personal implements ISettings {
 	}
 
 	public function getForm(): TemplateResponse {
-		$user = $this->userSession->getUser();
-		$settings = $user === null
-			? $this->settingsService->getDefaults()
-			: $this->settingsService->getUserSettings($user->getUID());
+		$settings = $this->settingsService->forUser($this->userSession->getUser()?->getUID());
 		$this->initialState->provideInitialState('settings', $settings);
 		Util::addScript(Application::APP_ID, 'arcade-settings');
 		Util::addStyle(Application::APP_ID, 'settings');

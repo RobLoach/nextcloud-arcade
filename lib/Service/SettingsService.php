@@ -8,6 +8,7 @@ use OCA\Arcade\AppInfo\Application;
 use OCA\Arcade\Controls;
 use OCA\Arcade\CoreMap;
 use OCA\Arcade\CoreOptions;
+use OCP\AppFramework\Services\IInitialState;
 use OCP\Config\IUserConfig;
 use OCP\Files\Folder;
 use OCP\Files\IRootFolder;
@@ -245,6 +246,33 @@ class SettingsService {
 	 */
 	public function getUserSettings(string $userId): array {
 		return $this->settings[$userId] ??= $this->readUserSettings($userId);
+	}
+
+	/**
+	 * The settings of a user, or the defaults when there is no user to
+	 * ask for -- a public page, say.
+	 *
+	 * @return array<string, mixed>
+	 */
+	public function forUser(?string $userId): array {
+		return $userId === null ? $this->getDefaults() : $this->getUserSettings($userId);
+	}
+
+	/**
+	 * Everything the player needs to know before a file is even named:
+	 * the systems, the words that say nothing about one, and the settings
+	 * of whoever is looking.
+	 */
+	public function providePlayerState(IInitialState $initialState, ?string $userId): void {
+		$initialState->provideInitialState('systems', CoreMap::SYSTEMS);
+		// The words that say nothing about a system, so the browser can
+		// read a folder name the way the server does without keeping a
+		// copy of the lists.
+		$initialState->provideInitialState('folderWords', [
+			'noise' => CoreMap::NOISE,
+			'vendors' => CoreMap::VENDORS,
+		]);
+		$initialState->provideInitialState('settings', $this->forUser($userId));
 	}
 
 	/**
