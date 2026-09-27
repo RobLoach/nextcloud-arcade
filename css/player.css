@@ -60,7 +60,10 @@
 .arcade-toolbar > button svg,
 .arcade-topbar > button svg { width: 20px; height: 20px; fill: #fff; }
 .arcade-toolbar-status { color: #fff; font-size: 12px; margin-inline-start: 6px; white-space: nowrap; }
-.arcade-states {
+/* The two panels above the toolbar -- save states and screenshots --
+   share one dress; the gallery only adds a width cap for its grid. */
+.arcade-states,
+.arcade-gallery {
 	position: absolute;
 	bottom: 56px;
 	left: 50%;
@@ -74,8 +77,11 @@
 	overflow-y: auto;
 	min-width: 320px;
 }
-.arcade-states.hidden { display: none; }
-.arcade-states h3 { color: #fff; margin: 0 0 8px 0; font-size: 14px; }
+.arcade-gallery { max-width: 90%; }
+.arcade-states.hidden,
+.arcade-gallery.hidden { display: none; }
+.arcade-states h3,
+.arcade-gallery h3 { color: #fff; margin: 0 0 8px 0; font-size: 14px; }
 .arcade-states-slot {
 	display: flex;
 	align-items: center;
@@ -95,18 +101,26 @@
 	font-size: 12px;
 	line-height: 1.3;
 }
-.arcade-states-slot button {
+.arcade-states-slot button,
+.arcade-resume button {
 	background-color: rgba(255, 255, 255, 0.15);
 	border: none;
 	border-radius: var(--border-radius, 6px);
 	color: #fff;
-	font-size: 12px;
-	padding: 6px 10px;
 	margin: 0;
 	min-height: 0;
 	cursor: pointer;
 }
-.arcade-states-slot button:hover:not(:disabled) { background-color: rgba(255, 255, 255, 0.3); }
+.arcade-states-slot button {
+	font-size: 12px;
+	padding: 6px 10px;
+}
+.arcade-resume button {
+	font-size: 13px;
+	padding: 6px 12px;
+}
+.arcade-states-slot button:hover:not(:disabled),
+.arcade-resume button:hover { background-color: rgba(255, 255, 255, 0.3); }
 .arcade-states-slot button:disabled { opacity: 0.4; cursor: default; }
 .arcade-states-sram {
 	margin-top: calc(var(--default-grid-baseline, 4px) * 2);
@@ -130,36 +144,7 @@
 	color: #fff;
 	font-size: 13px;
 }
-.arcade-resume button {
-	background-color: rgba(255, 255, 255, 0.15);
-	border: none;
-	border-radius: var(--border-radius, 6px);
-	color: #fff;
-	font-size: 13px;
-	padding: 6px 12px;
-	margin: 0;
-	min-height: 0;
-	cursor: pointer;
-}
-.arcade-resume button:hover { background-color: rgba(255, 255, 255, 0.3); }
 .arcade-resume button.primary-action { background-color: rgba(255, 255, 255, 0.3); font-weight: bold; }
-.arcade-gallery {
-	position: absolute;
-	bottom: 56px;
-	left: 50%;
-	transform: translateX(-50%);
-	background-color: rgba(0, 0, 0, 0.85);
-	border-radius: var(--border-radius-large, 8px);
-	padding: calc(var(--default-grid-baseline, 4px) * 3);
-	z-index: 20100;
-	color: #fff;
-	max-height: 70%;
-	max-width: 90%;
-	overflow-y: auto;
-	min-width: 320px;
-}
-.arcade-gallery.hidden { display: none; }
-.arcade-gallery h3 { color: #fff; margin: 0 0 8px 0; font-size: 14px; }
 .arcade-gallery-grid {
 	display: grid;
 	grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
