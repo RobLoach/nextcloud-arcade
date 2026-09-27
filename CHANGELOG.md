@@ -6,6 +6,8 @@ All notable changes to NextCloud Arcade. The format follows
 
 ## [Unreleased]
 
+## [0.40.0] - 2026-09-27
+
 ### Changed
 - Pausing the game while the tab is in the background and saving the
   game automatically when closing the player are now off by default.
@@ -13,6 +15,9 @@ All notable changes to NextCloud Arcade. The format follows
   made in the settings stays as it was.
 
 ### Fixed
+- Saving a single setting no longer clears the others: the onboarding's
+  "Use this folder" button used to wipe every folder and toggle that was
+  not part of its request.
 - Replacing a box art image under the same name shows the new picture in
   the library right away: preview URLs are now versioned by the
   thumbnails folder, where before the browser kept the old image out of
