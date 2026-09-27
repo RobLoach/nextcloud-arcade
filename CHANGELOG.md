@@ -6,6 +6,22 @@ All notable changes to NextCloud Arcade. The format follows
 
 ## [Unreleased]
 
+## [0.39.8] - 2026-09-27
+
+### Fixed
+- Emptying the trash bin now cleans up the save states, battery save and
+  registry entry of the games it lets go; trashing a game keeps them, so a
+  restored game picks its saves right back up. Deleting a game without a
+  trash bin cleans up immediately again (a type error had silently broken
+  that), and `occ arcade:cleanup` no longer removes the saves of games
+  sitting restorably in the trash.
+
+### Changed
+- The dialogs library moved to its current major, and builds stay
+  byte-reproducible with per-chunk styles.
+- BIOS file sizes in the administration read like the library's ("512 KB").
+- The app description now tells the whole story.
+
 ## [0.39.7] - 2026-09-27
 
 ### Fixed

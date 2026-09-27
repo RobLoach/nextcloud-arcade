@@ -2,6 +2,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 SPDX-License-Identifier: GPL-3.0-or-later
 SPDX-License-Identifier: MIT
 SPDX-FileCopyrightText: @nextcloud/dialogs developers
+SPDX-FileCopyrightText: @robloach/nextcloud-arcade developers
 SPDX-FileCopyrightText: Anthony Fu <anthonyfu117@hotmail.com>
 SPDX-FileCopyrightText: Anthony Fu <https://github.com/antfu>
 SPDX-FileCopyrightText: David Clark
@@ -27,6 +28,9 @@ This file is generated from multiple sources. Included packages:
 	- license: GPL-3.0-or-later
 - @nextcloud/vue
 	- version: 8.41.0
+	- license: AGPL-3.0-or-later
+- @robloach/nextcloud-arcade
+	- version: 0.39.8
 	- license: AGPL-3.0-or-later
 - @vueuse/core
 	- version: 11.3.0
