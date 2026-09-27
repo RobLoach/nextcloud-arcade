@@ -2,6 +2,7 @@ import { translate as t } from '@nextcloud/l10n'
 import { generateUrl } from '@nextcloud/router'
 import { api } from '../api.js'
 import { ICONS, icon } from '../icons.js'
+import { previewUrl } from '../play.js'
 import { createPanel } from './panel.js'
 
 /**
@@ -78,9 +79,7 @@ export function createGalleryPanel({ romPath, flash }) {
 			link.title = screenshot.basename
 
 			const image = document.createElement('img')
-			image.src = generateUrl('/core/preview?fileId={fileId}&x=256&y=192&a=1', {
-				fileId: screenshot.fileId,
-			})
+			image.src = previewUrl(screenshot.fileId, 256, 192)
 			image.alt = screenshot.basename
 			image.loading = 'lazy'
 			link.appendChild(image)

@@ -4,7 +4,7 @@ import { generateUrl } from '@nextcloud/router'
 import { api } from './api.js'
 import { formatDuration, formatPlayTime } from './format.js'
 import { attachLibraryGamepad } from './librarypad.js'
-import { playUrl } from './play.js'
+import { playUrl, previewUrl } from './play.js'
 import { systemLabel } from './systems.js'
 
 const VIEWS = ['grid', 'list', 'table']
@@ -155,20 +155,14 @@ function thumbnailFor(game, size) {
 
 	if (type !== undefined) {
 		image.className = `arcade-library-thumbnail arcade-library-thumbnail-${type}`
-		image.src = generateUrl('/core/preview?fileId={fileId}&x={size}&y={size}&a=1', {
-			fileId: available[type],
-			size,
-		})
+		image.src = previewUrl(available[type], size)
 		return image
 	}
 
 	// No image of its own: show the game as it was last seen.
 	if (game.fallback?.type === 'screenshot') {
 		image.className = 'arcade-library-thumbnail arcade-library-thumbnail-snap'
-		image.src = generateUrl('/core/preview?fileId={fileId}&x={size}&y={size}&a=1', {
-			fileId: game.fallback.fileId,
-			size,
-		})
+		image.src = previewUrl(game.fallback.fileId, size)
 		return image
 	}
 	if (game.fallback?.type === 'state') {

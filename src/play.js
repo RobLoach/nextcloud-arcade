@@ -32,3 +32,13 @@ export function playGame(path, mime, fileId) {
 	}
 	window.location.href = playUrl(path, fileId)
 }
+
+/**
+ * @param {number|string} fileId the file the preview is of
+ * @param {number} x the width asked for, in pixels
+ * @param {number} [y] the height, the width again when left out
+ * @return {string} the URL of a cropped preview
+ */
+export function previewUrl(fileId, x, y = x) {
+	return generateUrl('/core/preview?fileId={fileId}&x={x}&y={y}&a=1', { fileId, x, y })
+}
