@@ -32,7 +32,8 @@ class AppInfoTest extends TestCase {
 	public function testEveryClassTheInfoNamesExists(): void {
 		$named = $this->info()->xpath(
 			'//repair-steps//step | //commands/command | //settings/admin | //settings/admin-section'
-			. ' | //settings/personal | //settings/personal-section',
+			. ' | //settings/personal | //settings/personal-section'
+			. ' | //activity//setting | //activity//provider',
 		);
 		$this->assertNotEmpty($named, 'the info names no classes at all, which cannot be right');
 		foreach ($named as $class) {
@@ -57,6 +58,8 @@ class AppInfoTest extends TestCase {
 				'OCP\\Settings\\IIconSection',
 				'//settings/admin-section | //settings/personal-section',
 			],
+			'activity settings' => ['Activity', 'OCP\\Activity\\ISetting', '//activity//setting'],
+			'activity providers' => ['Activity', 'OCP\\Activity\\IProvider', '//activity//provider'],
 		];
 	}
 

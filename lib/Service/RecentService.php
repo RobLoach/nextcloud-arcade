@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace OCA\Arcade\Service;
 
+use OCA\Arcade\Activity\ActivityPublisher;
 use OCA\Arcade\Db\PlayMapper;
 use OCP\Files\IRootFolder;
 use OCP\ITagManager;
@@ -28,6 +29,7 @@ class RecentService {
 		private ITagManager $tagManager,
 		private IRootFolder $rootFolder,
 		private PlayMapper $playMapper,
+		private ActivityPublisher $activityPublisher,
 	) {
 	}
 
@@ -77,6 +79,9 @@ class RecentService {
 			return;
 		}
 		$this->playMapper->recordPlay($userId, $id, time());
+		// One launch, one entry: record() fires once per launch, and the
+		// launch is the activity.
+		$this->activityPublisher->gameStarted($userId, $path);
 	}
 
 	/**
@@ -90,7 +95,10 @@ class RecentService {
 		if ($id === null) {
 			return;
 		}
-		$this->playMapper->addSeconds($userId, $id, min($seconds, self::MAX_SESSION), time());
+		$seconds = min($seconds, self::MAX_SESSION);
+		$this->playMapper->addSeconds($userId, $id, $seconds, time());
+		// The publisher keeps the trivial sessions out of the stream.
+		$this->activityPublisher->sessionEnded($userId, $path, $seconds);
 	}
 
 	/**

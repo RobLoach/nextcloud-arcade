@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace OCA\Arcade\Tests\Unit;
 
+use OCA\Arcade\Activity\ActivityPublisher;
 use OCA\Arcade\Db\PlayMapper;
 use OCA\Arcade\Service\RecentService;
 use OCP\Files\File;
@@ -33,7 +34,7 @@ class RecentServiceTest extends TestCase {
 		'/Games/Unsorted/Mystery.zip' => 106,
 	];
 
-	private function service(): RecentService {
+	private function service(?ActivityPublisher $publisher = null): RecentService {
 		// Anything else the tests play is a file of its own.
 		for ($i = 1; $i <= 20; $i++) {
 			$this->files["/Games/Game $i.nes"] ??= 200 + $i;
@@ -70,7 +71,12 @@ class RecentServiceTest extends TestCase {
 		$rootFolder = $this->createStub(IRootFolder::class);
 		$rootFolder->method('getUserFolder')->willReturn($folder);
 
-		return new RecentService($tagManager, $rootFolder, $this->playMapper());
+		return new RecentService(
+			$tagManager,
+			$rootFolder,
+			$this->playMapper(),
+			$publisher ?? $this->createStub(ActivityPublisher::class),
+		);
 	}
 
 	/**
@@ -244,6 +250,30 @@ class RecentServiceTest extends TestCase {
 		$service->deleteAllForUser(self::USER);
 		$this->assertSame([], $service->get(self::USER));
 		$this->assertSame([], $service->stats(self::USER));
+	}
+
+	public function testALaunchIsToldToTheActivityStream(): void {
+		$publisher = $this->createMock(ActivityPublisher::class);
+		$publisher->expects($this->once())->method('gameStarted')
+			->with(self::USER, '/Games/Mario.nes');
+
+		$this->service($publisher)->record(self::USER, '/Games/Mario.nes');
+	}
+
+	public function testAGameThatIsGoneIsNoActivityEither(): void {
+		$publisher = $this->createMock(ActivityPublisher::class);
+		$publisher->expects($this->never())->method('gameStarted');
+
+		$this->service($publisher)->record(self::USER, '/Games/Nothing There.nes');
+	}
+
+	public function testASessionIsToldToTheActivityStreamClamped(): void {
+		$publisher = $this->createMock(ActivityPublisher::class);
+		// The stream hears the same clamped figure the table keeps.
+		$publisher->expects($this->once())->method('sessionEnded')
+			->with(self::USER, '/Games/Mario.nes', 4 * 3600);
+
+		$this->service($publisher)->addPlayTime(self::USER, '/Games/Mario.nes', 10 * 3600);
 	}
 
 	public function testAFavoriteIsTheStarOfTheFilesApp(): void {
