@@ -24,4 +24,17 @@ abstract class ArcadeController extends Controller {
 			? new JSONResponse([], Http::STATUS_UNAUTHORIZED)
 			: null;
 	}
+
+	/**
+	 * The raw request body, up to $maxSize bytes: null when it is empty
+	 * or too big to fit. Overridable so tests can stand in for
+	 * php://input, which cannot be written to from a test.
+	 */
+	protected function readBody(int $maxSize): ?string {
+		$body = file_get_contents('php://input', length: $maxSize + 1);
+		if ($body === false || $body === '' || strlen($body) > $maxSize) {
+			return null;
+		}
+		return $body;
+	}
 }

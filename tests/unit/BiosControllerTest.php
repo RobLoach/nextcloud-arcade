@@ -18,8 +18,12 @@ use PHPUnit\Framework\TestCase;
 class TestableBiosController extends BiosController {
 	public string $body = '';
 
-	protected function readBody(int $limit): string|false {
-		return substr($this->body, 0, $limit);
+	protected function readBody(int $maxSize): ?string {
+		$body = substr($this->body, 0, $maxSize + 1);
+		if ($body === '' || strlen($body) > $maxSize) {
+			return null;
+		}
+		return $body;
 	}
 }
 

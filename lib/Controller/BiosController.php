@@ -91,8 +91,8 @@ class BiosController extends ArcadeController {
 				Http::STATUS_BAD_REQUEST,
 			);
 		}
-		$data = $this->readBody(self::MAX_BIOS_SIZE + 1);
-		if (!is_string($data) || $data === '' || strlen($data) > self::MAX_BIOS_SIZE) {
+		$data = $this->readBody(self::MAX_BIOS_SIZE);
+		if ($data === null) {
 			return new JSONResponse(
 				['error' => 'The file is empty or larger than a BIOS could be'],
 				Http::STATUS_BAD_REQUEST,
@@ -136,13 +136,5 @@ class BiosController extends ArcadeController {
 			return new JSONResponse([], Http::STATUS_NOT_FOUND);
 		}
 		return new JSONResponse([]);
-	}
-
-	/**
-	 * The raw request body, up to $limit bytes. Overridable so tests can
-	 * stand in for php://input, which cannot be written to from a test.
-	 */
-	protected function readBody(int $limit): string|false {
-		return file_get_contents('php://input', length: $limit);
 	}
 }
