@@ -9,17 +9,6 @@ import { biosForSystem, coreForSystem, systemForFile, systemFromBytes, systemLab
 
 const SRAM_SYNC_INTERVAL = 60 * 1000
 
-/**
- * Thrown when an archive holds no game: the viewer offers the file for
- * download instead of showing an emulator error over a family photo zip.
- */
-export class NotAGameError extends Error {
-	constructor(message) {
-		super(message)
-		this.name = 'NotAGameError'
-	}
-}
-
 // The games whose battery save was just deleted. The emulator still holds
 // the old save in memory, and the next sync would write it right back, so
 // uploads stop until the game is opened anew — which starts clean, since
@@ -122,7 +111,7 @@ async function resolveRom(blob, romName, systemHint) {
 			return { rom: new File([data], name.split('/').pop()), system }
 		}
 	}
-	throw new NotAGameError(t('arcade', 'No supported ROM found in the archive'))
+	throw new Error(t('arcade', 'No supported ROM found in the archive'))
 }
 
 /**

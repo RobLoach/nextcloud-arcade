@@ -77,7 +77,7 @@ const AMBIGUOUS = ['bin', 'rom', 'zip']
  * @param {string} basename the file name
  * @return {boolean} whether the name says nothing about the system
  */
-export function isAmbiguous(basename) {
+function isAmbiguous(basename) {
 	return AMBIGUOUS.includes((basename || '').split('.').pop().toLowerCase())
 }
 
@@ -124,7 +124,7 @@ export function systemFromBytes(bytes) {
  * @param {string} systemId the system id
  * @return {?object} the system definition, with its id
  */
-export function systemById(systemId) {
+function systemById(systemId) {
 	return systems[systemId] ? { id: systemId, ...systems[systemId] } : null
 }
 
