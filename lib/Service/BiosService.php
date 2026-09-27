@@ -9,10 +9,12 @@ use OCA\Arcade\CoreMap;
 use OCP\Files\AppData\IAppDataFactory;
 use OCP\Files\File;
 use OCP\Files\Folder;
+use OCP\Files\GenericFileException;
 use OCP\Files\IRootFolder;
 use OCP\Files\NotFoundException;
 use OCP\Files\NotPermittedException;
 use OCP\Files\SimpleFS\ISimpleFolder;
+use OCP\Lock\LockedException;
 
 /**
  * The BIOS files of the instance, for the systems that ask for one.
@@ -83,6 +85,33 @@ class BiosService {
 		} catch (NotFoundException) {
 			return null;
 		}
+	}
+
+	/**
+	 * The file as the player should get it: the user's own system folder
+	 * first, matched without regard to case, then the store of the
+	 * instance. Without a user -- a public page -- only the store is
+	 * looked at.
+	 */
+	public function readFor(?string $userId, string $name): ?string {
+		if (!self::isKnown($name)) {
+			return null;
+		}
+		if ($userId !== null) {
+			$folder = $this->systemFolder($userId, false);
+			if ($folder !== null) {
+				try {
+					foreach ($folder->getDirectoryListing() as $node) {
+						if ($node instanceof File && strcasecmp($node->getName(), $name) === 0) {
+							return $node->getContent();
+						}
+					}
+				} catch (NotFoundException|NotPermittedException|GenericFileException|LockedException) {
+					// The folder could not be read; the store may still help.
+				}
+			}
+		}
+		return $this->read($name);
 	}
 
 	/**

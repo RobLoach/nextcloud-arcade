@@ -43,6 +43,35 @@ class BiosControllerTest extends TestCase {
 		return $controller;
 	}
 
+	public function testGetHandsOutTheFileForTheAskingUser(): void {
+		$controller = $this->controller();
+		$this->biosService->expects($this->once())->method('readFor')
+			->with('admin', 'gb_bios.bin')
+			->willReturn('the firmware');
+
+		$response = $controller->get('gb_bios.bin');
+
+		$this->assertSame(Http::STATUS_OK, $response->getStatus());
+		$this->assertSame('the firmware', $response->getData());
+		$this->assertSame('application/octet-stream', $response->getHeaders()['Content-Type']);
+	}
+
+	public function testGetWithoutAUserAsksForTheStoreOnly(): void {
+		$controller = $this->controller(userId: null);
+		$this->biosService->expects($this->once())->method('readFor')
+			->with(null, 'gb_bios.bin')
+			->willReturn('the firmware');
+
+		$this->assertSame(Http::STATUS_OK, $controller->get('gb_bios.bin')->getStatus());
+	}
+
+	public function testGetSaysWhenNobodyHasTheFile(): void {
+		$controller = $this->controller();
+		$this->biosService->method('readFor')->willReturn(null);
+
+		$this->assertSame(Http::STATUS_NOT_FOUND, $controller->get('gb_bios.bin')->getStatus());
+	}
+
 	public function testStatusIsTheStatusOfTheAskingAdministrator(): void {
 		$controller = $this->controller();
 		$status = [
