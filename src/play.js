@@ -37,8 +37,12 @@ export function playGame(path, mime, fileId) {
  * @param {number|string} fileId the file the preview is of
  * @param {number} x the width asked for, in pixels
  * @param {number} [y] the height, the width again when left out
+ * @param {string} [version] a value that changes when the image does:
+ *	previews are served immutable for a day, so without it a browser
+ *	keeps showing a replaced image from its cache
  * @return {string} the URL of a cropped preview
  */
-export function previewUrl(fileId, x, y = x) {
-	return generateUrl('/core/preview?fileId={fileId}&x={x}&y={y}&a=1', { fileId, x, y })
+export function previewUrl(fileId, x, y = x, version = '') {
+	const url = generateUrl('/core/preview?fileId={fileId}&x={x}&y={y}&a=1', { fileId, x, y })
+	return version === '' ? url : url + '&v=' + encodeURIComponent(version)
 }

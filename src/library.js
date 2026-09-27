@@ -23,6 +23,12 @@ const THUMBNAIL_PREFERENCE = {
 // What each system is shown with, as the administration settings have it.
 const thumbnailTypes = loadState('arcade', 'settings', {}).thumbnail_types ?? {}
 
+// The version the listing says the thumbnails are at: it changes when any
+// image of the thumbnails folder does, and versioning the preview URLs
+// with it keeps a replaced image from being shown stale out of the
+// browser cache, previews being served immutable for a day.
+let thumbnailsVersion = ''
+
 // Pages are cached for the tab, so coming back from a game paints the
 // library immediately while it is revalidated in the background.
 const CACHE_PREFIX = 'arcade-library-page:'
@@ -124,7 +130,7 @@ function thumbnailFor(game, size) {
 
 	if (type !== undefined) {
 		image.className = `arcade-library-thumbnail arcade-library-thumbnail-${type}`
-		image.src = previewUrl(available[type], size)
+		image.src = previewUrl(available[type], size, size, thumbnailsVersion)
 		return image
 	}
 
@@ -717,6 +723,7 @@ export async function renderLibrary(container, onError) {
 	}
 
 	const render = (data, force = false) => {
+		thumbnailsVersion = data.thumbnailsVersion ?? ''
 		// The favorites are known for the whole library, so the flag is put
 		// on whatever is being shown. Likewise the play stats: the recently
 		// played and the favorites carry theirs already, the page looks

@@ -12,6 +12,12 @@ All notable changes to NextCloud Arcade. The format follows
   Only users who never touched either toggle are affected; a choice
   made in the settings stays as it was.
 
+### Fixed
+- Replacing a box art image under the same name shows the new picture in
+  the library right away: preview URLs are now versioned by the
+  thumbnails folder, where before the browser kept the old image out of
+  its cache for a day -- `/core/preview` is served immutable.
+
 ## [0.39.9] - 2026-09-27
 
 ### Added
@@ -22,12 +28,6 @@ All notable changes to NextCloud Arcade. The format follows
 
 ### Changed
 - The file picker no longer uses a deprecated dialogs API.
-
-### Added
-- The `occ arcade:cleanup` sweep also runs by itself once a week, as a
-  background job: trash expiry by cron or `occ trashbin:cleanup` gives
-  the app no signal to act on, so what those leave behind is now swept
-  up without anyone running the command.
 
 ## [0.39.8] - 2026-09-27
 

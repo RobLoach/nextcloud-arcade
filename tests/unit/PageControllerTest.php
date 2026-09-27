@@ -87,6 +87,7 @@ class PageControllerTest extends TestCase {
 		$libraryService->method('getGames')->willReturn($games);
 		$libraryService->method('filterGames')->willReturnArgument(0);
 		$libraryService->method('suggestFolders')->willReturn($suggestions);
+		$libraryService->method('thumbnailsVersion')->willReturn('etag-thumbs');
 
 		$recentService = $this->createStub(RecentService::class);
 		$recentService->method('get')->willReturn($recentIds);
@@ -210,6 +211,16 @@ class PageControllerTest extends TestCase {
 			[1 => ['seconds' => 600, 'plays' => 2, 'time' => 50]],
 			$response->getData()['stats'],
 			'the stats of a game that is not in the library are left out',
+		);
+	}
+
+	public function testTheThumbnailsVersionRidesAlongWithTheListing(): void {
+		$response = $this->controller()->library();
+
+		$this->assertSame(
+			'etag-thumbs',
+			$response->getData()['thumbnailsVersion'],
+			'the browser versions its preview URLs with it, or a replaced image would show stale for a day',
 		);
 	}
 

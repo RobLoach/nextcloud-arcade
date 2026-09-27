@@ -119,6 +119,7 @@ class PageController extends ArcadeController {
 				'favorites' => [],
 				'stats' => [],
 				'games' => [],
+				'thumbnailsVersion' => '',
 			]);
 		}
 
@@ -181,6 +182,9 @@ class PageController extends ArcadeController {
 			'favorites' => $favorites,
 			'stats' => $stats,
 			'games' => $page,
+			// The one value every thumbnail preview URL is versioned by,
+			// so a replaced image escapes the browser's immutable cache.
+			'thumbnailsVersion' => $this->libraryService->thumbnailsVersion($userFolder, $settings),
 		]);
 	}
 

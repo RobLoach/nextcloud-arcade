@@ -38,4 +38,14 @@ describe('previewUrl', () => {
 	test('keeps a height of its own', () => {
 		expect(previewUrl(7, 64, 32)).toBe('/core/preview?fileId=7&x=64&y=32&a=1')
 	})
+
+	test('versions the URL when the image can change', () => {
+		// Previews are served immutable for a day; the version is what
+		// lets a replaced thumbnail escape the browser cache.
+		expect(previewUrl(7, 64, 64, 'etag99')).toBe('/core/preview?fileId=7&x=64&y=64&a=1&v=etag99')
+	})
+
+	test('escapes the version', () => {
+		expect(previewUrl(7, 64, 64, 'a&b')).toBe('/core/preview?fileId=7&x=64&y=64&a=1&v=a%26b')
+	})
 })
