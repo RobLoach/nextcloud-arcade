@@ -537,6 +537,27 @@ class StateServiceTest extends TestCase {
 		$this->assertSame('another game', $service->load(self::USER, '/Games/Zelda.sfc', 1));
 	}
 
+	public function testAGameFiledUnderItsIdIsStillCleanedUpOnceItIsGone(): void {
+		// Filed under the id of its file while it existed. The registry
+		// hands that key back as a number -- PHP turns array keys that look
+		// like numbers into numbers -- and the cleanup used to trip over it.
+		$service = $this->service();
+		$this->files[ltrim(self::GAME, '/')] = 'rom bytes';
+		$this->ids[ltrim(self::GAME, '/')] = 101;
+		$service->save(self::USER, self::GAME, 1, 'a state');
+		$service->saveSram(self::USER, self::GAME, 'a battery save');
+
+		// Deleted past the trash: the file and its id are gone, and only
+		// the registry still knows what the game was filed under.
+		unset($this->files[ltrim(self::GAME, '/')], $this->ids[ltrim(self::GAME, '/')]);
+		$service->deleteAllForGame(self::USER, self::GAME);
+
+		$states = $this->appData['states/' . hash('sha256', self::USER)] ?? [];
+		$this->assertArrayNotHasKey('101-1.state', $states);
+		$this->assertArrayNotHasKey('101.srm', $states);
+		$this->assertSame([], $service->gamesOf(self::USER));
+	}
+
 	public function testEverythingOfAUserGoesWithThem(): void {
 		$service = $this->service();
 		$service->save(self::USER, self::GAME, 1, 'of alice');

@@ -182,17 +182,20 @@ class StateService {
 		$keys = [$this->key($userId, $romPath) => true];
 		foreach ($this->gameMapper->entriesOf($userId) as $key => $entry) {
 			if ($entry['path'] === $romPath) {
-				$keys[(string)$key] = true;
+				$keys[$key] = true;
 			}
 		}
-		foreach (array_keys($keys) as $key) {
+		// PHP turns array keys that look like numbers into numbers, and the
+		// file id keys are exactly that; the files are named by the string.
+		$keys = array_map(strval(...), array_keys($keys));
+		foreach ($keys as $key) {
 			foreach (self::slots() as $slot) {
 				$this->deleteAppData($userId, self::fileName($key, $slot, 'state'));
 				$this->deleteAppData($userId, self::fileName($key, $slot, 'png'));
 			}
 			$this->deleteAppData($userId, self::sramFileName($key));
 		}
-		$this->forgetKeys($userId, ...array_keys($keys));
+		$this->forgetKeys($userId, ...$keys);
 		// And the folder of the game in the user's own saves folder.
 		$this->getGameFolder($userId, $romPath, false)?->delete();
 	}
