@@ -7,6 +7,7 @@ namespace OCA\Arcade\Preview;
 use OCA\Arcade\AppInfo\Application;
 use OCA\Arcade\CoreMap;
 use OCA\Arcade\Listener\MetadataListener;
+use OCA\Arcade\Service\CachePacker;
 use OCA\Arcade\Service\Caches;
 use OCA\Arcade\Service\SettingsService;
 use OCA\Arcade\Service\ThumbnailService;
@@ -157,21 +158,23 @@ class RomPreview implements IProviderV2 {
 
 	/**
 	 * Walking the thumbnails folder for every game that has no answer kept
-	 * would be wasteful, so the walk is kept for a few minutes too.
+	 * would be wasteful, so the walk is kept for a few minutes too. Packed,
+	 * because the index of a libretro pack runs past the megabyte memcached
+	 * drops an entry at without a word.
 	 *
 	 * @return array<string, mixed>
 	 */
 	private function index(string $userId, Folder $userFolder, string $thumbnailsPath): array {
 		$cache = Caches::create($this->cacheFactory, Application::APP_ID . '_preview');
 		$key = 'index|' . $userId . '|' . $thumbnailsPath;
-		$cached = $cache->get($key);
-		if (is_array($cached)) {
+		$cached = CachePacker::unpack($cache->get($key));
+		if ($cached !== null) {
 			return $cached;
 		}
 
 		$folder = $userFolder->get($thumbnailsPath);
 		$index = $folder instanceof Folder ? $this->thumbnailService->buildIndex($folder) : [];
-		$cache->set($key, $index, self::INDEX_TTL);
+		$cache->set($key, CachePacker::pack($index), self::INDEX_TTL);
 		return $index;
 	}
 }

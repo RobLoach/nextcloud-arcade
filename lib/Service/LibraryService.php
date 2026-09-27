@@ -320,7 +320,7 @@ class LibraryService {
 
 	/**
 	 * The games as they are cached: without what a line of PHP can put
-	 * back, and gzipped, so five thousand of them stay well under the
+	 * back, and packed, so five thousand of them stay well under the
 	 * megabyte a memcached entry is allowed.
 	 *
 	 * @param list<array<string, mixed>> $games
@@ -331,38 +331,21 @@ class LibraryService {
 			unset($game['basename']);
 			return $game;
 		}, $games);
-		$encoded = json_encode($lean);
-		$compressed = $encoded === false ? false : gzcompress($encoded, 6);
-		if ($compressed === false) {
-			// A library that cannot be compressed is cached as it always was.
-			return $games;
-		}
-		// Base64, because a distributed cache may run what it holds through
-		// json_encode, which cannot carry raw bytes and would quietly cache
-		// nothing at all.
-		return 'gz:' . base64_encode($compressed);
+		$packed = CachePacker::pack($lean);
+		// A library that cannot be packed is cached as it always was.
+		return is_array($packed) ? $games : $packed;
 	}
 
 	/**
-	 * A cached entry back into games, whichever way it was stored: gzipped
-	 * JSON from deflate(), or a plain array from before it existed or from
-	 * a deflate() that could not compress.
+	 * A cached entry back into games, whichever way it was stored: packed
+	 * by deflate(), or a plain array from before the packing existed or
+	 * from a deflate() that could not compress.
 	 *
 	 * @return list<array<string, mixed>>|null null when there is no usable entry
 	 */
 	private function inflate(mixed $cached): ?array {
-		if (is_string($cached)) {
-			if (str_starts_with($cached, 'gz:')) {
-				$binary = base64_decode(substr($cached, 3), true);
-				$encoded = $binary === false ? false : @gzuncompress($binary);
-			} else {
-				// Cached before the bytes were wrapped for the caches that
-				// json_encode what they hold.
-				$encoded = @gzuncompress($cached);
-			}
-			$cached = json_decode($encoded === false ? $cached : $encoded, true);
-		}
-		if (!is_array($cached)) {
+		$cached = CachePacker::unpack($cached);
+		if ($cached === null) {
 			return null;
 		}
 		foreach ($cached as &$game) {
