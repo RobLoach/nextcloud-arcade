@@ -72,7 +72,7 @@ class StateService {
 			$this->remember($userId, $romPath);
 			return;
 		}
-		$this->writeAppData($userId, $this->fileName($this->key($userId, $romPath), $slot, 'state'), $data, $romPath);
+		$this->writeAppData($userId, self::fileName($this->key($userId, $romPath), $slot, 'state'), $data, $romPath);
 	}
 
 	public function saveThumbnail(string $userId, string $romPath, int $slot, string $data): void {
@@ -81,7 +81,7 @@ class StateService {
 			$this->writeNode($folder, $this->slotName($slot) . '.png', $data);
 			return;
 		}
-		$this->writeAppData($userId, $this->fileName($this->key($userId, $romPath), $slot, 'png'), $data);
+		$this->writeAppData($userId, self::fileName($this->key($userId, $romPath), $slot, 'png'), $data);
 	}
 
 	public function load(string $userId, string $romPath, int $slot): ?string {
@@ -89,7 +89,7 @@ class StateService {
 		if ($folder !== null) {
 			return $this->readNode($folder, $this->slotName($slot) . '.state');
 		}
-		return $this->readAppData($userId, $this->fileName($this->key($userId, $romPath), $slot, 'state'));
+		return $this->readAppData($userId, self::fileName($this->key($userId, $romPath), $slot, 'state'));
 	}
 
 	public function loadThumbnail(string $userId, string $romPath, int $slot): ?string {
@@ -97,7 +97,7 @@ class StateService {
 		if ($folder !== null) {
 			return $this->readNode($folder, $this->slotName($slot) . '.png');
 		}
-		return $this->readAppData($userId, $this->fileName($this->key($userId, $romPath), $slot, 'png'));
+		return $this->readAppData($userId, self::fileName($this->key($userId, $romPath), $slot, 'png'));
 	}
 
 	/**
@@ -111,7 +111,7 @@ class StateService {
 			$this->remember($userId, $romPath);
 			return;
 		}
-		$this->writeAppData($userId, $this->sramFileName($this->key($userId, $romPath)), $data, $romPath);
+		$this->writeAppData($userId, self::sramFileName($this->key($userId, $romPath)), $data, $romPath);
 	}
 
 	public function loadSram(string $userId, string $romPath): ?string {
@@ -122,7 +122,7 @@ class StateService {
 		if ($this->savesFolderPath($userId) !== '') {
 			return null;
 		}
-		return $this->readAppData($userId, $this->sramFileName($this->key($userId, $romPath)));
+		return $this->readAppData($userId, self::sramFileName($this->key($userId, $romPath)));
 	}
 
 	/**
@@ -138,7 +138,7 @@ class StateService {
 			return false;
 		}
 		$states = $this->userStates($userId, false);
-		return $states !== null && $states->fileExists($this->sramFileName($this->key($userId, $romPath)));
+		return $states !== null && $states->fileExists(self::sramFileName($this->key($userId, $romPath)));
 	}
 
 	/**
@@ -159,7 +159,7 @@ class StateService {
 		if ($this->savesFolderPath($userId) !== '') {
 			return false;
 		}
-		return $this->deleteAppData($userId, $this->sramFileName($this->key($userId, $romPath)));
+		return $this->deleteAppData($userId, self::sramFileName($this->key($userId, $romPath)));
 	}
 
 	public function delete(string $userId, string $romPath, int $slot): bool {
@@ -169,8 +169,8 @@ class StateService {
 			return $this->deleteNode($folder, $this->slotName($slot) . '.state');
 		}
 		$key = $this->key($userId, $romPath);
-		$this->deleteAppData($userId, $this->fileName($key, $slot, 'png'));
-		return $this->deleteAppData($userId, $this->fileName($key, $slot, 'state'));
+		$this->deleteAppData($userId, self::fileName($key, $slot, 'png'));
+		return $this->deleteAppData($userId, self::fileName($key, $slot, 'state'));
 	}
 
 	/**
@@ -186,11 +186,11 @@ class StateService {
 			}
 		}
 		foreach (array_keys($keys) as $key) {
-			foreach ($this->slots() as $slot) {
-				$this->deleteAppData($userId, $this->fileName($key, $slot, 'state'));
-				$this->deleteAppData($userId, $this->fileName($key, $slot, 'png'));
+			foreach (self::slots() as $slot) {
+				$this->deleteAppData($userId, self::fileName($key, $slot, 'state'));
+				$this->deleteAppData($userId, self::fileName($key, $slot, 'png'));
 			}
-			$this->deleteAppData($userId, $this->sramFileName($key));
+			$this->deleteAppData($userId, self::sramFileName($key));
 		}
 		$this->forgetKeys($userId, ...array_keys($keys));
 		// And the folder of the game in the user's own saves folder.
@@ -205,11 +205,11 @@ class StateService {
 	public function deleteAllForFileId(string $userId, int $fileId): void {
 		$key = (string)$fileId;
 		$was = $this->gamesOf($userId)[$key] ?? null;
-		foreach ($this->slots() as $slot) {
-			$this->deleteAppData($userId, $this->fileName($key, $slot, 'state'));
-			$this->deleteAppData($userId, $this->fileName($key, $slot, 'png'));
+		foreach (self::slots() as $slot) {
+			$this->deleteAppData($userId, self::fileName($key, $slot, 'state'));
+			$this->deleteAppData($userId, self::fileName($key, $slot, 'png'));
 		}
-		$this->deleteAppData($userId, $this->sramFileName($key));
+		$this->deleteAppData($userId, self::sramFileName($key));
 		if (is_string($was)) {
 			$this->getGameFolder($userId, $was, false)?->delete();
 		}
@@ -223,7 +223,7 @@ class StateService {
 	public function deleteAllForUser(string $userId): void {
 		$this->gameMapper->deleteAllForUser($userId);
 		try {
-			$this->statesRoot()->getFolder($this->userKey($userId))->delete();
+			$this->statesRoot()->getFolder(self::userKey($userId))->delete();
 		} catch (NotFoundException) {
 			// Nothing was ever stored for this user.
 		}
@@ -264,7 +264,7 @@ class StateService {
 		}
 
 		$states = [];
-		foreach ($this->slots() as $slot) {
+		foreach (self::slots() as $slot) {
 			$file = $files[$this->slotName($slot) . '.state'] ?? null;
 			if ($file === null) {
 				continue;
@@ -290,8 +290,8 @@ class StateService {
 		$key = $this->key($userId, $romPath);
 
 		$states = [];
-		foreach ($this->slots() as $slot) {
-			$file = $mine[$this->fileName($key, $slot, 'state')] ?? null;
+		foreach (self::slots() as $slot) {
+			$file = $mine[self::fileName($key, $slot, 'state')] ?? null;
 			if ($file === null) {
 				continue;
 			}
@@ -299,7 +299,7 @@ class StateService {
 				'slot' => $slot,
 				'size' => $file->getSize(),
 				'mtime' => $file->getMTime(),
-				'hasThumbnail' => isset($mine[$this->fileName($key, $slot, 'png')]),
+				'hasThumbnail' => isset($mine[self::fileName($key, $slot, 'png')]),
 			];
 		}
 		return $states;
@@ -349,8 +349,8 @@ class StateService {
 		$found = [];
 		foreach ($romPaths as $path) {
 			$key = $this->key($userId, $path);
-			foreach ($this->slots() as $slot) {
-				$mtime = $mtimes[$this->fileName($key, $slot, 'png')] ?? null;
+			foreach (self::slots() as $slot) {
+				$mtime = $mtimes[self::fileName($key, $slot, 'png')] ?? null;
 				if ($mtime !== null && ($found[$path]['mtime'] ?? -1) < $mtime) {
 					$found[$path] = ['slot' => $slot, 'mtime' => $mtime];
 				}
@@ -409,7 +409,7 @@ class StateService {
 		$gameFolders = $this->gameFolders[$userId] ??= $this->gameFoldersIn($saves);
 		// The names the screenshots of the slots are written under.
 		$slotsByName = [];
-		foreach ($this->slots() as $slot) {
+		foreach (self::slots() as $slot) {
 			$slotsByName[$this->slotName($slot) . '.png'] = $slot;
 		}
 
@@ -438,11 +438,16 @@ class StateService {
 	 * Where the saves of a game live: under the system it belongs to, so
 	 * that two games of the same name do not share a folder.
 	 */
-	private function gameFolderPath(string $savesPath, string $romPath): string {
-		$stem = pathinfo(basename($romPath), PATHINFO_FILENAME);
+	public static function gameFolderPath(string $savesPath, string $romPath): string {
+		$stem = self::stemOf($romPath);
 		$system = CoreMap::shortNameForPath($romPath);
 		$folder = trim($savesPath, '/');
 		return $system === '' ? "$folder/$stem" : "$folder/$system/$stem";
+	}
+
+	/** The name of a game without its folders and extension: what its files are called after. */
+	public static function stemOf(string $romPath): string {
+		return pathinfo(basename($romPath), PATHINFO_FILENAME);
 	}
 
 	private function savesFolderPath(string $userId): string {
@@ -460,7 +465,7 @@ class StateService {
 			return null;
 		}
 		$userFolder = $this->rootFolder->getUserFolder($userId);
-		$path = $this->gameFolderPath($savesPath, $romPath);
+		$path = self::gameFolderPath($savesPath, $romPath);
 
 		try {
 			$node = $userFolder->get($path);
@@ -495,7 +500,7 @@ class StateService {
 			return null;
 		}
 		try {
-			$node = $userFolder->get($this->gameFolderPath($savesPath, $was));
+			$node = $userFolder->get(self::gameFolderPath($savesPath, $was));
 		} catch (NotFoundException) {
 			return null;
 		}
@@ -687,7 +692,7 @@ class StateService {
 	}
 
 	public function folderKeyOf(string $userId): string {
-		return $this->userKey($userId);
+		return self::userKey($userId);
 	}
 
 	/**
@@ -752,13 +757,13 @@ class StateService {
 		}
 		$root = $this->statesRoot();
 		try {
-			return $this->userStates[$userId] = $root->getFolder($this->userKey($userId));
+			return $this->userStates[$userId] = $root->getFolder(self::userKey($userId));
 		} catch (NotFoundException) {
 			if (!$create) {
 				$this->userStates[$userId] = false;
 				return null;
 			}
-			return $this->userStates[$userId] = $root->newFolder($this->userKey($userId));
+			return $this->userStates[$userId] = $root->newFolder(self::userKey($userId));
 		}
 	}
 
@@ -767,7 +772,7 @@ class StateService {
 	 *
 	 * @return list<int>
 	 */
-	private function slots(): array {
+	public static function slots(): array {
 		return [self::AUTO_SLOT, ...range(1, self::HIGHEST_SLOT)];
 	}
 
@@ -777,14 +782,16 @@ class StateService {
 	}
 
 	private function sramNodeName(string $romPath): string {
-		return pathinfo(basename($romPath), PATHINFO_FILENAME) . '.srm';
+		return self::stemOf($romPath) . '.srm';
 	}
 
-	private function fileName(string $key, int $slot, string $extension): string {
+	/** How a state or screenshot of a slot is named in the app data. */
+	public static function fileName(string $key, int $slot, string $extension): string {
 		return $key . '-' . $slot . '.' . $extension;
 	}
 
-	private function sramFileName(string $key): string {
+	/** How the battery save is named in the app data. */
+	public static function sramFileName(string $key): string {
 		return $key . '.srm';
 	}
 
@@ -804,7 +811,8 @@ class StateService {
 		return hash('sha256', $romPath);
 	}
 
-	private function userKey(string $userId): string {
+	/** What a user's states folder in the app data is named after. */
+	public static function userKey(string $userId): string {
 		return hash('sha256', $userId);
 	}
 }
