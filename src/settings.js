@@ -6,6 +6,31 @@ import { keyLabel, retroarchKey } from './keys.js'
 const container = document.getElementById('arcade-settings')
 
 /**
+ * @param {Element} [source] the control a change came from
+ * @return {Element} the status line of its section, or the page's own
+ */
+function statusFor(source) {
+	return (source instanceof Element && source.closest('.section')?.querySelector('.msg'))
+		|| container.querySelector('.msg')
+}
+
+// One timer per status element, so a fresh message is not blanked early
+// by the timer of the one before it.
+const statusTimers = new WeakMap()
+
+/**
+ * Clear a status line after a moment, re-arming its timer.
+ *
+ * @param {Element} status the status line
+ */
+function flashStatus(status) {
+	clearTimeout(statusTimers.get(status))
+	statusTimers.set(status, setTimeout(() => {
+		status.textContent = ''
+	}, 3000))
+}
+
+/**
  * @param {HTMLInputElement} input the folder input to fill
  */
 async function pickFolder(input) {
@@ -39,8 +64,7 @@ async function pickFolder(input) {
  * @param {Element} [source] the control the change came from
  */
 async function save(source) {
-	const status = (source instanceof Element && source.closest('.section')?.querySelector('.msg'))
-		|| container.querySelector('.msg')
+	const status = statusFor(source)
 	const settings = {}
 	container.querySelectorAll('.arcade-setting').forEach((element) => {
 		settings[element.dataset.setting] = element.type === 'checkbox'
@@ -84,9 +108,7 @@ async function save(source) {
 		console.error('Could not save Arcade settings', error)
 		status.textContent = t('arcade', 'Could not save the settings')
 	}
-	setTimeout(() => {
-		status.textContent = ''
-	}, 3000)
+	flashStatus(status)
 }
 
 /**
@@ -290,7 +312,7 @@ async function refreshBios() {
  */
 async function uploadBios(input) {
 	const row = input.closest('.arcade-bios-file')
-	const status = input.closest('.section').querySelector('.msg')
+	const status = statusFor(input)
 	const file = input.files[0]
 	if (file === undefined) {
 		return
@@ -314,9 +336,7 @@ async function uploadBios(input) {
 	}
 	input.value = ''
 	await refreshBios()
-	setTimeout(() => {
-		status.textContent = ''
-	}, 3000)
+	flashStatus(status)
 }
 
 /**
@@ -326,7 +346,7 @@ async function uploadBios(input) {
  */
 async function removeBios(button) {
 	const row = button.closest('.arcade-bios-file')
-	const status = button.closest('.section').querySelector('.msg')
+	const status = statusFor(button)
 	status.textContent = t('arcade', 'Removing …')
 	try {
 		await api(generateUrl('/apps/arcade/arcade/bios?name={name}', { name: row.dataset.name }), {
@@ -344,9 +364,7 @@ async function removeBios(button) {
 		}
 	}
 	await refreshBios()
-	setTimeout(() => {
-		status.textContent = ''
-	}, 3000)
+	flashStatus(status)
 }
 
 if (container !== null) {
