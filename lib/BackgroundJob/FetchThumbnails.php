@@ -6,6 +6,7 @@ namespace OCA\Arcade\BackgroundJob;
 
 use OCA\Arcade\AppInfo\Application;
 use OCA\Arcade\Notification\Notifier;
+use OCA\Arcade\Service\Folders;
 use OCA\Arcade\Service\LibraryService;
 use OCA\Arcade\Service\SettingsService;
 use OCA\Arcade\Service\ThumbnailFetchService;
@@ -13,10 +14,8 @@ use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\BackgroundJob\IJobList;
 use OCP\BackgroundJob\QueuedJob;
 use OCP\Config\IUserConfig;
-use OCP\Files\Folder;
 use OCP\Files\File;
 use OCP\Files\IRootFolder;
-use OCP\Files\NotFoundException;
 use OCP\IPreview;
 use OCP\Notification\IManager as INotificationManager;
 use Psr\Log\LoggerInterface;
@@ -106,13 +105,13 @@ class FetchThumbnails extends QueuedJob {
 		}
 
 		$userFolder = $this->rootFolder->getUserFolder($userId);
-		$library = $this->folderAt($userFolder, $settings['library_folder']);
+		$library = Folders::folderAt($userFolder, $settings['library_folder']);
 		if ($library === null) {
 			$this->report($userId, 'The games library folder does not exist');
 			$this->clearTally($userId);
 			return;
 		}
-		$thumbnails = $this->folderAt($userFolder, $settings['thumbnails_folder'])
+		$thumbnails = Folders::folderAt($userFolder, $settings['thumbnails_folder'])
 			?? $userFolder->newFolder(trim($settings['thumbnails_folder'], '/'));
 
 		// A fresh scan, so games given an image in an earlier run are left
@@ -221,15 +220,6 @@ class FetchThumbnails extends QueuedJob {
 				}
 			}
 		}
-	}
-
-	private function folderAt(Folder $userFolder, string $path): ?Folder {
-		try {
-			$folder = $userFolder->get($path);
-		} catch (NotFoundException) {
-			return null;
-		}
-		return $folder instanceof Folder ? $folder : null;
 	}
 
 	/**

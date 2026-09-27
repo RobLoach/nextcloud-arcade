@@ -402,12 +402,8 @@ class StateService {
 	 */
 	private function savesFolderThumbnailIndex(string $userId, array $romPaths): array {
 		$savesPath = $this->savesFolderPath($userId);
-		try {
-			$saves = $this->rootFolder->getUserFolder($userId)->get($savesPath);
-		} catch (NotFoundException) {
-			return [];
-		}
-		if (!$saves instanceof Folder) {
+		$saves = Folders::forUser($this->rootFolder, $userId, $savesPath);
+		if ($saves === null) {
 			return [];
 		}
 		$gameFolders = $this->gameFolders[$userId] ??= $this->gameFoldersIn($saves);

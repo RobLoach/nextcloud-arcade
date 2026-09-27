@@ -5,14 +5,13 @@ declare(strict_types=1);
 namespace OCA\Arcade\BackgroundJob;
 
 use OCA\Arcade\Listener\MetadataListener;
+use OCA\Arcade\Service\Folders;
 use OCA\Arcade\Service\LibraryService;
 use OCA\Arcade\Service\SettingsService;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\BackgroundJob\IJobList;
 use OCP\BackgroundJob\QueuedJob;
-use OCP\Files\Folder;
 use OCP\Files\IRootFolder;
-use OCP\Files\NotFoundException;
 use OCP\FilesMetadata\IFilesMetadataManager;
 use Psr\Log\LoggerInterface;
 
@@ -105,12 +104,8 @@ class RefreshMetadata extends QueuedJob {
 	private function missing(string $userId): array {
 		$settings = $this->settingsService->getUserSettings($userId);
 		$userFolder = $this->rootFolder->getUserFolder($userId);
-		try {
-			$folder = $userFolder->get($settings['library_folder']);
-		} catch (NotFoundException) {
-			return [];
-		}
-		if (!$folder instanceof Folder) {
+		$folder = Folders::folderAt($userFolder, $settings['library_folder']);
+		if ($folder === null) {
 			return [];
 		}
 

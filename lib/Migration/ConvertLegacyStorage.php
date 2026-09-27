@@ -8,6 +8,7 @@ use OCA\Arcade\AppInfo\Application;
 use OCA\Arcade\CoreMap;
 use OCA\Arcade\Db\GameMapper;
 use OCA\Arcade\Db\PlayMapper;
+use OCA\Arcade\Service\Folders;
 use OCA\Arcade\Service\SettingsService;
 use OCA\Arcade\Service\StateService;
 use OCP\Config\IUserConfig;
@@ -244,11 +245,11 @@ class ConvertLegacyStorage implements IRepairStep {
 		}
 		try {
 			$userFolder = $this->rootFolder->getUserFolder($userId);
-			$saves = $userFolder->get(trim($savesPath, '/'));
+			$saves = Folders::folderAt($userFolder, trim($savesPath, '/'));
 		} catch (\Throwable) {
 			return;
 		}
-		if (!$saves instanceof Folder) {
+		if ($saves === null) {
 			return;
 		}
 		// One listing says which old-layout folders there are at all.

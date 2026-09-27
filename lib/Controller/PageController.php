@@ -7,6 +7,7 @@ namespace OCA\Arcade\Controller;
 use OCA\Arcade\AppInfo\Application;
 use OCA\Arcade\BackgroundJob\RefreshMetadata;
 use OCA\Arcade\CoreMap;
+use OCA\Arcade\Service\Folders;
 use OCA\Arcade\Service\LibraryService;
 use OCA\Arcade\Service\RecentService;
 use OCA\Arcade\Service\SettingsService;
@@ -21,9 +22,7 @@ use OCP\AppFramework\Http\TemplateResponse;
 use OCP\AppFramework\Services\IInitialState;
 use OCP\BackgroundJob\IJobList;
 use OCP\EventDispatcher\IEventDispatcher;
-use OCP\Files\Folder;
 use OCP\Files\IRootFolder;
-use OCP\Files\NotFoundException;
 use OCP\IRequest;
 
 /**
@@ -120,12 +119,8 @@ class PageController extends Controller {
 		$settings = $this->settingsService->getUserSettings($this->userId);
 		$folderPath = $settings['library_folder'];
 		$userFolder = $this->rootFolder->getUserFolder($this->userId);
-		try {
-			$folder = $userFolder->get($folderPath);
-		} catch (NotFoundException) {
-			$folder = null;
-		}
-		if (!$folder instanceof Folder) {
+		$folder = Folders::folderAt($userFolder, $folderPath);
+		if ($folder === null) {
 			return $this->respond([
 				'folder' => $folderPath,
 				'exists' => false,

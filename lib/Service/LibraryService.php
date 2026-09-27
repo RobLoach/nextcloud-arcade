@@ -394,13 +394,9 @@ class LibraryService {
 		if ($settings['screenshots_folder'] === '') {
 			return [];
 		}
-		try {
-			$folder = $userFolder->get($settings['screenshots_folder']);
-		} catch (NotFoundException) {
-			// No screenshots folder, no screenshots.
-			return [];
-		}
-		return $folder instanceof Folder ? $this->thumbnailService->indexScreenshots($folder) : [];
+		// No screenshots folder, no screenshots.
+		$folder = Folders::folderAt($userFolder, $settings['screenshots_folder']);
+		return $folder === null ? [] : $this->thumbnailService->indexScreenshots($folder);
 	}
 
 	/**
@@ -412,12 +408,8 @@ class LibraryService {
 		if ($thumbnailsPath === '') {
 			return;
 		}
-		try {
-			$thumbnails = $userFolder->get($thumbnailsPath);
-		} catch (NotFoundException) {
-			return;
-		}
-		if (!$thumbnails instanceof Folder) {
+		$thumbnails = Folders::folderAt($userFolder, $thumbnailsPath);
+		if ($thumbnails === null) {
 			return;
 		}
 		$index = $this->thumbnailService->buildIndex($thumbnails);
