@@ -37,10 +37,7 @@ function flashStatus(status) {
 async function pickFolder(input) {
 	// The file picker weighs more than the rest of this page put together,
 	// so it is fetched when somebody actually goes looking for a folder.
-	const [{ FilePickerType, getFilePickerBuilder }] = await Promise.all([
-		import('@nextcloud/dialogs'),
-		import('@nextcloud/dialogs/style.css'),
-	])
+	const { FilePickerType, getFilePickerBuilder } = await import('./picker.js')
 	const picker = getFilePickerBuilder(t('arcade', 'Choose a folder'))
 		.setMultiSelect(false)
 		.setMimeTypeFilter(['httpd/unix-directory'])
