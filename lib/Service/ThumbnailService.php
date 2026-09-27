@@ -32,6 +32,9 @@ use OCP\Files\Node;
  * }
  */
 class ThumbnailService {
+	/** The characters the libretro thumbnail server writes as an underscore. */
+	public const LIBRETRO_ILLEGAL = '/[&*\/:`<>?\\\\|]/';
+
 	private const MAX_DEPTH = 3;
 	private const IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg', 'webp', 'gif'];
 
@@ -281,7 +284,7 @@ class ThumbnailService {
 	}
 
 	private function stemToKey(string $stem): string {
-		return $this->normalize(preg_replace('/[&*\/:`<>?\\\\|]/', '_', $stem) ?? $stem);
+		return $this->normalize(preg_replace(self::LIBRETRO_ILLEGAL, '_', $stem) ?? $stem);
 	}
 
 	/**

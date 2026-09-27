@@ -56,7 +56,7 @@ class LibraryService {
 	 * Ids asked after in one query. Oracle refuses a list of more than
 	 * a thousand, so a big library is asked about in chunks.
 	 */
-	private const ID_CHUNK = 500;
+	public const ID_CHUNK = 500;
 
 	/**
 	 * The screenshots of a user, by the game they were taken of.

@@ -143,7 +143,7 @@ class ThumbnailFetchService {
 	public function candidates(string $basename, string $region = ''): array {
 		$stem = pathinfo($basename, PATHINFO_FILENAME);
 		// The characters libretro writes as an underscore.
-		$stem = preg_replace('/[&*\/:`<>?\\\\|]/', '_', $stem) ?? $stem;
+		$stem = preg_replace(ThumbnailService::LIBRETRO_ILLEGAL, '_', $stem) ?? $stem;
 
 		$names = [$stem];
 		// "Sonic and Knuckles" is filed as "Sonic + Knuckles", and the

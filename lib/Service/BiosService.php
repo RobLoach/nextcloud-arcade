@@ -307,7 +307,7 @@ class BiosService {
 	}
 
 	/** The user's system folder as a path, '' when none is set. */
-	private function systemFolderPath(string $userId): string {
+	public function systemFolderPath(string $userId): string {
 		$folder = $this->settingsService->getUserSettings($userId)['system_folder'] ?? '';
 		return is_string($folder) ? $folder : '';
 	}
