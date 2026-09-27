@@ -9,6 +9,7 @@ use OCA\Arcade\Service\StateService;
 use OCA\Arcade\Service\ThumbnailService;
 use OCP\Files\File;
 use OCP\Files\Folder;
+use OCP\Files\NotFoundException;
 use OCP\Files\Search\ISearchBinaryOperator;
 use OCP\Files\Search\ISearchComparison;
 use OCP\Files\Search\ISearchQuery;
@@ -685,6 +686,31 @@ class LibraryServiceTest extends TestCase {
 			512 * 1024,
 			strlen($stored),
 			'memcached drops entries over a megabyte without a word, so a full library must stay well clear of it',
+		);
+	}
+
+	public function testThumbnailsVersionIsTheEtagOfTheThumbnailsFolder(): void {
+		$thumbnails = $this->createStub(Folder::class);
+		$thumbnails->method('getEtag')->willReturn('etag-thumbs');
+		$userFolder = $this->createStub(Folder::class);
+		$userFolder->method('get')->willReturn($thumbnails);
+
+		$this->assertSame(
+			'etag-thumbs',
+			$this->service->thumbnailsVersion($userFolder, ['thumbnails_folder' => '/Thumbs']),
+			'replacing an image moves the folder etag along, which is what busts the browser cache of the previews',
+		);
+	}
+
+	public function testThumbnailsVersionIsEmptyWithoutAThumbnailsFolder(): void {
+		$userFolder = $this->createStub(Folder::class);
+		$userFolder->method('get')->willThrowException(new NotFoundException());
+
+		$this->assertSame('', $this->service->thumbnailsVersion($userFolder, ['thumbnails_folder' => '']));
+		$this->assertSame(
+			'',
+			$this->service->thumbnailsVersion($userFolder, ['thumbnails_folder' => '/Gone']),
+			'a configured folder that does not exist versions like no folder at all',
 		);
 	}
 }

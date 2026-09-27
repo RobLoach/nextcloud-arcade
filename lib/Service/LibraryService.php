@@ -331,6 +331,20 @@ class LibraryService {
 		return array_values($cached);
 	}
 
+	/**
+	 * The version the thumbnails of this user are at: the etag of their
+	 * thumbnails folder, which Nextcloud moves along whenever any image
+	 * under it changes. The listing hands it to the browser to append to
+	 * every preview URL -- /core/preview is served immutable for a day,
+	 * so without a changing URL a replaced image would keep showing its
+	 * old picture out of the browser cache.
+	 *
+	 * @param array<string, mixed> $settings
+	 */
+	public function thumbnailsVersion(Folder $userFolder, array $settings): string {
+		return $this->folderEtag($userFolder, (string)($settings['thumbnails_folder'] ?? ''));
+	}
+
 	private function folderEtag(Folder $userFolder, string $path): string {
 		if ($path === '') {
 			return '';
