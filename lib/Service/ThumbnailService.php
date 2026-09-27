@@ -258,6 +258,19 @@ class ThumbnailService {
 	}
 
 	/**
+	 * The name a screenshot was taken under, without its extension and
+	 * without the moment the player took it, or null for a node that is
+	 * no image at all.
+	 */
+	private function screenshotStem(Node $node): ?string {
+		if (!$this->isImage($node->getName())) {
+			return null;
+		}
+		$stem = pathinfo($node->getName(), PATHINFO_FILENAME);
+		return preg_replace('/\s\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}$/', '', $stem) ?? $stem;
+	}
+
+	/**
 	 * The key a file name is matched by: without its extension, lowercase,
 	 * and with the characters libretro-thumbnails replaces with an
 	 * underscore already replaced, so "Mario Bros: 3.nes" matches
@@ -281,11 +294,10 @@ class ThumbnailService {
 	public function indexScreenshots(Folder $folder): array {
 		$screenshots = [];
 		foreach ($this->imagesIn($folder) as $node) {
-			if (!$this->isImage($node->getName())) {
+			$stem = $this->screenshotStem($node);
+			if ($stem === null) {
 				continue;
 			}
-			$stem = pathinfo($node->getName(), PATHINFO_FILENAME);
-			$stem = preg_replace('/\s\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}$/', '', $stem) ?? $stem;
 			$mtime = $node->getMTime();
 			foreach ([$this->stemToKey($stem), $this->looseStemKey($stem)] as $key) {
 				if ($key !== '' && ($screenshots[$key]['mtime'] ?? -1) < $mtime) {
@@ -314,11 +326,10 @@ class ThumbnailService {
 		$keys = $this->screenshotKeys($basename);
 		$screenshots = [];
 		foreach ($this->imagesIn($folder) as $node) {
-			if (!$this->isImage($node->getName())) {
+			$stem = $this->screenshotStem($node);
+			if ($stem === null) {
 				continue;
 			}
-			$stem = pathinfo($node->getName(), PATHINFO_FILENAME);
-			$stem = preg_replace('/\s\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}$/', '', $stem) ?? $stem;
 			if (!in_array($this->stemToKey($stem), $keys, true)
 				&& !in_array($this->looseStemKey($stem), $keys, true)) {
 				continue;
