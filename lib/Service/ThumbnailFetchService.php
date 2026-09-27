@@ -32,6 +32,8 @@ class ThumbnailFetchService {
 	/** A game that was looked for in vain is left alone for a while. */
 	private const MISS_TTL = 7 * 24 * 3600;
 	private const TIMEOUT = 15;
+	/** Real box art is a few hundred KB; anything bigger is not box art. */
+	private const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
 
 	public function __construct(
 		private IClientService $clientService,
@@ -191,13 +193,49 @@ class ThumbnailFetchService {
 			if ($response->getStatusCode() !== 200) {
 				return null;
 			}
+			// What comes back is stored on the instance and served to the
+			// user's browser, so nothing is accepted on faith: it has to be
+			// small enough for box art, say it is an image, and open like
+			// one.
+			$declared = trim($response->getHeader('Content-Length'));
+			if ($declared !== '' && (int)$declared > self::MAX_IMAGE_BYTES) {
+				$this->logger->debug('Box art rejected: declared size too large', ['url' => $url, 'length' => $declared]);
+				return null;
+			}
 			$body = $response->getBody();
-			return is_string($body) && $body !== '' ? $body : null;
+			if (!is_string($body) || $body === '') {
+				return null;
+			}
+			if (strlen($body) > self::MAX_IMAGE_BYTES) {
+				$this->logger->debug('Box art rejected: body too large', ['url' => $url, 'size' => strlen($body)]);
+				return null;
+			}
+			$type = strtolower(trim($response->getHeader('Content-Type')));
+			if (!str_starts_with($type, 'image/')) {
+				$this->logger->debug('Box art rejected: not declared an image', ['url' => $url, 'type' => $type]);
+				return null;
+			}
+			if (!$this->looksLikeAnImage($body)) {
+				$this->logger->debug('Box art rejected: no image magic bytes', ['url' => $url]);
+				return null;
+			}
+			return $body;
 		} catch (\Throwable $e) {
 			// A game that is not there answers with an error, which is the
 			// common case rather than a problem.
 			return null;
 		}
+	}
+
+	/**
+	 * Whether the bytes open like a picture. The libretro server keeps
+	 * everything as PNG, but JPEG is accepted too in case a mirror or a
+	 * proxy along the way re-encodes; anything else has no business being
+	 * stored as box art.
+	 */
+	private function looksLikeAnImage(string $body): bool {
+		return str_starts_with($body, "\x89PNG\r\n\x1a\n")
+			|| str_starts_with($body, "\xFF\xD8\xFF");
 	}
 
 	/**
