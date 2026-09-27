@@ -5,7 +5,7 @@ import { defaultRemoteURL, defaultRootPath } from '@nextcloud/files/dav'
 import { translate as t } from '@nextcloud/l10n'
 import { generateFilePath, generateUrl } from '@nextcloud/router'
 import { inputConfig, retroarchKey } from './keys.js'
-import { biosForSystem, coreForSystem, systemForFile, systemFromBytes } from './systems.js'
+import { biosForSystem, coreForSystem, systemForFile, systemFromBytes, systemLabel } from './systems.js'
 
 const SRAM_SYNC_INTERVAL = 60 * 1000
 
@@ -135,9 +135,11 @@ async function resolveRom(blob, romName, systemHint) {
  * @param {object} options.settings the user settings
  * @param {?object} [options.systemHint] system detected from the game's folder
  * @param {string} [options.romPath] path identifying the game, enables SRAM restore
+ * @param {?Function} [options.onWarning] told, in words for the player, about
+ *                                        anything the launch went without
  * @return {Promise<Nostalgist>} the running emulator
  */
-export async function launchRom({ element, romUrl, romName, settings = {}, systemHint = null, romPath = '' }) {
+export async function launchRom({ element, romUrl, romName, settings = {}, systemHint = null, romPath = '', onWarning = null }) {
 	const canSave = (settings.saves_folder ?? '') !== ''
 	// The core is a few megabytes of its own. Warming it in the browser
 	// cache now means it is there when Nostalgist asks, instead of being
@@ -158,6 +160,14 @@ export async function launchRom({ element, romUrl, romName, settings = {}, syste
 	}
 	const sram = canSave ? await fetchSram(romPath) : null
 	const bios = await fetchBios(system.id)
+	if (bios.length === 0 && biosForSystem(system.id).length > 0 && typeof onWarning === 'function') {
+		// The game starts anyway, just poorer for it -- most cores run
+		// without their BIOS, only worse (the PS1 much worse). Worth a
+		// word, and this is the only moment that knows it.
+		onWarning(t('arcade', 'No BIOS files found for {system}. Games may run worse without them.', {
+			system: systemLabel(system.id),
+		}))
+	}
 	const runahead = Number(settings.runahead_frames ?? 0)
 
 	return await Nostalgist.launch({

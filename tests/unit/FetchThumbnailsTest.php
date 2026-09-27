@@ -16,6 +16,8 @@ use OCP\Files\IRootFolder;
 use OCP\Files\NotFoundException;
 use OCP\Config\IUserConfig;
 use OCP\IPreview;
+use OCP\Notification\IManager as INotificationManager;
+use OCP\Notification\INotification;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
@@ -30,7 +32,10 @@ class FetchThumbnailsTest extends TestCase {
 	private ThumbnailFetchService&MockObject $fetchService;
 	private IJobList&MockObject $jobList;
 	private IPreview&MockObject $preview;
+	private INotificationManager&MockObject $notifications;
 	private string $status = '';
+	/** What the run has found so far, as the user config would keep it. */
+	private ?int $tally = null;
 	/** @var array<string, mixed> */
 	private array $settings = [];
 	/** @var list<array<string, mixed>> */
@@ -45,6 +50,8 @@ class FetchThumbnailsTest extends TestCase {
 		$this->games = [];
 		$this->libraryExists = true;
 		$this->status = '';
+		$this->tally = null;
+		$this->notifications = $this->createMock(INotificationManager::class);
 		$this->fetchService = $this->createMock(ThumbnailFetchService::class);
 		// The instance lets the server go looking, unless a test says not.
 		$this->fetchService->method('isAllowed')->willReturn(true);
@@ -80,9 +87,26 @@ class FetchThumbnailsTest extends TestCase {
 				return true;
 			},
 		);
+		$config->method('setValueInt')->willReturnCallback(
+			function (string $user, string $app, string $key, int $value): bool {
+				$this->tally = $value;
+				return true;
+			},
+		);
+		$config->method('getValueInt')->willReturnCallback(
+			fn (string $user, string $app, string $key, int $default = 0): int => $this->tally ?? $default,
+		);
+		$config->method('deleteUserConfig')->willReturnCallback(
+			function (): void {
+				$this->tally = null;
+			},
+		);
+
+		$time = $this->createStub(ITimeFactory::class);
+		$time->method('getDateTime')->willReturn(new \DateTime());
 
 		return new FetchThumbnails(
-			$this->createStub(ITimeFactory::class),
+			$time,
 			$settingsService,
 			$libraryService,
 			$this->fetchService,
@@ -90,8 +114,29 @@ class FetchThumbnailsTest extends TestCase {
 			$this->jobList,
 			$config,
 			$this->preview,
+			$this->notifications,
 			$this->createStub(LoggerInterface::class),
 		);
+	}
+
+	/**
+	 * A notification whose setters chain, as the real ones do, and whose
+	 * subject parameters are kept for the test to look at.
+	 *
+	 * @param array<string, mixed> $seen filled with the subject parameters
+	 */
+	private function chainingNotification(array &$seen): INotification&MockObject {
+		$notification = $this->createMock(INotification::class);
+		foreach (['setApp', 'setUser', 'setDateTime', 'setObject'] as $setter) {
+			$notification->method($setter)->willReturnSelf();
+		}
+		$notification->method('setSubject')->willReturnCallback(
+			function (string $subject, array $parameters = []) use (&$seen, $notification): INotification {
+				$seen = ['subject' => $subject] + $parameters;
+				return $notification;
+			},
+		);
+		return $notification;
 	}
 
 	private function runJob(): void {
@@ -245,5 +290,76 @@ class FetchThumbnailsTest extends TestCase {
 
 		$this->runJob();
 		$this->assertStringContainsString('Something went wrong', $this->status);
+	}
+
+	public function testAFinishedRunSaysSoOnceUnderTheBell(): void {
+		$this->games = $this->gamesWithout(3);
+		$this->fetchService->method('fetch')
+			->willReturn(['fetched' => 2, 'missing' => 1, 'tried' => 3]);
+
+		$seen = [];
+		$this->notifications->method('createNotification')
+			->willReturn($this->chainingNotification($seen));
+		$this->notifications->expects($this->once())->method('notify');
+
+		$this->runJob();
+		$this->assertSame('fetch_finished', $seen['subject']);
+		$this->assertSame(2, $seen['found']);
+	}
+
+	public function testABatchInTheMiddleOfARunKeepsQuiet(): void {
+		$this->games = $this->gamesWithout(50);
+		$this->fetchService->method('fetch')
+			->willReturn(['fetched' => 3, 'missing' => 47, 'tried' => FetchThumbnails::BATCH]);
+
+		$this->notifications->expects($this->never())->method('notify');
+
+		$this->runJob();
+		$this->assertSame(3, $this->tally, 'the finds wait for the end of the run');
+	}
+
+	public function testTheNotificationCarriesTheTallyOfTheWholeRun(): void {
+		// Earlier batches of this run already found five.
+		$this->tally = 5;
+		$this->games = $this->gamesWithout(2);
+		$this->fetchService->method('fetch')
+			->willReturn(['fetched' => 2, 'missing' => 0, 'tried' => 2]);
+
+		$seen = [];
+		$this->notifications->method('createNotification')
+			->willReturn($this->chainingNotification($seen));
+		$this->notifications->expects($this->once())->method('notify');
+
+		$this->runJob();
+		$this->assertSame(7, $seen['found'], 'the run is told as a whole, not batch by batch');
+		$this->assertNull($this->tally, 'a told tally does not leak into the next run');
+	}
+
+	public function testARunWhoseLastBatchFetchedEverythingStillGetsItsWord(): void {
+		// The last batch filled the library, requeued itself, and this is
+		// the requeued job finding nothing left to look for.
+		$this->tally = 10;
+		$this->games = [
+			['path' => '/Games/Mario.nes', 'basename' => 'Mario.nes', 'system' => 'nes', 'thumbnails' => ['boxart' => 1]],
+		];
+
+		$seen = [];
+		$this->notifications->method('createNotification')
+			->willReturn($this->chainingNotification($seen));
+		$this->notifications->expects($this->once())->method('notify');
+
+		$this->runJob();
+		$this->assertSame(10, $seen['found']);
+	}
+
+	public function testANotificationThatFailsDoesNotFailTheJob(): void {
+		$this->games = $this->gamesWithout(1);
+		$this->fetchService->method('fetch')
+			->willReturn(['fetched' => 1, 'missing' => 0, 'tried' => 1]);
+		$this->notifications->method('notify')
+			->willThrowException(new \RuntimeException('the bell is broken'));
+
+		$this->runJob();
+		$this->assertStringContainsString('Found box art for 1 games', $this->status);
 	}
 }

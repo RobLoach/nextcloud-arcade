@@ -20,9 +20,10 @@ import { attachTouchControls, isTouchDevice } from './touch.js'
  * @param {string} options.romName file name of the ROM, for screenshots
  * @param {object} options.settings the user settings
  * @param {string} [options.closeUrl] when set, adds a close button leading there
+ * @param {string} [options.notice] a word from the launch, flashed once the bar is up
  * @return {Function} detaches the toolbar again
  */
-export function attachToolbar({ container, instance, romPath, romName, settings = {}, closeUrl = '', onClose = null }) {
+export function attachToolbar({ container, instance, romPath, romName, settings = {}, closeUrl = '', onClose = null, notice = '' }) {
 	container.classList.add('arcade-player-container')
 
 	const toolbar = document.createElement('div')
@@ -443,6 +444,11 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 
 	toolbar.appendChild(status)
 	container.appendChild(toolbar)
+	if (notice !== '') {
+		// Known since before the toolbar existed -- the launch found out,
+		// but had no status line yet to say it on. Said now, once.
+		flash(notice)
+	}
 	if (statesPanel !== null) {
 		container.appendChild(statesPanel.element)
 	}
