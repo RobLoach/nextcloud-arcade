@@ -799,6 +799,19 @@ class LibraryServiceTest extends TestCase {
 		);
 	}
 
+	public function testAFolderEtagIsOnlyLookedUpOncePerRequest(): void {
+		// One request asks twice: for the cache key and for the version the
+		// browser appends to every preview URL.
+		$thumbnails = $this->createStub(Folder::class);
+		$thumbnails->method('getEtag')->willReturn('etag-thumbs');
+		$userFolder = $this->createMock(Folder::class);
+		$userFolder->expects($this->once())->method('get')->willReturn($thumbnails);
+
+		$settings = ['thumbnails_folder' => '/Thumbs'];
+		$this->assertSame('etag-thumbs', $this->service->thumbnailsVersion($userFolder, $settings));
+		$this->assertSame('etag-thumbs', $this->service->thumbnailsVersion($userFolder, $settings));
+	}
+
 	public function testThumbnailsVersionIsEmptyWithoutAThumbnailsFolder(): void {
 		$userFolder = $this->createStub(Folder::class);
 		$userFolder->method('get')->willThrowException(new NotFoundException());

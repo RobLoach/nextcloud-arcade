@@ -67,6 +67,15 @@ class LibraryService {
 	 */
 	private array $screenshots = [];
 
+	/**
+	 * The etag of each folder asked about, by path. One request asks for
+	 * the thumbnails folder twice over -- for the cache key and for
+	 * thumbnailsVersion() -- and an etag cannot change within a request.
+	 *
+	 * @var array<string, string>
+	 */
+	private array $folderEtags = [];
+
 	public function __construct(
 		private ICacheFactory $cacheFactory,
 		private ThumbnailService $thumbnailService,
@@ -392,10 +401,14 @@ class LibraryService {
 		if ($path === '') {
 			return '';
 		}
+		$known = $this->folderEtags[$path] ?? null;
+		if ($known !== null) {
+			return $known;
+		}
 		try {
-			return $userFolder->get($path)->getEtag();
+			return $this->folderEtags[$path] = $userFolder->get($path)->getEtag();
 		} catch (NotFoundException) {
-			return '';
+			return $this->folderEtags[$path] = '';
 		}
 	}
 
