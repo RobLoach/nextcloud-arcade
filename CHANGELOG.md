@@ -6,6 +6,108 @@ All notable changes to NextCloud Arcade. The format follows
 
 ## [Unreleased]
 
+### Added
+- The Activity app is told when a game starts, when a session longer than
+  a minute ends, and when a save state is written. The stream is the
+  player's own, seen by nobody else, and can be muted in the Activity
+  settings.
+- A notification under the bell when a box art run finishes, saying what
+  it found. The player says a word, once, when a system wanted BIOS files
+  and none were found.
+- The games library can be browsed with a gamepad: the d-pad or left
+  stick moves between games, A launches the one in focus, B backs out to
+  the search field, and L1/R1 turn the pages.
+- `build/smoke-test.sh` installs the app into a real Nextcloud, seeds
+  ROMs, walks the endpoints and upgrades in place. CI runs it on alpha,
+  beta and rc tags, alongside the JavaScript build.
+
+### Changed
+- A filled save state slot is labeled with its date alone; the screenshot
+  already says which game it is.
+- The admin BIOS section lists only the files the cores ask for. The
+  listing of stray files nothing asks for is gone.
+
+## [0.39.5] - 2026-09-27
+
+### Changed
+- The patch version rolls whenever the bundles are rebuilt, so browsers
+  fetch fresh scripts instead of trusting their caches. This release is
+  that and nothing else.
+
+## [0.39.4] - 2026-09-26
+
+### Fixed
+- BIOS files are matched without regard to case, wherever they are looked
+  for: `SCPH1001.BIN` serves as `scph1001.bin`, in the player and on the
+  administration page alike.
+
+## [0.39.3] - 2026-09-26
+
+### Changed
+- The BIOS section of the administration settings is backed by the
+  administrator's own System folder: it shows what a player would find,
+  uploads land in that folder under the canonical name, and the section
+  only appears once a System folder is set. The instance-wide store that
+  `occ arcade:bios` fills stays as the fallback.
+
+## [0.39.2] - 2026-09-26
+
+### Added
+- A top bar over the player, with a close button and an actions menu:
+  Full screen, the RetroArch menu, Restart, Open sidebar — or Details,
+  where no sidebar can be had — and Download. The chrome fades over an
+  idle game and comes back at a touch of anything.
+- Rewind, and run-ahead to hide input lag, as personal settings; each
+  costs something, so both start off.
+- The in-game battery save can be deleted from the save states panel.
+- More core options for administrators: NES NTSC filtering, the Game Boy
+  bootloader and model, Genesis address-error strictness, Super Nintendo
+  overclocking.
+- The CRC32 of a ROM — the checksum No-Intro lists games by — is stored
+  alongside its MD5 when checksums are worked out.
+
+### Changed
+- Every route of the app lives under `/arcade` now. The old URLs are
+  gone, not redirected.
+- A game is played by its file id where there is one, so a play URL
+  survives renames and moves; the path form stays as the fallback.
+- Zipped ROMs are offered for playing only inside the games library,
+  through "Play with Arcade" in the file menu. The Viewer claimed zip
+  archives for a moment during this release and deliberately stopped: a
+  zip is not guaranteed to be a game.
+- The endpoints that write are rate limited, generously enough that no
+  player ever meets the limit.
+
+## [0.39.1] - 2026-09-24
+
+### Added
+- PlayStation, through the `pcsx_rearmed` core: `.chd` and `.pbp` files.
+  Its BIOS is strongly recommended.
+- Play statistics in the library: how many times and how long each game
+  was played, and sorting by either.
+- Atari Lynx, Neo Geo Pocket, Virtual Boy and NES headers are read as
+  well.
+- An Arcade tab in the Files sidebar: the system, what the cartridge
+  calls itself, play time, the saves waiting, and a button that plays it.
+- BIOS management on the administration settings page, per system.
+- First-run suggestions: when the library folder is missing or empty, the
+  folders that already hold ROMs are offered.
+- `occ arcade:status` reports the save state storage and play activity of
+  every user.
+- Previews are warmed right after box art is fetched, so the first paint
+  of the library is not a request per game against a cold cache.
+
+### Changed
+- The Content Security Policy additions are applied for the users who can
+  use the app and the public pages that need them, instead of everywhere.
+
+### Fixed
+- Extensions the server already maps are not taken over: `.md` is
+  Markdown to Nextcloud before it is a Mega Drive dump. Files an earlier
+  version retyped are given their server mimetype back at upgrade, or
+  sooner with `occ maintenance:repair`. A `.md` file still counts as a
+  game when its mimetype or its folder says so.
+
 ## [0.39.0] - 2026-09-23
 
 ### Changed
@@ -304,7 +406,12 @@ All notable changes to NextCloud Arcade. The format follows
 ### Added
 - The first version.
 
-[Unreleased]: https://github.com/robloach/nextcloud-arcade/compare/v0.39.0...HEAD
+[Unreleased]: https://github.com/robloach/nextcloud-arcade/compare/v0.39.5...HEAD
+[0.39.5]: https://github.com/robloach/nextcloud-arcade/releases/tag/v0.39.5
+[0.39.4]: https://github.com/robloach/nextcloud-arcade/releases/tag/v0.39.4
+[0.39.3]: https://github.com/robloach/nextcloud-arcade/releases/tag/v0.39.3
+[0.39.2]: https://github.com/robloach/nextcloud-arcade/releases/tag/v0.39.2
+[0.39.1]: https://github.com/robloach/nextcloud-arcade/releases/tag/v0.39.1
 [0.39.0]: https://github.com/robloach/nextcloud-arcade/releases/tag/v0.39.0
 [0.38.0]: https://github.com/robloach/nextcloud-arcade/releases/tag/v0.38.0
 [0.37.0]: https://github.com/robloach/nextcloud-arcade/releases/tag/v0.37.0

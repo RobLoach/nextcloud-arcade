@@ -13,6 +13,8 @@ Personal settings → Arcade:
 | Save when closing | On | Write the Auto save state when the player is closed |
 | Continue on start | Off | Load the latest save as a game starts, without asking |
 | Save every | Never | Write the Auto save state while playing, from 30 seconds to 10 minutes |
+| Rewind | Off | Go back through the game while the rewind key is held; costs some performance |
+| Run-ahead | 0 frames | Hide input lag, up to 3 frames, at the cost of CPU |
 | Fast-forward speed | 3× | Speed of the fast-forward button, 1× to 5× |
 | Volume | 0 dB | Gain in decibels, -20 to 10 |
 | Audio latency | 64 ms | Raise it if the sound crackles |
@@ -24,11 +26,14 @@ Personal settings → Arcade:
 | Picture shown for each system | Box art | Box art, title screen, screenshot or logo, per system |
 | Controls | see above | The key of every button and of the player itself |
 
+There is no Save button anywhere: every setting is saved the moment it is
+changed, and the section says so beside its heading.
+
 Folder settings have a browse button that opens the NextCloud file picker.
 The thumbnails folder also has a button that goes looking for the box art of
 the games that have none; it runs as a background job, so it carries on
-after the page is closed, and says how it went when the page is opened
-again.
+after the page is closed, says how it went when the page is opened
+again, and leaves a notification under the bell when it is done.
 
 Administration settings → Arcade holds what is the same for everybody:
 
@@ -42,6 +47,12 @@ Administration settings → Arcade holds what is the same for everybody:
 | Seconds a scan is kept | 86400 | How long the result of a scan is cached |
 | Core options | Core default | Options of the emulator cores, which users cannot change |
 | Picture each system starts out shown with | Box art | The default for the personal setting of the same name |
+
+Box art, checksums and the three scan limits are scalars of the instance,
+so they live in a declarative settings form that the server renders and
+saves itself; the rest of the page is the app's own markup. Everything on
+it saves as it is changed, like the personal page. The administration
+page also holds a [BIOS section](bios.md), once a System folder is set.
 
 An option of a core belongs to the core rather than to whoever is playing,
 so those are the administrator's alone. Looking up box art is the only thing

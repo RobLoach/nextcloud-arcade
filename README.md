@@ -18,19 +18,27 @@ from your files and run in the browser.
 
 - Plays ROMs straight from the Files app, in the file viewer, with box art
   as their preview.
-- A games library page with grid, list and table views.
+- Seventeen systems, from the ColecoVision to the PlayStation, one
+  emulator core each.
+- A games library page with grid, list and table views, browsable with a
+  gamepad from the couch.
 - Three save state slots per game plus an automatic one, each with a
   screenshot, unique per user.
 - In-game battery saves (SRAM) synchronized automatically.
-- Player controls: pause, restart, mute, fast-forward, the RetroArch menu,
-  screenshots, fullscreen, and a virtual gamepad on touch devices.
+- Player controls: pause, restart, mute, fast-forward, rewind, the
+  RetroArch menu, screenshots, fullscreen, and a virtual gamepad on touch
+  devices.
 - Zipped ROMs, extracted in the browser.
 - Thumbnails for your games, matched from a folder of images, downloaded
   from the libretro thumbnail server, or taken from their own screenshots
   and save states — and matched on the name the cartridge gives itself when
   the file name says nothing.
-- Favorites shared with the Files app -- the same star -- and how long
-  each game was played.
+- Favorites shared with the Files app -- the same star -- and how often
+  and how long each game was played, sortable in the library.
+- At home in Nextcloud beyond the viewer: an Arcade tab in the Files
+  sidebar, box art previews, filtering by the tags of the Files app, what
+  was played in the Activity stream, and a notification when a box art
+  run finishes.
 - Works on publicly shared files and folders.
 
 ## Installation
@@ -62,8 +70,9 @@ cores are committed, so nothing needs to be built on the server.
 
 Open a ROM in the Files app — a `.nes`, `.sfc`, `.gb` or any of the
 [other systems](docs/cores.md) — and it plays in the file viewer. Zipped
-ROMs, and ROMs Nextcloud has not learned the mimetype of yet, open from the
-**Play with Arcade** entry in the file menu.
+ROMs inside the games library, and ROMs Nextcloud has not learned the
+mimetype of yet, open from the **Play with Arcade** entry in the file
+menu.
 
 The app's own page lists everything in your games library folder (`/Games`
 by default) as a grid, a list or a sortable table, with box art, favorites
