@@ -14,6 +14,7 @@
     "postcores": "cp 3rdparty/retroarch-emscripten-build/license img/cores/license",
     "precores": "git submodule update --init --recursive",
     "test": "npm run build",
+    "test:js": "vitest run",
     "watch": "vite build --mode development --watch"
   },
   "browserslist": [
@@ -36,7 +37,8 @@
     "@nextcloud/vite-config": "^2.4.0",
     "nostalgist": "0.22.0",
     "typescript": "^5.9.3",
-    "vite": "^7.1.1"
+    "vite": "^7.1.1",
+    "vitest": "^5.0.2"
   },
   "dependencies": {
     "@nextcloud/dialogs": "^7.5.0",
