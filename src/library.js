@@ -2,6 +2,7 @@ import { getRequestToken } from '@nextcloud/auth'
 import { loadState } from '@nextcloud/initial-state'
 import { translate as t, translatePlural as n } from '@nextcloud/l10n'
 import { generateUrl } from '@nextcloud/router'
+import { attachLibraryGamepad } from './librarypad.js'
 import { systemLabel } from './systems.js'
 
 const VIEWS = ['grid', 'list', 'table']
@@ -744,6 +745,10 @@ function renderOnboarding(data, reload) {
 export async function renderLibrary(container, onError) {
 	let shown = null
 	let pending = null
+
+	// A connected controller can browse and launch games; without one
+	// this costs nothing, the poll loop only runs while a pad is there.
+	attachLibraryGamepad(container)
 
 	const load = async (refresh = false) => {
 		const key = cacheKey()
