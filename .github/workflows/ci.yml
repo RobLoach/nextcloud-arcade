@@ -3,6 +3,12 @@ name: CI
 on:
   push:
     branches: [master]
+    # Pre-release tags run the heavy jobs (JavaScript build, server smoke
+    # test) that every push skips.
+    tags:
+      - '*alpha*'
+      - '*beta*'
+      - '*rc*'
   pull_request:
 
 permissions:
@@ -73,6 +79,9 @@ jobs:
 
   build:
     name: JavaScript build
+    # Only on pre-release tags: the committed bundles change rarely, and
+    # rebuilding them on every push costs more than it catches.
+    if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -101,6 +110,8 @@ jobs:
 
   server-smoke:
     name: Server smoke test
+    # Only on pre-release tags, alongside the JavaScript build.
+    if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
