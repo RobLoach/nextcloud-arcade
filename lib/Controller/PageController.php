@@ -15,6 +15,7 @@ use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\FrontpageRoute;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
+use OCP\AppFramework\Http\Attribute\UserRateLimit;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\AppFramework\Http\TemplateResponse;
 use OCP\AppFramework\Services\IInitialState;
@@ -86,7 +87,12 @@ class PageController extends ArcadeController {
 	 * and only for games of this library, and sorts by them for the 'plays'
 	 * (how often) and 'playtime' (how long) sort keys.
 	 */
+	// Browsing fires a request per page, filter keystroke and sort flip,
+	// and a busy minute of that stays well under a hundred; 240 leaves
+	// legitimate bursts untouched while a scripted crawl of the cached
+	// scan is still cut off.
 	#[NoAdminRequired]
+	#[UserRateLimit(limit: 240, period: 60)]
 	#[FrontpageRoute(verb: 'GET', url: '/arcade/library')]
 	public function library(
 		int $offset = 0,
@@ -194,7 +200,12 @@ class PageController extends ArcadeController {
 	 * Anything under the configured library folder is left out, and the
 	 * list is empty when nothing is found.
 	 */
+	// Suggestions only appear while onboarding, a handful of loads at
+	// most, but each one searches the whole home folder; 30 an hour is
+	// plenty for any real first run and stops the search being used to
+	// hammer the file cache.
 	#[NoAdminRequired]
+	#[UserRateLimit(limit: 30, period: 3600)]
 	#[FrontpageRoute(verb: 'GET', url: '/arcade/suggest')]
 	public function suggest(): JSONResponse {
 		if (($error = $this->requireUser()) !== null) {
