@@ -6,6 +6,17 @@ All notable changes to NextCloud Arcade. The format follows
 
 ## [Unreleased]
 
+## [0.39.9] - 2026-09-27
+
+### Added
+- The cleanup sweep of `occ arcade:cleanup` also runs weekly on its own,
+  so saves left behind by trash expiry -- which the server announces to
+  nobody -- no longer wait for an administrator to notice.
+- The frontend gained its first unit tests (vitest), run on every push.
+
+### Changed
+- The file picker no longer uses a deprecated dialogs API.
+
 ### Added
 - The `occ arcade:cleanup` sweep also runs by itself once a week, as a
   background job: trash expiry by cron or `occ trashbin:cleanup` gives
