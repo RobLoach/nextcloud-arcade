@@ -157,7 +157,7 @@ export async function launchRom({ element, romUrl, romName, settings = {}, syste
 		throw new Error(t('arcade', 'Unsupported ROM type: {file}', { file: romName }))
 	}
 	const sram = canSave ? await fetchSram(romPath) : null
-	const bios = await fetchBios(system.id, settings.system_folder ?? '')
+	const bios = await fetchBios(system.id)
 	const runahead = Number(settings.runahead_frames ?? 0)
 
 	return await Nostalgist.launch({
@@ -219,35 +219,31 @@ function rewindConfig(settings) {
 }
 
 /**
- * Read the BIOS files of a system from the user's system folder.
+ * Fetch the BIOS files of a system.
  *
- * A core names the files it wants, and most games run without them, so
- * whatever is missing is quietly left out.
+ * The server looks in the user's own system folder first, whatever the
+ * casing of the file there, and falls back to what the instance holds,
+ * always answering under the spelling the core asks for. A core names
+ * the files it wants, and most games run without them, so whatever is
+ * missing is quietly left out.
  *
  * @param {string} systemId the system being played
- * @param {string} folder the system folder of the user
  * @return {Promise<File[]>} the files that were there
  */
-async function fetchBios(systemId, folder) {
+async function fetchBios(systemId) {
 	const names = biosForSystem(systemId)
 	if (names.length === 0 || getCurrentUser() === null) {
 		return []
 	}
 	const files = await Promise.all(names.map(async (name) => {
-		// The file of the player first, then the one the instance holds:
-		// a BIOS is the one thing a player cannot make for themselves, so
-		// an administrator can put one where everybody can reach it.
-		const urls = folder === '' ? [] : [davUrl(`${folder}/${name}`)]
-		urls.push(generateUrl('/apps/arcade/arcade/bios?name={name}', { name }))
-		for (const url of urls) {
-			try {
-				const response = await fetch(url, { credentials: 'same-origin' })
-				if (response.ok) {
-					return new File([await response.blob()], name)
-				}
-			} catch (error) {
-				console.error(`Could not read the BIOS file ${name}`, error)
+		try {
+			const url = generateUrl('/apps/arcade/arcade/bios?name={name}', { name })
+			const response = await fetch(url, { credentials: 'same-origin' })
+			if (response.ok) {
+				return new File([await response.blob()], name)
 			}
+		} catch (error) {
+			console.error(`Could not read the BIOS file ${name}`, error)
 		}
 		return null
 	}))

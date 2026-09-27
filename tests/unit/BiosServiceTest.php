@@ -116,6 +116,7 @@ class BiosServiceTest extends TestCase {
 		$file = $this->createStub(File::class);
 		$file->method('getName')->willReturn($name);
 		$file->method('getSize')->willReturnCallback(fn (): int => strlen($this->userFiles[$name] ?? ''));
+		$file->method('getContent')->willReturnCallback(fn (): string => $this->userFiles[$name] ?? '');
 		$file->method('putContent')->willReturnCallback(
 			function ($content) use ($name): void {
 				$this->userFiles[$name] = (string)$content;
@@ -189,6 +190,43 @@ class BiosServiceTest extends TestCase {
 		$this->assertTrue($service->remove('gb_bios.bin'));
 		$this->assertNull($service->read('gb_bios.bin'));
 		$this->assertFalse($service->remove('gb_bios.bin'), 'and only once');
+	}
+
+	public function testReadForServesTheFolderFileFirst(): void {
+		$this->userFiles['gb_bios.bin'] = 'mine';
+		$this->files['gb_bios.bin'] = 'everybody\'s';
+
+		$this->assertSame('mine', $this->service()->readFor('player', 'gb_bios.bin'));
+	}
+
+	public function testReadForFindsTheFolderFileWhateverItsCase(): void {
+		$this->userFiles['GB_BIOS.BIN'] = 'mine';
+
+		$this->assertSame('mine', $this->service()->readFor('player', 'gb_bios.bin'));
+	}
+
+	public function testReadForFallsBackToTheStore(): void {
+		$this->files['gb_bios.bin'] = 'everybody\'s';
+
+		$this->assertSame('everybody\'s', $this->service()->readFor('player', 'gb_bios.bin'));
+	}
+
+	public function testReadForWithoutAUserOnlyKnowsTheStore(): void {
+		$this->userFiles['gb_bios.bin'] = 'somebody\'s';
+		$this->files['gb_bios.bin'] = 'everybody\'s';
+
+		$this->assertSame('everybody\'s', $this->service()->readFor(null, 'gb_bios.bin'));
+	}
+
+	public function testReadForRefusesANameNoCoreAsksFor(): void {
+		$this->userFiles['notes.txt'] = 'todo';
+		$this->files['notes.txt'] = 'todo';
+
+		$this->assertNull($this->service()->readFor('player', 'notes.txt'));
+	}
+
+	public function testReadForSaysNothingWhenNobodyHasTheFile(): void {
+		$this->assertNull($this->service()->readFor('player', 'gb_bios.bin'));
 	}
 
 	public function testStatusFindsAFolderFileWhateverItsCase(): void {

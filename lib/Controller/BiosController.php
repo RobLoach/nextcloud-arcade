@@ -43,17 +43,17 @@ class BiosController extends Controller {
 	#[NoCSRFRequired]
 	#[FrontpageRoute(verb: 'GET', url: '/arcade/bios')]
 	public function get(string $name = ''): DataDisplayResponse {
-		if ($this->userId === null) {
-			return new DataDisplayResponse('', Http::STATUS_UNAUTHORIZED);
-		}
-		$data = $this->biosService->read($name);
+		// The user's own system folder first, whatever the casing there,
+		// then the store of the instance; a public page has no folder, so
+		// only the store answers for it.
+		$data = $this->biosService->readFor($this->userId, $name);
 		if ($data === null) {
 			return new DataDisplayResponse('', Http::STATUS_NOT_FOUND);
 		}
 		$response = new DataDisplayResponse($data, Http::STATUS_OK, [
 			'Content-Type' => 'application/octet-stream',
 		]);
-		// The same bytes for everybody, and they do not change.
+		// Private cache: the bytes may be the user's own.
 		$response->cacheFor(24 * 3600, false, true);
 		return $response;
 	}
