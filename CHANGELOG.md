@@ -6,6 +6,12 @@ All notable changes to NextCloud Arcade. The format follows
 
 ## [Unreleased]
 
+### Changed
+- Pausing the game while the tab is in the background and saving the
+  game automatically when closing the player are now off by default.
+  Only users who never touched either toggle are affected; a choice
+  made in the settings stays as it was.
+
 ## [0.39.9] - 2026-09-27
 
 ### Added

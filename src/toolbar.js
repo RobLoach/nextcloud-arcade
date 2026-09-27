@@ -323,6 +323,21 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 				available ? t('arcade', 'Open sidebar') : t('arcade', 'Details'),
 			))
 		}
+		// The personal Arcade settings, in a tab of their own: leaving this
+		// page would tear the running game down, so the game stays put and
+		// no autosave dance is needed.
+		const settingsLink = document.createElement('a')
+		settingsLink.className = 'arcade-actions-item'
+		settingsLink.href = generateUrl('/settings/user/arcade')
+		settingsLink.target = '_blank'
+		settingsLink.rel = 'noopener noreferrer'
+		settingsLink.innerHTML = icon(ICONS.cog)
+		settingsLink.appendChild(document.createTextNode(t('arcade', 'Settings')))
+		settingsLink.addEventListener('click', (event) => {
+			event.stopPropagation()
+			closeActionsMenu()
+		})
+		actionsMenu.appendChild(settingsLink)
 		if (romPath) {
 			const link = document.createElement('a')
 			link.className = 'arcade-actions-item'
