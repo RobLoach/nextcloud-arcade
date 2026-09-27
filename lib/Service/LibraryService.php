@@ -227,7 +227,7 @@ class LibraryService {
 	 * @return list<array<string, mixed>>
 	 */
 	public function getGames(string $userId, Folder $folder, Folder $userFolder, string $folderPath, array $settings, bool $refresh): array {
-		$cache = $this->cacheFactory->createDistributed(Application::APP_ID . '_library');
+		$cache = Caches::create($this->cacheFactory, Application::APP_ID . '_library');
 		// Nextcloud propagates etags up the tree, so the library folder's
 		// etag changes whenever anything inside it does.
 		$key = implode('|', [

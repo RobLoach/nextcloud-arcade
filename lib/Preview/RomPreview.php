@@ -7,6 +7,7 @@ namespace OCA\Arcade\Preview;
 use OCA\Arcade\AppInfo\Application;
 use OCA\Arcade\CoreMap;
 use OCA\Arcade\Listener\MetadataListener;
+use OCA\Arcade\Service\Caches;
 use OCA\Arcade\Service\SettingsService;
 use OCA\Arcade\Service\ThumbnailService;
 use OCP\Files\File;
@@ -134,7 +135,7 @@ class RomPreview implements IProviderV2 {
 	 * @param array<string, mixed> $settings
 	 */
 	private function pictureId(string $userId, Folder $userFolder, File $file, array $settings): int {
-		$cache = $this->cacheFactory->createDistributed(Application::APP_ID . '_preview');
+		$cache = Caches::create($this->cacheFactory, Application::APP_ID . '_preview');
 		$key = $userId . '|' . $settings['thumbnails_folder'] . '|' . $file->getId();
 		$cached = $cache->get($key);
 		if (is_int($cached)) {
@@ -161,7 +162,7 @@ class RomPreview implements IProviderV2 {
 	 * @return array<string, mixed>
 	 */
 	private function index(string $userId, Folder $userFolder, string $thumbnailsPath): array {
-		$cache = $this->cacheFactory->createDistributed(Application::APP_ID . '_preview');
+		$cache = Caches::create($this->cacheFactory, Application::APP_ID . '_preview');
 		$key = 'index|' . $userId . '|' . $thumbnailsPath;
 		$cached = $cache->get($key);
 		if (is_array($cached)) {

@@ -9,6 +9,7 @@ use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\BackgroundJob\IJobList;
 use OCP\BackgroundJob\TimedJob;
 use OCP\IAppConfig;
+use OCP\ICacheFactory;
 use OCP\IL10N;
 use OCP\SetupCheck\ISetupCheck;
 use OCP\SetupCheck\SetupResult;
@@ -32,11 +33,15 @@ class ArcadeSetupCheck implements ISetupCheck {
 	public const DOC_LINK
 		= 'https://docs.nextcloud.com/server/latest/admin_manual/configuration_server/background_jobs_configuration.html';
 
+	public const CACHE_DOC_LINK
+		= 'https://docs.nextcloud.com/server/latest/admin_manual/configuration_server/caching_configuration.html';
+
 	public function __construct(
 		private IL10N $l,
 		private IAppConfig $appConfig,
 		private IJobList $jobList,
 		private ITimeFactory $timeFactory,
+		private ICacheFactory $cacheFactory,
 	) {
 	}
 
@@ -71,6 +76,16 @@ class ArcadeSetupCheck implements ISetupCheck {
 				$this->l->t('The last background job ran more than an hour ago. Arcade reads what a game says about itself in background jobs, so games stay unrecognized until they run again.')
 				. $this->waiting(),
 				self::DOC_LINK,
+			);
+		}
+
+		// A game library "cached" in the NullCache of an instance without
+		// any memory cache is no cache at all, and the symptom -- a slow
+		// listing -- never says why by itself.
+		if (!$this->cacheFactory->isAvailable() && !$this->cacheFactory->isLocalCacheAvailable()) {
+			return SetupResult::warning(
+				$this->l->t('No memory cache is configured, so Arcade rescans the game library on every request. Configure a memory cache such as APCu or Redis.'),
+				self::CACHE_DOC_LINK,
 			);
 		}
 

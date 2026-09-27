@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace OCA\Arcade\Migration;
 
 use OCA\Arcade\AppInfo\Application;
+use OCA\Arcade\Service\Caches;
 use OCP\BackgroundJob\IJobList;
 use OCP\ICacheFactory;
 use OCP\Migration\IOutput;
@@ -51,7 +52,9 @@ class UninstallCleanup implements IRepairStep {
 			$this->jobList->remove($job);
 		}
 		foreach (Application::CACHES as $cache) {
-			$this->cacheFactory->createDistributed(Application::APP_ID . $cache)->clear();
+			// The same cache the app wrote to: distributed when the instance
+			// has one, local when only that is configured.
+			Caches::create($this->cacheFactory, Application::APP_ID . $cache)->clear();
 		}
 	}
 }
