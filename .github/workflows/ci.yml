@@ -99,6 +99,21 @@ jobs:
             exit 1
           fi
 
+  server-smoke:
+    name: Server smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run the app inside a real Nextcloud
+        # Unit tests and Psalm only see the app's own code; the regressions
+        # this catches live in the server it runs inside -- query-optimizer
+        # crashes, mimetype corruption, listeners that never register. The
+        # script installs a real Nextcloud in Docker, enables the app, seeds
+        # ROMs, walks the endpoints, and exercises the upgrade path. The
+        # committed bundles are served as-is, so no npm or composer here.
+        run: build/smoke-test.sh
+
   appinfo:
     name: App metadata
     runs-on: ubuntu-latest
