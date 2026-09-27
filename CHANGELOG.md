@@ -6,6 +6,8 @@ All notable changes to NextCloud Arcade. The format follows
 
 ## [Unreleased]
 
+## [0.39.6] - 2026-09-27
+
 ### Added
 - The Activity app is told when a game starts, when a session longer than
   a minute ends, and when a save state is written. The stream is the
