@@ -258,10 +258,6 @@ async function refreshBios() {
 		console.error('Could not read the BIOS status', error)
 		return
 	}
-	const folder = section.querySelector('.arcade-bios-folder')
-	if (folder !== null && status.folder) {
-		folder.textContent = t('arcade', 'Your System folder is {folder}.', { folder: status.folder })
-	}
 	const files = new Map()
 	for (const entry of status.systems ?? []) {
 		for (const file of entry.files ?? []) {
@@ -285,15 +281,6 @@ async function refreshBios() {
 		row.querySelector('.arcade-bios-input').classList.toggle('hidden', file.present)
 		row.querySelector('.arcade-bios-remove').classList.toggle('hidden', !file.present || fromStore)
 	})
-	const extra = section.querySelector('.arcade-bios-extra')
-	const strays = (status.extra ?? [])
-		.map((file) => file.source === 'store'
-			? t('arcade', '{name} ({size}, instance store)', { name: file.name, size: formatBiosSize(file.size) })
-			: `${file.name} (${formatBiosSize(file.size)})`)
-	extra.classList.toggle('hidden', strays.length === 0)
-	extra.textContent = strays.length === 0
-		? ''
-		: t('arcade', 'Also there, though no system asks for it: {names}', { names: strays.join(', ') })
 }
 
 /**

@@ -43,7 +43,6 @@ $systemFolder = $_['systemFolder'];
 		<h2 class="inlineblock"><?php p($l->t('BIOS')); ?></h2>
 		<span class="msg" aria-live="polite"></span>
 		<p class="settings-hint"><?php p($l->t('A few consoles will not start without the firmware file of the real hardware. Copy these files from a console you own; they go into your System folder. Files added instance-wide with occ arcade:bios are offered to every player as a fallback.')); ?></p>
-		<p class="settings-hint arcade-bios-folder"></p>
 		<?php foreach ($systems as $systemId => $system): ?>
 			<?php if ($system['bios'] === []) { continue; } ?>
 			<div class="arcade-bios-system">
@@ -59,12 +58,6 @@ $systemFolder = $_['systemFolder'];
 				<?php endforeach; ?>
 			</div>
 		<?php endforeach; ?>
-		<p class="arcade-bios-extra hidden"></p>
-	</div>
-	<?php else: ?>
-	<div class="section">
-		<h2 class="inlineblock"><?php p($l->t('BIOS')); ?></h2>
-		<p class="settings-hint"><?php p($l->t('Set the System folder above to manage BIOS files here.')); ?></p>
 	</div>
 	<?php endif; ?>
 

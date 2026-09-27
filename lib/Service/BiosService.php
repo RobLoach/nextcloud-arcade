@@ -189,16 +189,13 @@ class BiosService {
 	 * What a user's player would actually find, for the settings page:
 	 * every file a system asks for, with where it would come from --
 	 * the user's own system folder first, the store of the instance
-	 * second, just as the player looks for them -- and the strays that
-	 * no core asks for, labeled by where they lie.
+	 * second, just as the player looks for them.
 	 *
 	 * @return array{
-	 *     folder: string,
 	 *     systems: list<array{
 	 *         system: array{id: string, name: string},
 	 *         files: list<array{name: string, present: bool, source: ?string, size: int}>,
 	 *     }>,
-	 *     extra: list<array{name: string, size: int, source: string}>,
 	 * }
 	 */
 	public function statusFor(string $userId): array {
@@ -225,22 +222,7 @@ class BiosService {
 				'files' => $files,
 			];
 		}
-		$extra = [];
-		foreach ($folderFiles as $name => $size) {
-			if (self::canonicalName($name) === null) {
-				$extra[] = ['name' => $name, 'size' => $size, 'source' => 'folder'];
-			}
-		}
-		foreach ($stored as $name => $size) {
-			if (self::canonicalName($name) === null) {
-				$extra[] = ['name' => $name, 'size' => $size, 'source' => 'store'];
-			}
-		}
-		return [
-			'folder' => $this->systemFolderPath($userId),
-			'systems' => $systems,
-			'extra' => $extra,
-		];
+		return ['systems' => $systems];
 	}
 
 	/**
