@@ -47,6 +47,8 @@ class LibraryService {
 	public const SUGGEST_TOP = 3;
 	/** Bumped when the shape of a cached entry changes. */
 	private const CACHE_VERSION = 7;
+	/** Bumped when the shape of a cached fallbacks entry changes. */
+	private const FALLBACKS_CACHE_VERSION = 1;
 	/**
 	 * Extensions that mean something else at least as often as they mean
 	 * a game, so they only count with corroboration.
@@ -157,6 +159,47 @@ class LibraryService {
 			return;
 		}
 
+		$fallbacks = $this->fallbacksFor($userId, $userFolder, $settings, $missing);
+
+		foreach ($lists as &$games) {
+			foreach ($games as &$game) {
+				if (empty($game['thumbnails']) && isset($fallbacks[$game['path']])) {
+					$game['fallback'] = $fallbacks[$game['path']];
+				}
+			}
+			unset($game);
+		}
+	}
+
+	/**
+	 * The fallback of every art-less game, from the cache when nothing it
+	 * is built from has changed. With a saves folder set, working it out
+	 * costs a folder listing per art-less game, which is too much to pay
+	 * on every request. A new screenshot or state thumbnail moves the etag
+	 * of its folder -- Nextcloud propagates etags up the tree -- so the
+	 * key goes stale exactly when the answer does.
+	 *
+	 * @param array<string, mixed> $settings
+	 * @param array<string, array<string, mixed>> $missing the art-less games, by path
+	 * @return array<string, array{type: string, fileId?: int, slot?: int}>
+	 */
+	private function fallbacksFor(string $userId, Folder $userFolder, array $settings, array $missing): array {
+		$cache = Caches::create($this->cacheFactory, Application::APP_ID . '_library');
+		$key = implode('|', [
+			'fallbacks',
+			self::FALLBACKS_CACHE_VERSION,
+			$userId,
+			$this->folderEtag($userFolder, (string)($settings['screenshots_folder'] ?? '')),
+			$this->folderEtag($userFolder, (string)($settings['saves_folder'] ?? '')),
+		]);
+		$cached = $cache->get($key);
+		if (is_array($cached) && is_array($cached['paths'] ?? null) && is_array($cached['fallbacks'] ?? null)
+			&& array_diff_key($missing, array_fill_keys($cached['paths'], true)) === []) {
+			// Only when the entry answers for every game asked about now: a
+			// game that lost its thumbnail since is not in an older entry.
+			return $cached['fallbacks'];
+		}
+
 		// The listing asks three times over -- for the page, the recently
 		// played and the favorites -- and the folder cannot change in
 		// between, so it is walked once.
@@ -167,9 +210,9 @@ class LibraryService {
 		$fallbacks = [];
 		foreach ($missing as $path => $game) {
 			$screenshot = null;
-			foreach ($this->thumbnailService->screenshotKeys($game['basename']) as $key) {
-				if (isset($screenshots[$key])) {
-					$screenshot = $screenshots[$key];
+			foreach ($this->thumbnailService->screenshotKeys($game['basename']) as $name) {
+				if (isset($screenshots[$name])) {
+					$screenshot = $screenshots[$name];
 					break;
 				}
 			}
@@ -182,14 +225,14 @@ class LibraryService {
 			}
 		}
 
-		foreach ($lists as &$games) {
-			foreach ($games as &$game) {
-				if (empty($game['thumbnails']) && isset($fallbacks[$game['path']])) {
-					$game['fallback'] = $fallbacks[$game['path']];
-				}
-			}
-			unset($game);
-		}
+		// The paths answered for ride along, so an entry that knows nothing
+		// of a game is never taken for "looked, and there is none".
+		$cache->set(
+			$key,
+			['paths' => array_keys($missing), 'fallbacks' => $fallbacks],
+			(int)($settings['cache_ttl'] ?? self::CACHE_TTL),
+		);
+		return $fallbacks;
 	}
 
 	/**

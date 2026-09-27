@@ -77,6 +77,103 @@ class LibraryServiceTest extends TestCase {
 		);
 	}
 
+	/** A cache the tests can share between "requests", as an array. */
+	private function arrayCache(array &$store): ICache {
+		$cache = $this->createStub(ICache::class);
+		$cache->method('get')->willReturnCallback(static fn (string $key) => $store[$key] ?? null);
+		$cache->method('set')->willReturnCallback(
+			static function (string $key, mixed $value) use (&$store): bool {
+				$store[$key] = $value;
+				return true;
+			},
+		);
+		return $cache;
+	}
+
+	/**
+	 * @param list<array<string, mixed>> $list
+	 * @return list<array<string, mixed>> what addFallbackImages left in the list
+	 */
+	private function fallbacksOf(LibraryService $service, array $list, ?Folder $userFolder = null): array {
+		if ($userFolder === null) {
+			$userFolder = $this->createStub(Folder::class);
+			$userFolder->method('get')->willThrowException(new NotFoundException());
+		}
+		$service->addFallbackImages(
+			'alice',
+			$userFolder,
+			['screenshots_folder' => '', 'saves_folder' => '/Saves'],
+			$list,
+		);
+		return $list;
+	}
+
+	public function testFallbacksAreCachedAcrossRequests(): void {
+		$asked = 0;
+		$this->stateService->method('thumbnailIndex')->willReturnCallback(
+			function (string $userId, array $paths) use (&$asked): array {
+				$asked++;
+				return ['/Games/Mario.nes' => ['slot' => 2, 'mtime' => 100]];
+			},
+		);
+		$store = [];
+		$game = ['id' => 1, 'path' => '/Games/Mario.nes', 'basename' => 'Mario.nes', 'system' => 'nes'];
+
+		$first = $this->fallbacksOf($this->buildService($this->cacheFactory($this->arrayCache($store))), [$game]);
+		$again = $this->fallbacksOf($this->buildService($this->cacheFactory($this->arrayCache($store))), [$game]);
+
+		$this->assertSame(['type' => 'state', 'slot' => 2], $first[0]['fallback'] ?? null);
+		$this->assertSame($first, $again, 'the second request answers from the cache, byte for byte');
+		$this->assertSame(1, $asked, 'the saves folder is only walked once across the two requests');
+	}
+
+	public function testAGameTheCachedFallbacksNeverSawIsWorkedOutFresh(): void {
+		$asked = 0;
+		$this->stateService->method('thumbnailIndex')->willReturnCallback(
+			function (string $userId, array $paths) use (&$asked): array {
+				$asked++;
+				return ['/Games/Zelda.sfc' => ['slot' => 1, 'mtime' => 50]];
+			},
+		);
+		$store = [];
+		$mario = ['id' => 1, 'path' => '/Games/Mario.nes', 'basename' => 'Mario.nes', 'system' => 'nes'];
+		$zelda = ['id' => 2, 'path' => '/Games/Zelda.sfc', 'basename' => 'Zelda.sfc', 'system' => 'snes'];
+
+		$this->fallbacksOf($this->buildService($this->cacheFactory($this->arrayCache($store))), [$mario]);
+		$list = $this->fallbacksOf($this->buildService($this->cacheFactory($this->arrayCache($store))), [$mario, $zelda]);
+
+		$this->assertSame(2, $asked, 'an entry that never saw the game does not answer for it');
+		$this->assertSame(['type' => 'state', 'slot' => 1], $list[1]['fallback'] ?? null);
+	}
+
+	public function testANewStateThumbnailReachesTheFallbacksThroughTheEtag(): void {
+		// A new screenshot or state thumbnail moves the etag of its folder
+		// along, which is the whole invalidation.
+		$asked = 0;
+		$this->stateService->method('thumbnailIndex')->willReturnCallback(
+			function (string $userId, array $paths) use (&$asked): array {
+				$asked++;
+				return [];
+			},
+		);
+		$store = [];
+		$game = ['id' => 1, 'path' => '/Games/Mario.nes', 'basename' => 'Mario.nes', 'system' => 'nes'];
+		$etag = 'saves-before';
+		$saves = $this->createStub(Folder::class);
+		$saves->method('getEtag')->willReturnCallback(static function () use (&$etag): string {
+			return $etag;
+		});
+		$userFolder = $this->createStub(Folder::class);
+		$userFolder->method('get')->willReturn($saves);
+
+		$this->fallbacksOf($this->buildService($this->cacheFactory($this->arrayCache($store))), [$game], $userFolder);
+		$etag = 'saves-after';
+		$this->fallbacksOf($this->buildService($this->cacheFactory($this->arrayCache($store))), [$game], $userFolder);
+
+		$this->assertSame(2, $asked, 'a moved saves folder etag is a fresh look');
+		$this->assertCount(2, $store, 'the etag is part of the key');
+	}
+
 	/**
 	 * @return list<array<string, mixed>>
 	 */
