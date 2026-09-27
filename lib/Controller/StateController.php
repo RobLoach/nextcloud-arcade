@@ -16,6 +16,7 @@ use OCP\AppFramework\Http\Attribute\UserRateLimit;
 use OCP\AppFramework\Http\DataDownloadResponse;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\AppFramework\Http\Response;
+use OCP\Files\IRootFolder;
 use OCP\IRequest;
 
 /**
@@ -35,6 +36,7 @@ class StateController extends ArcadeController {
 		private StateService $stateService,
 		private SettingsService $settingsService,
 		private ActivityPublisher $activityPublisher,
+		private IRootFolder $rootFolder,
 		protected ?string $userId,
 	) {
 		parent::__construct($appName, $request);
@@ -157,7 +159,7 @@ class StateController extends ArcadeController {
 	#[UserRateLimit(limit: 30, period: 60)]
 	#[FrontpageRoute(verb: 'DELETE', url: '/arcade/sram')]
 	public function deleteSram(string $file = ''): JSONResponse {
-		if (!$this->isValidRequest($file, StateService::AUTO_SLOT)) {
+		if (!$this->isDeletableRequest($file, StateService::AUTO_SLOT)) {
 			return new JSONResponse([], Http::STATUS_BAD_REQUEST);
 		}
 		if (!$this->stateService->deleteSram($this->userId, $file)) {
@@ -172,7 +174,7 @@ class StateController extends ArcadeController {
 	#[UserRateLimit(limit: 30, period: 60)]
 	#[FrontpageRoute(verb: 'DELETE', url: '/arcade/state')]
 	public function delete(string $file = '', int $slot = 1): JSONResponse {
-		if (!$this->isValidRequest($file, $slot)) {
+		if (!$this->isDeletableRequest($file, $slot)) {
 			return new JSONResponse([], Http::STATUS_BAD_REQUEST);
 		}
 		if (!$this->stateService->delete($this->userId, $file, $slot)) {
@@ -185,9 +187,34 @@ class StateController extends ArcadeController {
 	 * Slots of earlier versions can still be read and removed, so that what
 	 * they hold is not stranded.
 	 *
+	 * On top of the shape of the request, the game itself has to be among
+	 * the user's files: saves are keyed by the ROM's path, and a path that
+	 * exists nowhere would otherwise mint save files for games the user
+	 * does not have.
+	 *
 	 * @psalm-assert-if-true string $this->userId
 	 */
 	private function isValidRequest(string $file, int $slot): bool {
+		return $this->isPlausibleRequest($file, $slot) && $this->gameExists($file);
+	}
+
+	/**
+	 * The same, without asking whether the game's file still exists: the
+	 * DELETE routes clean up after games that are already gone. deleteSram
+	 * and delete both fall back to a hash of the path when the file id is
+	 * gone, and the per-game saves folder outlives the ROM, so removing
+	 * what a deleted game left behind must still go through.
+	 *
+	 * @psalm-assert-if-true string $this->userId
+	 */
+	private function isDeletableRequest(string $file, int $slot): bool {
+		return $this->isPlausibleRequest($file, $slot);
+	}
+
+	/**
+	 * @psalm-assert-if-true string $this->userId
+	 */
+	private function isPlausibleRequest(string $file, int $slot): bool {
 		return $this->userId !== null
 			&& $file !== ''
 			// Saves live in the files of the user, so there has to be a
@@ -196,6 +223,17 @@ class StateController extends ArcadeController {
 			// Slot 0 is the one written when a game is closed.
 			&& $slot >= StateService::AUTO_SLOT
 			&& $slot <= StateService::HIGHEST_SLOT;
+	}
+
+	private function gameExists(string $file): bool {
+		if ($this->userId === null) {
+			return false;
+		}
+		try {
+			return $this->rootFolder->getUserFolder($this->userId)->nodeExists($file);
+		} catch (\Throwable) {
+			return false;
+		}
 	}
 
 	/**

@@ -6,6 +6,7 @@ namespace OCA\Arcade\Tests\Unit;
 
 use OCA\Arcade\Search\SearchBinaryOperator;
 use OCA\Arcade\Search\SearchComparison;
+use OCA\Arcade\Search\SearchQuery;
 use OCP\Files\Search\ISearchBinaryOperator;
 use OCP\Files\Search\ISearchComparison;
 use PHPUnit\Framework\TestCase;
@@ -39,6 +40,16 @@ class SearchOperatorTest extends TestCase {
 			new SearchComparison(ISearchComparison::COMPARE_EQUAL, 'name', 'games.json'),
 		]);
 		self::assertSame('(not name eq "games.json")', (string)$not);
+	}
+
+	public function testAQueryIsUnlimitedByDefault(): void {
+		$query = new SearchQuery(new SearchComparison(ISearchComparison::COMPARE_LIKE, 'name', '%.gb'));
+		self::assertSame(0, $query->getLimit());
+	}
+
+	public function testAQueryCarriesTheLimitItWasGiven(): void {
+		$query = new SearchQuery(new SearchComparison(ISearchComparison::COMPARE_LIKE, 'name', '%.gb'), 2000);
+		self::assertSame(2000, $query->getLimit());
 	}
 
 	public function testTheArgumentsCanBeRewritten(): void {

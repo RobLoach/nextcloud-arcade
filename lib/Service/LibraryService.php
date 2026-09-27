@@ -515,6 +515,9 @@ class LibraryService {
 		array &$games,
 		array $limits,
 	): void {
+		// Unlimited on purpose: the truncation below sorts by path first,
+		// and that determinism only holds when the query saw everything
+		// up to max_games.
 		$nodes = $folder->search($this->romQuery($extensionMap));
 		// The database answers in whatever order suits it; the walk this
 		// replaces went folder by folder. Sorting by path keeps the scan
@@ -623,9 +626,13 @@ class LibraryService {
 	 */
 	public function suggestFolders(Folder $userFolder, string $excludeFolder): array {
 		$extensionMap = CoreMap::libraryExtensions();
-		$nodes = $userFolder->search($this->romQuery($extensionMap));
-		// Path order, so the same home folder always gets the same
-		// suggestions, even when it holds more than the cap.
+		// Capped in the SQL itself, so a home folder full of matches never
+		// hands more than the scan limit across. The query is unordered,
+		// which makes the capped subset arbitrary -- tolerable here, where
+		// any few hundred ROMs say plenty about where the ROMs live.
+		$nodes = $userFolder->search($this->romQuery($extensionMap, self::SUGGEST_SCAN_LIMIT));
+		// Path order, so the suggestions from what the query handed over
+		// are stable; the slice stays as a belt to the query's braces.
 		usort($nodes, static fn ($a, $b): int => strcmp($a->getPath(), $b->getPath()));
 		$nodes = array_slice($nodes, 0, self::SUGGEST_SCAN_LIMIT);
 
@@ -745,8 +752,10 @@ class LibraryService {
 	 * filtered page. The scan is cached whole and filtered in PHP instead.
 	 *
 	 * @param array<string, string> $extensionMap extension => system id
+	 * @param int $limit rows the database hands back at most, 0 for all;
+	 *                   see SearchQuery for what a capped query trades away
 	 */
-	private function romQuery(array $extensionMap): ISearchQuery {
+	private function romQuery(array $extensionMap, int $limit = 0): ISearchQuery {
 		$clauses = [];
 		foreach (array_unique(array_values(CoreMap::extensionMimeMap())) as $mime) {
 			$clauses[] = new SearchComparison(ISearchComparison::COMPARE_EQUAL, 'mimetype', $mime);
@@ -754,6 +763,6 @@ class LibraryService {
 		foreach (array_keys($extensionMap) as $extension) {
 			$clauses[] = new SearchComparison(ISearchComparison::COMPARE_LIKE, 'name', '%.' . $extension);
 		}
-		return new SearchQuery(new SearchBinaryOperator(ISearchBinaryOperator::OPERATOR_OR, $clauses));
+		return new SearchQuery(new SearchBinaryOperator(ISearchBinaryOperator::OPERATOR_OR, $clauses), $limit);
 	}
 }

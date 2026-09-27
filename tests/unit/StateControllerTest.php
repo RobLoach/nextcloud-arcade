@@ -9,6 +9,8 @@ use OCA\Arcade\Controller\StateController;
 use OCA\Arcade\Service\SettingsService;
 use OCA\Arcade\Service\StateService;
 use OCP\AppFramework\Http;
+use OCP\Files\Folder;
+use OCP\Files\IRootFolder;
 use OCP\IRequest;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
@@ -41,16 +43,22 @@ class StateControllerTest extends TestCase {
 		string $savesFolder = '/Saves',
 		?string $userId = 'alice',
 		string $body = '',
+		bool $fileExists = true,
 	): TestableStateController {
 		$this->stateService = $this->createMock(StateService::class);
 		$settings = $this->createStub(SettingsService::class);
 		$settings->method('getUserSettings')->willReturn(['saves_folder' => $savesFolder]);
+		$userFolder = $this->createStub(Folder::class);
+		$userFolder->method('nodeExists')->willReturn($fileExists);
+		$rootFolder = $this->createStub(IRootFolder::class);
+		$rootFolder->method('getUserFolder')->willReturn($userFolder);
 		$controller = new TestableStateController(
 			'arcade',
 			$this->createStub(IRequest::class),
 			$this->stateService,
 			$settings,
 			$this->createStub(ActivityPublisher::class),
+			$rootFolder,
 			$userId,
 		);
 		$controller->body = $body;
@@ -108,6 +116,50 @@ class StateControllerTest extends TestCase {
 		$response = $controller->deleteSram(self::GAME);
 
 		$this->assertSame(Http::STATUS_NOT_FOUND, $response->getStatus());
+	}
+
+	public function testSavingNeedsTheGameToExist(): void {
+		// A path that exists nowhere in the user's files must not mint
+		// save files for games the user does not have.
+		$controller = $this->controller(body: 'the state', fileExists: false);
+		$this->stateService->expects($this->never())->method('save');
+
+		$response = $controller->save(self::GAME, 2);
+
+		$this->assertSame(Http::STATUS_BAD_REQUEST, $response->getStatus());
+	}
+
+	public function testListingNeedsTheGameToExist(): void {
+		$controller = $this->controller(fileExists: false);
+		$this->stateService->expects($this->never())->method('list');
+
+		$response = $controller->list(self::GAME);
+
+		$this->assertSame(Http::STATUS_BAD_REQUEST, $response->getStatus());
+	}
+
+	public function testDeletingAStateWorksForAGameThatIsGone(): void {
+		// Cleaning up after a deleted game targets a path whose file no
+		// longer exists; the saves are found by the hash of that path.
+		$controller = $this->controller(fileExists: false);
+		$this->stateService->expects($this->once())->method('delete')
+			->with('alice', self::GAME, 2)
+			->willReturn(true);
+
+		$response = $controller->delete(self::GAME, 2);
+
+		$this->assertSame(Http::STATUS_OK, $response->getStatus());
+	}
+
+	public function testDeletingTheBatterySaveWorksForAGameThatIsGone(): void {
+		$controller = $this->controller(fileExists: false);
+		$this->stateService->expects($this->once())->method('deleteSram')
+			->with('alice', self::GAME)
+			->willReturn(true);
+
+		$response = $controller->deleteSram(self::GAME);
+
+		$this->assertSame(Http::STATUS_OK, $response->getStatus());
 	}
 
 	public function testDeletingNeedsASavesFolder(): void {

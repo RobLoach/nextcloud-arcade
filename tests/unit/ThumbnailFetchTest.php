@@ -24,6 +24,8 @@ use Psr\Log\LoggerInterface;
  */
 class ThumbnailFetchTest extends TestCase {
 	private const USER = 'alice';
+	/** What the fake server serves: it has to open like the PNG it claims to be. */
+	private const PICTURE = "\x89PNG\r\n\x1a\nthe picture";
 
 	/** The names the server was asked for. */
 	private array $asked = [];
@@ -48,6 +50,10 @@ class ThumbnailFetchTest extends TestCase {
 				$found = $this->createStub(IResponse::class);
 				$found->method('getStatusCode')->willReturn(200);
 				$found->method('getBody')->willReturn($this->server[$name]);
+				$found->method('getHeader')->willReturnMap([
+					['Content-Length', ''],
+					['Content-Type', 'image/png'],
+				]);
 				return $found;
 			},
 		);
@@ -124,20 +130,20 @@ class ThumbnailFetchTest extends TestCase {
 	}
 
 	public function testBoxArtIsStoredWhereTheMatchingLooksForIt(): void {
-		$this->server['Mario (USA)'] = 'the picture';
+		$this->server['Mario (USA)'] = self::PICTURE;
 
 		$result = $this->service()->fetch(self::USER, [$this->game('Mario.nes')], $this->folder(), 10);
 
 		$this->assertSame(1, $result['fetched']);
 		$this->assertSame(
-			'the picture',
+			self::PICTURE,
 			$this->stored['Nintendo - Nintendo Entertainment System/Named_Boxarts/Mario.png'] ?? null,
 			'filed under the platform and the name of the game as the user has it',
 		);
 	}
 
 	public function testTheFilesWrittenThisRunAreHandedBack(): void {
-		$this->server['Mario (USA)'] = 'the picture';
+		$this->server['Mario (USA)'] = self::PICTURE;
 
 		$result = $this->service()->fetch(
 			self::USER,
@@ -204,14 +210,14 @@ class ThumbnailFetchTest extends TestCase {
 	}
 
 	public function testTheNameOfTheGameIsTriedBeforeItsRegions(): void {
-		$this->server['Mario'] = 'the picture';
+		$this->server['Mario'] = self::PICTURE;
 		$this->service()->fetch(self::USER, [$this->game('Mario.nes')], $this->folder(), 10);
 
 		$this->assertCount(1, $this->asked, 'found at the first name, so no more were asked for');
 	}
 
 	public function testEachSystemIsLookedForUnderItsOwnPlatform(): void {
-		$this->server['Sonic (USA)'] = 'the picture';
+		$this->server['Sonic (USA)'] = self::PICTURE;
 		$this->service()->fetch(self::USER, [$this->game('Sonic.md', 'genesis')], $this->folder(), 10);
 
 		$this->assertStringContainsString('Sega%20-%20Mega%20Drive%20-%20Genesis', $this->asked[0]);

@@ -539,15 +539,42 @@ class LibraryServiceTest extends TestCase {
 	/**
 	 * @param list<\OCP\Files\Node> $nodes what the one search over the home folder finds
 	 */
-	private function homeFolder(array $nodes): Folder {
+	private function homeFolder(array $nodes, ?ISearchQuery &$query = null): Folder {
 		$folder = $this->createStub(Folder::class);
-		$folder->method('search')->willReturn($nodes);
+		$folder->method('search')->willReturnCallback(function ($asked) use (&$query, $nodes): array {
+			$query = $asked;
+			return $nodes;
+		});
 		$folder->method('getRelativePath')->willReturnCallback(
 			static fn (string $path): ?string => str_starts_with($path, '/alice/files/')
 				? substr($path, strlen('/alice/files'))
 				: null,
 		);
 		return $folder;
+	}
+
+	public function testTheSuggestQueryIsCappedInTheSql(): void {
+		// The onboarding search is bounded in the query itself, so a home
+		// folder full of matches never hands more than the scan limit over.
+		$query = null;
+		$home = $this->homeFolder([], $query);
+
+		$this->service->suggestFolders($home, '/Games');
+
+		$this->assertInstanceOf(ISearchQuery::class, $query);
+		$this->assertSame(LibraryService::SUGGEST_SCAN_LIMIT, $query->getLimit());
+	}
+
+	public function testTheScanQueryStaysUnlimited(): void {
+		// The library scan truncates deterministically by path, which only
+		// works when the query saw everything up to max_games.
+		$query = null;
+		$library = $this->libraryFolder([], $query);
+
+		$this->scan($this->buildService($this->cacheFactory($this->createStub(ICache::class))), $library);
+
+		$this->assertInstanceOf(ISearchQuery::class, $query);
+		$this->assertSame(0, $query->getLimit());
 	}
 
 	public function testSuggestionsMergeSystemFoldersIntoTheirParent(): void {
