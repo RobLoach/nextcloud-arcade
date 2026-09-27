@@ -189,18 +189,18 @@ export function createStatesPanel({ instance, romPath, flash, onDone }) {
 
 			const label = document.createElement('span')
 			label.className = 'arcade-states-label'
+			// A filled slot is its date: the thumbnail already tells the
+			// slots apart, and the slot number only earns its room where
+			// there is nothing else to say.
 			const when = state === undefined ? '' : new Date(state.mtime * 1000).toLocaleString()
 			if (slot === AUTO_SLOT) {
 				label.textContent = t('arcade', 'Auto — {date}', { date: when })
 			} else if (slot > data.slots) {
-				label.textContent = t('arcade', 'Slot {slot} — {date}, from an older version', {
-					slot,
-					date: when,
-				})
+				label.textContent = t('arcade', '{date}, from an older version', { date: when })
 			} else {
 				label.textContent = state === undefined
 					? t('arcade', 'Slot {slot} — empty', { slot })
-					: t('arcade', 'Slot {slot} — {date}', { slot, date: when })
+					: when
 			}
 			row.appendChild(label)
 
