@@ -7,6 +7,7 @@ namespace OCA\Arcade\SetupChecks;
 use OCA\Arcade\AppInfo\Application;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\BackgroundJob\IJobList;
+use OCP\BackgroundJob\TimedJob;
 use OCP\IAppConfig;
 use OCP\IL10N;
 use OCP\SetupCheck\ISetupCheck;
@@ -96,6 +97,12 @@ class ArcadeSetupCheck implements ISetupCheck {
 
 	private function hasQueuedJobs(): bool {
 		foreach (Application::JOBS as $class) {
+			// A recurring job sits in the list by design, so its being
+			// there says nothing about work waiting; only the queued ones
+			// speak of that.
+			if (is_subclass_of($class, TimedJob::class)) {
+				continue;
+			}
 			foreach ($this->jobList->getJobsIterator($class, 1, 0) as $job) {
 				return true;
 			}

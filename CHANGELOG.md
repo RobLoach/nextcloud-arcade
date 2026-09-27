@@ -6,6 +6,12 @@ All notable changes to NextCloud Arcade. The format follows
 
 ## [Unreleased]
 
+### Added
+- The `occ arcade:cleanup` sweep also runs by itself once a week, as a
+  background job: trash expiry by cron or `occ trashbin:cleanup` gives
+  the app no signal to act on, so what those leave behind is now swept
+  up without anyone running the command.
+
 ## [0.39.8] - 2026-09-27
 
 ### Fixed
