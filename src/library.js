@@ -2,6 +2,7 @@ import { getRequestToken } from '@nextcloud/auth'
 import { loadState } from '@nextcloud/initial-state'
 import { translate as t, translatePlural as n } from '@nextcloud/l10n'
 import { generateUrl } from '@nextcloud/router'
+import { formatDuration, formatPlayTime } from './format.js'
 import { attachLibraryGamepad } from './librarypad.js'
 import { systemLabel } from './systems.js'
 
@@ -135,36 +136,6 @@ function gameSystem(game) {
 		return t('arcade', 'ZIP archive')
 	}
 	return systemLabel(game.system)
-}
-
-/**
- * @param {number} seconds a length of time
- * @return {string} that length in words, empty under a minute
- */
-function formatDuration(seconds) {
-	if (!seconds || seconds < 60) {
-		return ''
-	}
-	const hours = Math.floor(seconds / 3600)
-	const minutes = Math.round((seconds % 3600) / 60)
-	return hours > 0
-		? t('arcade', '{hours} h {minutes} min', { hours, minutes })
-		: t('arcade', '{minutes} min', { minutes })
-}
-
-/**
- * @param {number} seconds time played
- * @return {string} that time, in words
- */
-function formatPlayTime(seconds) {
-	if (!seconds || seconds < 60) {
-		return ''
-	}
-	const hours = Math.floor(seconds / 3600)
-	const minutes = Math.round((seconds % 3600) / 60)
-	return hours > 0
-		? t('arcade', '{hours}h {minutes}m played', { hours, minutes })
-		: t('arcade', '{minutes}m played', { minutes })
 }
 
 /**

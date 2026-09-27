@@ -1,6 +1,7 @@
 import { translate as t, translatePlural as n } from '@nextcloud/l10n'
 import { generateUrl } from '@nextcloud/router'
 import { api } from './api.js'
+import { formatPlayTime } from './format.js'
 import { ICONS, icon } from './icons.js'
 import { romMimes } from './systems.js'
 
@@ -23,21 +24,6 @@ function pathOf(fileInfo) {
 	const directory = typeof fileInfo?.path === 'string' ? fileInfo.path : '/'
 	const name = typeof fileInfo?.name === 'string' ? fileInfo.name : ''
 	return `${directory === '/' ? '' : directory}/${name}`
-}
-
-/**
- * @param {number} seconds time played
- * @return {string} that time in words, the way the library puts it
- */
-function formatPlayTime(seconds) {
-	if (!seconds || seconds < 60) {
-		return ''
-	}
-	const hours = Math.floor(seconds / 3600)
-	const minutes = Math.round((seconds % 3600) / 60)
-	return hours > 0
-		? t('arcade', '{hours}h {minutes}m played', { hours, minutes })
-		: t('arcade', '{minutes}m played', { minutes })
 }
 
 /**
