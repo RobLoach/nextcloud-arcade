@@ -4,6 +4,7 @@ import { getCurrentUser, getRequestToken } from '@nextcloud/auth'
 import { defaultRemoteURL, defaultRootPath } from '@nextcloud/files/dav'
 import { translate as t } from '@nextcloud/l10n'
 import { generateFilePath, generateUrl } from '@nextcloud/router'
+import { api } from './api.js'
 import { inputConfig, retroarchKey } from './keys.js'
 import { biosForSystem, coreForSystem, systemForFile, systemFromBytes, systemLabel } from './systems.js'
 
@@ -45,12 +46,11 @@ export function davUrl(path) {
  * @return {Promise<string>} the file id
  */
 export async function fileIdOf(path) {
-	const response = await fetch(davUrl(path), {
+	const response = await api(davUrl(path), {
 		method: 'PROPFIND',
 		headers: {
 			'Content-Type': 'application/xml; charset=utf-8',
 			Depth: '0',
-			requesttoken: getRequestToken() ?? '',
 		},
 		credentials: 'same-origin',
 		body: '<?xml version="1.0"?>'
@@ -58,9 +58,6 @@ export async function fileIdOf(path) {
 			+ '<d:prop><oc:fileid/></d:prop>'
 			+ '</d:propfind>',
 	})
-	if (!response.ok) {
-		throw new Error(`${response.status} ${response.statusText}`)
-	}
 	const multistatus = new DOMParser().parseFromString(await response.text(), 'application/xml')
 	const fileId = multistatus.getElementsByTagNameNS('http://owncloud.org/ns', 'fileid')[0]?.textContent ?? ''
 	if (fileId === '') {
@@ -379,12 +376,9 @@ export function startSramSync(instance, romPath, canSave = true) {
 			if (sram === undefined || sram.size === 0) {
 				return
 			}
-			await fetch(sramUrl(romPath), {
+			await api(sramUrl(romPath), {
 				method: 'POST',
-				headers: {
-					'Content-Type': 'application/octet-stream',
-					requesttoken: getRequestToken() ?? '',
-				},
+				headers: { 'Content-Type': 'application/octet-stream' },
 				body: sram,
 				// So the final upload survives the page closing.
 				keepalive: true,
