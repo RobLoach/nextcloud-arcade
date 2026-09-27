@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace OCA\Arcade\Controller;
 
+use OCA\Arcade\Activity\ActivityPublisher;
 use OCA\Arcade\Service\SettingsService;
 use OCA\Arcade\Service\StateService;
 use OCP\AppFramework\Controller;
@@ -34,6 +35,7 @@ class StateController extends Controller {
 		IRequest $request,
 		private StateService $stateService,
 		private SettingsService $settingsService,
+		private ActivityPublisher $activityPublisher,
 		private ?string $userId,
 	) {
 		parent::__construct($appName, $request);
@@ -80,6 +82,10 @@ class StateController extends Controller {
 			return new JSONResponse([], Http::STATUS_BAD_REQUEST);
 		}
 		$this->stateService->save($this->userId, $file, $slot, $state);
+		// Only here: a state saved by hand is worth a stream entry, the
+		// autosaves and the thumbnail and SRAM writes are not. The
+		// publisher additionally keeps the auto slot out.
+		$this->activityPublisher->stateSaved($this->userId, $file, $slot);
 		return new JSONResponse(['size' => strlen($state)]);
 	}
 

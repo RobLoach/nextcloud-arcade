@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace OCA\Arcade\Tests\Unit;
 
+use OCA\Arcade\Activity\ActivityPublisher;
 use OCA\Arcade\Controller\StateController;
 use OCA\Arcade\Service\SettingsService;
 use OCA\Arcade\Service\StateService;
@@ -29,6 +30,7 @@ class StateControllerTest extends TestCase {
 			$this->createStub(IRequest::class),
 			$this->stateService,
 			$settings,
+			$this->createStub(ActivityPublisher::class),
 			$userId,
 		);
 	}

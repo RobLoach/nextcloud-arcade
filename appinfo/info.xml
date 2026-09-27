@@ -67,6 +67,14 @@ Arcade runs the RetroArch libretro cores in the browser, so nothing is uploaded 
 		<personal>OCA\Arcade\Settings\Personal</personal>
 		<personal-section>OCA\Arcade\Settings\PersonalSection</personal-section>
 	</settings>
+	<activity>
+		<settings>
+			<setting>OCA\Arcade\Activity\Setting</setting>
+		</settings>
+		<providers>
+			<provider>OCA\Arcade\Activity\Provider</provider>
+		</providers>
+	</activity>
 	<navigations>
 		<navigation>
 			<id>arcade</id>
