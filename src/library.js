@@ -2,7 +2,7 @@ import { loadState } from '@nextcloud/initial-state'
 import { translate as t, translatePlural as n } from '@nextcloud/l10n'
 import { generateUrl } from '@nextcloud/router'
 import { api } from './api.js'
-import { formatDuration, formatPlayTime } from './format.js'
+import { formatDuration, formatPlayTime, formatSize } from './format.js'
 import { attachLibraryGamepad } from './librarypad.js'
 import { playUrl, previewUrl } from './play.js'
 import { systemLabel } from './systems.js'
@@ -96,21 +96,6 @@ function writeCache(key, data) {
 	} catch (error) {
 		// A full or unavailable session storage only costs us the cache.
 	}
-}
-
-/**
- * @param {number} bytes a file size
- * @return {string} the size in human readable units
- */
-function formatSize(bytes) {
-	const units = ['B', 'KB', 'MB', 'GB']
-	let size = bytes
-	let unit = 0
-	while (size >= 1024 && unit < units.length - 1) {
-		size /= 1024
-		unit++
-	}
-	return `${size < 10 && unit > 0 ? size.toFixed(1) : Math.round(size)} ${units[unit]}`
 }
 
 /**
