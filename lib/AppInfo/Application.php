@@ -28,6 +28,7 @@ use OCP\FilesMetadata\Event\MetadataBackgroundEvent;
 use OCP\FilesMetadata\Event\MetadataLiveEvent;
 use OCP\Security\CSP\AddContentSecurityPolicyEvent;
 use OCP\User\Events\UserDeletedEvent;
+use OCP\Util;
 
 class Application extends App implements IBootstrap {
 	/**
@@ -77,6 +78,13 @@ class Application extends App implements IBootstrap {
 	}
 
 	public function boot(IBootContext $context): void {
+		// Emptying the trash, or one item being expunged from it, is only
+		// ever told through this legacy signal: NodeDeletedEvent does not
+		// fire for paths in the trash. Saves survive the trash, so this is
+		// where they finally go.
+		$context->injectFn(function (CleanupListener $listener): void {
+			Util::connectHook('\OCP\Trashbin', 'preDelete', $listener, 'trashItemDeleted');
+		});
 		$context->injectFn(function (IMimeTypeDetector $detector): void {
 			// registerType() lives on the implementation, not on the public
 			// interface, so make sure it is there. Without it ROMs are still
