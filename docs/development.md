@@ -15,12 +15,21 @@ composer psalm    # static analysis
 ```
 
 Every push and pull request runs the same through GitHub Actions: PHP
-linting on 8.3 and 8.4, the test suite, static analysis, the JavaScript
-build, and a check that `appinfo/info.xml` validates against the app store
-schema and agrees with `package.json` on the version.
+linting on 8.3 and 8.4, the test suite, static analysis, and a check that
+`appinfo/info.xml` validates against the app store schema and agrees with
+`package.json` on the version. The heavy jobs — the JavaScript build and
+the server smoke test — run only on alpha, beta and rc tags, since the
+committed bundles change rarely and a container install takes minutes.
+
+`build/smoke-test.sh` is that smoke test, and it runs locally too: it
+starts a real Nextcloud container (or uses one it is given), installs the
+app, seeds ROMs, walks the endpoints a browser would, and does it all
+again through an app upgrade. Unit tests and Psalm only see the app's own
+code; the bugs this catches live in the server it runs inside.
 
 The built bundles in `js/` are committed, so rebuild and commit them along
-with any change to `src/`.
+with any change to `src/` — and bump the patch version whenever the
+bundles change, so browser caches roll instead of serving stale scripts.
 
 ## Project structure
 
@@ -33,18 +42,23 @@ lib/Controller/             Page, library, settings and save state endpoints
 lib/Listener/               Files and Viewer script loading, Content Security Policy
 lib/Preview/                Box art as the Nextcloud preview of a ROM
 lib/Migration/              Repair steps: mimetypes on install, caches on disable
-lib/Command/                The occ cleanup and uninstall commands
+lib/Command/                The occ commands: cleanup, uninstall, bios, status
+lib/Activity/               What was played and saved, for the Activity stream
+lib/Notification/           The word under the bell when a box art run is done
 lib/BackgroundJob/          Looking for box art and reading ROMs, away from the browser
 lib/Controls.php            What the keyboard does, and what it does by default
 lib/RomHeader.php           The name a cartridge gives itself
 build/translationtool.phar  Collects the strings to translate
+build/smoke-test.sh         The app inside a real Nextcloud container
 l10n/                       Translations, as Nextcloud reads them
 lib/Service/                Settings, library, save states, thumbnails, history
 lib/Settings/               Personal settings section
 src/main.js                 The app page: player or games library
 src/library.js              Games library views and pagination
+src/librarypad.js           Browsing the library with a gamepad
 src/viewer.js               The Viewer handler, loaded on every Files page
 src/fileaction.js           The "Play with Arcade" entry in the file menu
+src/files.js                The Arcade tab of the Files sidebar
 src/session.js              Everything a running game needs, loaded on demand
 src/player.js               Launcher, ROM fetching, zip extraction, SRAM
 src/toolbar.js              Player control bar
@@ -67,17 +81,26 @@ All of them are user-scoped and require a session.
 
 | Method | Route | Purpose |
 | --- | --- | --- |
-| GET | `/apps/arcade/` | The app page, `?file=` plays a game |
-| GET | `/apps/arcade/arcade/library` | Games: `offset`, `limit`, `sort`, `order`, `search`, `system`, `refresh` |
+| GET | `/apps/arcade/` | The app page; `?fileId=` plays a game, `?file=` still works for old bookmarks |
+| GET | `/apps/arcade/arcade/library` | Games: `offset`, `limit`, `sort`, `order`, `search`, `system`, `tag`, `refresh` |
 | GET/POST | `/apps/arcade/arcade/settings` | Personal settings |
+| POST | `/apps/arcade/arcade/settings/admin` | The instance settings the admin page keeps |
+| GET | `/apps/arcade/arcade/game` | What the app knows about one ROM, for the sidebar tab |
+| GET | `/apps/arcade/arcade/suggest` | Folders that already hold ROMs, for the first run |
 | GET | `/apps/arcade/arcade/states` | Save state slots of a game |
 | GET/POST/DELETE | `/apps/arcade/arcade/state` | A save state slot |
 | GET/POST | `/apps/arcade/arcade/state/thumbnail` | The screenshot of a slot |
-| GET/POST | `/apps/arcade/arcade/sram` | The in-game battery save |
+| GET/POST/DELETE | `/apps/arcade/arcade/sram` | The in-game battery save |
 | POST | `/apps/arcade/arcade/recent` | Remember a game as played, and for how long |
 | POST | `/apps/arcade/arcade/favorite` | Make a game a favorite, or stop |
 | GET/POST | `/apps/arcade/arcade/thumbnails/fetch` | Ask for missing box art, and how it went |
 | GET/DELETE | `/apps/arcade/arcade/screenshots` | The screenshots of a game |
+| GET | `/apps/arcade/arcade/bios` | A BIOS file, by the name a core asks for |
+| GET | `/apps/arcade/arcade/bios/status` | What is held and what is missing, admin only |
+| POST/DELETE | `/apps/arcade/arcade/bios` | A BIOS file of the admin's System folder, admin only |
+
+The endpoints that write are rate limited, generously enough that no
+player ever meets the limit.
 
 Save states and battery saves are removed along with the game they belong
 to, and with the user they belong to — but a game deleted into the trash
@@ -94,12 +117,14 @@ Outside of the files of a user, the app writes:
 
 | Where | What |
 | --- | --- |
-| `oc_preferences` | Personal settings, recently played, how long each game was played (by file id), and how a box art run went |
+| `oc_preferences` | Personal settings, and how a box art run went |
 | `oc_appconfig` | Core options, thumbnail types, and the folder defaults of the instance |
+| `oc_arcade_plays` | When and how long each game was played, per user and file id |
+| `oc_arcade_games` | The games that have save states |
 | `oc_jobs` | A queued box art lookup, while one is running |
 | `oc_mimetypes`, `oc_filecache` | The ROM mimetypes, and the files given them |
-| `oc_files_metadata` | The system, title, region and MD5 of each ROM, by file id |
-| `appdata_*/arcade/` | Save states and battery saves, for as long as no saves folder is set |
+| `oc_files_metadata` | The system, title, region, MD5 and CRC32 of each ROM, by file id |
+| `appdata_*/arcade/` | Save states and battery saves, for as long as no saves folder is set; the BIOS store of the instance |
 
 Favorites are not in that list: they are the favorites of the Files app,
 kept in its own tables under the file id. `occ arcade:uninstall` leaves
