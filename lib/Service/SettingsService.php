@@ -225,7 +225,7 @@ class SettingsService {
 			'audio_latency' => 64,
 			'respond_to_global_events' => true,
 			'pause_when_hidden' => false,
-			'autosave_on_close' => true,
+			'autosave_on_close' => false,
 			'autoload_on_start' => false,
 			'autosave_interval' => 0,
 			'library_folder' => '/Games',
