@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace OCA\Arcade\BackgroundJob;
 
 use OCA\Arcade\AppInfo\Application;
+use OCA\Arcade\Notification\Notifier;
 use OCA\Arcade\Service\LibraryService;
 use OCA\Arcade\Service\SettingsService;
 use OCA\Arcade\Service\ThumbnailFetchService;
@@ -17,6 +18,7 @@ use OCP\Files\File;
 use OCP\Files\IRootFolder;
 use OCP\Files\NotFoundException;
 use OCP\IPreview;
+use OCP\Notification\IManager as INotificationManager;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -45,6 +47,14 @@ class FetchThumbnails extends QueuedJob {
 	 */
 	public const PREVIEW_SIZES = [256, 64];
 
+	/**
+	 * Where the finds of the earlier batches of a run wait for the last
+	 * one. It cannot ride along in the job argument: the controller only
+	 * queues a job when none with ['userId' => ...] is there, and a tally
+	 * in the argument would make a requeued job invisible to that check.
+	 */
+	private const TALLY = 'fetch_run_found';
+
 	public function __construct(
 		ITimeFactory $time,
 		private SettingsService $settingsService,
@@ -54,6 +64,7 @@ class FetchThumbnails extends QueuedJob {
 		private IJobList $jobList,
 		private IUserConfig $userConfig,
 		private IPreview $preview,
+		private INotificationManager $notificationManager,
 		private LoggerInterface $logger,
 	) {
 		parent::__construct($time);
@@ -73,6 +84,9 @@ class FetchThumbnails extends QueuedJob {
 		} catch (\Throwable $e) {
 			$this->logger->error('Could not look for box art', ['exception' => $e]);
 			$this->report($userId, 'Something went wrong while looking for box art');
+			// A broken run is over too; its half-made tally must not leak
+			// into the next one.
+			$this->clearTally($userId);
 		}
 	}
 
@@ -82,10 +96,12 @@ class FetchThumbnails extends QueuedJob {
 		// and a job queued before that must not go anyway.
 		if (!$this->fetchService->isAllowed()) {
 			$this->report($userId, 'Looking up box art is turned off for this instance');
+			$this->clearTally($userId);
 			return;
 		}
 		if ($settings['thumbnails_folder'] === '') {
 			$this->report($userId, 'No thumbnails folder is set');
+			$this->clearTally($userId);
 			return;
 		}
 
@@ -93,6 +109,7 @@ class FetchThumbnails extends QueuedJob {
 		$library = $this->folderAt($userFolder, $settings['library_folder']);
 		if ($library === null) {
 			$this->report($userId, 'The games library folder does not exist');
+			$this->clearTally($userId);
 			return;
 		}
 		$thumbnails = $this->folderAt($userFolder, $settings['thumbnails_folder'])
@@ -113,14 +130,26 @@ class FetchThumbnails extends QueuedJob {
 			static fn (array $game): bool => empty($game['thumbnails']),
 		));
 		if ($missing === []) {
+			// Also the end of a run whose last batch fetched everything
+			// that was left: the requeued job arrives here with the tally
+			// of the earlier batches still waiting to be told.
 			$this->report($userId, 'Every game has a picture');
+			$this->finishRun($userId, $this->tally($userId));
 			return;
 		}
 
 		$result = $this->fetchService->fetch($userId, $missing, $thumbnails, self::BATCH);
 		$this->warm($result['written'] ?? []);
 		if ($result['tried'] >= self::BATCH) {
-			// There is more to look for; carry on in the next run.
+			// There is more to look for; carry on in the next run. Only
+			// the finds are put by -- the one notification at the end
+			// speaks for the whole run, not for a batch.
+			$this->userConfig->setValueInt(
+				$userId,
+				Application::APP_ID,
+				self::TALLY,
+				$this->tally($userId) + $result['fetched'],
+			);
 			$this->report($userId, sprintf(
 				'Looking for box art, %d still to go',
 				max(0, count($missing) - $result['fetched']),
@@ -133,6 +162,38 @@ class FetchThumbnails extends QueuedJob {
 			$result['fetched'],
 			$result['missing'],
 		));
+		$this->finishRun($userId, $this->tally($userId) + $result['fetched']);
+	}
+
+	/**
+	 * The whole run is over: say so once, under the notification bell of
+	 * the player who started it, and forget the tally.
+	 *
+	 * A notification is a nicety, so trouble sending one is only logged;
+	 * the box art itself is already on disk either way.
+	 */
+	private function finishRun(string $userId, int $found): void {
+		$this->clearTally($userId);
+		try {
+			$notification = $this->notificationManager->createNotification();
+			$notification->setApp(Application::APP_ID)
+				->setUser($userId)
+				->setDateTime($this->time->getDateTime())
+				->setObject('boxart-run', $userId)
+				->setSubject(Notifier::SUBJECT_FETCH_FINISHED, ['found' => $found]);
+			$this->notificationManager->notify($notification);
+		} catch (\Throwable $e) {
+			$this->logger->warning('Could not tell about the finished box art run', ['exception' => $e]);
+		}
+	}
+
+	/** What the earlier batches of this run found. */
+	private function tally(string $userId): int {
+		return $this->userConfig->getValueInt($userId, Application::APP_ID, self::TALLY, 0);
+	}
+
+	private function clearTally(string $userId): void {
+		$this->userConfig->deleteUserConfig($userId, Application::APP_ID, self::TALLY);
 	}
 
 	/**

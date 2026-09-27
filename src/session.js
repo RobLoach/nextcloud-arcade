@@ -22,6 +22,11 @@ const settings = loadState('arcade', 'settings', {})
  * @return {Promise<Function>} stops the game and puts everything away
  */
 export async function startSession({ canvas, container, filename, basename, source, closeUrl = '' }) {
+	// The launch learns of anything it went without -- a missing BIOS --
+	// before the toolbar and its status line exist, so the word is held
+	// here and handed over below, for the toolbar to flash once it is on
+	// screen.
+	let notice = ''
 	const instance = await launchRom({
 		element: canvas,
 		romUrl: source ?? davUrl(filename),
@@ -29,6 +34,9 @@ export async function startSession({ canvas, container, filename, basename, sour
 		settings,
 		systemHint: systemForFolderPath(filename),
 		romPath: filename,
+		onWarning: (text) => {
+			notice = text
+		},
 	})
 	const stopSramSync = startSramSync(instance, filename, (settings.saves_folder ?? '') !== '')
 	const stopPlayTime = recordRecent(filename)
@@ -40,6 +48,7 @@ export async function startSession({ canvas, container, filename, basename, sour
 		settings,
 		closeUrl,
 		onClose: stopPlayTime,
+		notice,
 	})
 
 	return () => {
