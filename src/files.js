@@ -3,6 +3,7 @@ import { generateUrl } from '@nextcloud/router'
 import { api } from './api.js'
 import { formatPlayTime } from './format.js'
 import { ICONS, icon } from './icons.js'
+import { playGame } from './play.js'
 import { romMimes } from './systems.js'
 
 /**
@@ -49,25 +50,6 @@ function slotName(slot) {
 }
 
 /**
- * Starts the game the way the file menu entry does: in the Viewer when it
- * knows the mimetype, on the app page otherwise -- by file id where the
- * sidebar knows one, so the link survives renames and moves.
- *
- * @param {string} file path of the game
- * @param {string} mime its mimetype
- * @param {number|string} fileId the Nextcloud file id, when known
- */
-function play(file, mime, fileId) {
-	if (window.OCA?.Viewer !== undefined && romMimes().includes(mime)) {
-		window.OCA.Viewer.open({ path: file })
-		return
-	}
-	window.location.href = fileId
-		? generateUrl('/apps/arcade/?fileId={fileId}', { fileId })
-		: generateUrl('/apps/arcade/?file={file}', { file })
-}
-
-/**
  * @param {HTMLElement} list the definition list
  * @param {string} label what the value is
  * @param {string} value the value, nothing added when it is empty
@@ -99,7 +81,7 @@ function render(game, file, mime, fileId) {
 	button.className = 'primary arcade-sidebar-play'
 	button.innerHTML = icon(ICONS.gamepad)
 	button.appendChild(document.createTextNode(t('arcade', 'Play')))
-	button.addEventListener('click', () => play(file, mime, fileId))
+	button.addEventListener('click', () => playGame(file, mime, fileId))
 	container.appendChild(button)
 
 	const list = document.createElement('dl')

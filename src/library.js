@@ -4,6 +4,7 @@ import { generateUrl } from '@nextcloud/router'
 import { api } from './api.js'
 import { formatDuration, formatPlayTime } from './format.js'
 import { attachLibraryGamepad } from './librarypad.js'
+import { playUrl } from './play.js'
 import { systemLabel } from './systems.js'
 
 const VIEWS = ['grid', 'list', 'table']
@@ -133,19 +134,6 @@ function gameSystem(game) {
 
 /**
  * @param {object} game the game
- * @return {string} the URL that plays the game
- */
-function gameUrl(game) {
-	// By file id where there is one, so the link survives renames and
-	// moves; the path form stays as the fallback.
-	if (game.id) {
-		return generateUrl('/apps/arcade/?fileId={fileId}', { fileId: game.id })
-	}
-	return generateUrl('/apps/arcade/?file={file}', { file: game.path })
-}
-
-/**
- * @param {object} game the game
  * @param {number} size the requested thumbnail size in pixels
  * @return {HTMLElement} the thumbnail image, or a placeholder
  */
@@ -209,7 +197,7 @@ function renderCard(game, reload) {
 
 	const link = document.createElement('a')
 	link.className = 'arcade-library-game-link'
-	link.href = gameUrl(game)
+	link.href = playUrl(game.path, game.id)
 	link.appendChild(thumbnailFor(game, 256))
 
 	const name = document.createElement('span')
@@ -296,7 +284,7 @@ function renderList(games) {
 	for (const game of games) {
 		const row = document.createElement('a')
 		row.className = 'arcade-library-row'
-		row.href = gameUrl(game)
+		row.href = playUrl(game.path, game.id)
 		row.appendChild(thumbnailFor(game, 64))
 
 		const name = document.createElement('span')
@@ -359,7 +347,7 @@ function renderTable(games, reload) {
 
 		const nameCell = document.createElement('td')
 		const link = document.createElement('a')
-		link.href = gameUrl(game)
+		link.href = playUrl(game.path, game.id)
 		link.textContent = gameName(game)
 		link.title = game.basename
 		nameCell.appendChild(link)
