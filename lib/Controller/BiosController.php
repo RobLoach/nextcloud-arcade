@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace OCA\Arcade\Controller;
 
 use OCA\Arcade\Service\BiosService;
-use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\FrontpageRoute;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
@@ -26,7 +25,7 @@ use OCP\IRequest;
  * @psalm-suppress UnusedClass
  */
 #[OpenAPI(OpenAPI::SCOPE_IGNORE)]
-class BiosController extends Controller {
+class BiosController extends ArcadeController {
 	// BIOS files are small; the largest asked for is well under a megabyte.
 	private const MAX_BIOS_SIZE = 16 * 1024 * 1024;
 
@@ -34,7 +33,7 @@ class BiosController extends Controller {
 		string $appName,
 		IRequest $request,
 		private BiosService $biosService,
-		private ?string $userId,
+		protected ?string $userId,
 	) {
 		parent::__construct($appName, $request);
 	}
@@ -66,8 +65,8 @@ class BiosController extends Controller {
 	 */
 	#[FrontpageRoute(verb: 'GET', url: '/arcade/bios/status')]
 	public function status(): JSONResponse {
-		if ($this->userId === null) {
-			return new JSONResponse([], Http::STATUS_UNAUTHORIZED);
+		if (($error = $this->requireUser()) !== null) {
+			return $error;
 		}
 		return new JSONResponse($this->biosService->statusFor($this->userId));
 	}
@@ -82,8 +81,8 @@ class BiosController extends Controller {
 	#[UserRateLimit(limit: 60, period: 60)]
 	#[FrontpageRoute(verb: 'POST', url: '/arcade/bios')]
 	public function upload(string $name = ''): JSONResponse {
-		if ($this->userId === null) {
-			return new JSONResponse([], Http::STATUS_UNAUTHORIZED);
+		if (($error = $this->requireUser()) !== null) {
+			return $error;
 		}
 		$canonical = BiosService::canonicalName($name);
 		if ($canonical === null) {
@@ -119,8 +118,8 @@ class BiosController extends Controller {
 	#[UserRateLimit(limit: 60, period: 60)]
 	#[FrontpageRoute(verb: 'DELETE', url: '/arcade/bios')]
 	public function remove(string $name = ''): JSONResponse {
-		if ($this->userId === null) {
-			return new JSONResponse([], Http::STATUS_UNAUTHORIZED);
+		if (($error = $this->requireUser()) !== null) {
+			return $error;
 		}
 		$canonical = BiosService::canonicalName($name);
 		if ($canonical === null) {

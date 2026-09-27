@@ -8,7 +8,6 @@ use OCA\Arcade\AppInfo\Application;
 use OCA\Arcade\BackgroundJob\FetchThumbnails;
 use OCA\Arcade\Service\SettingsService;
 use OCA\Arcade\Service\ThumbnailFetchService;
-use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\FrontpageRoute;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
@@ -26,7 +25,7 @@ use OCP\IRequest;
  * @psalm-suppress UnusedClass
  */
 #[OpenAPI(OpenAPI::SCOPE_IGNORE)]
-class ThumbnailController extends Controller {
+class ThumbnailController extends ArcadeController {
 	public function __construct(
 		string $appName,
 		IRequest $request,
@@ -34,7 +33,7 @@ class ThumbnailController extends Controller {
 		private IJobList $jobList,
 		private ThumbnailFetchService $fetchService,
 		private IUserConfig $userConfig,
-		private ?string $userId,
+		protected ?string $userId,
 	) {
 		parent::__construct($appName, $request);
 	}
@@ -46,8 +45,8 @@ class ThumbnailController extends Controller {
 	#[UserRateLimit(limit: 30, period: 3600)]
 	#[FrontpageRoute(verb: 'POST', url: '/arcade/thumbnails/fetch')]
 	public function fetch(): JSONResponse {
-		if ($this->userId === null) {
-			return new JSONResponse([], Http::STATUS_UNAUTHORIZED);
+		if (($error = $this->requireUser()) !== null) {
+			return $error;
 		}
 		$settings = $this->settingsService->getUserSettings($this->userId);
 		if (!$this->fetchService->isAllowed()) {
@@ -74,8 +73,8 @@ class ThumbnailController extends Controller {
 	#[NoAdminRequired]
 	#[FrontpageRoute(verb: 'GET', url: '/arcade/thumbnails/fetch')]
 	public function status(): JSONResponse|array {
-		if ($this->userId === null) {
-			return new JSONResponse([], Http::STATUS_UNAUTHORIZED);
+		if (($error = $this->requireUser()) !== null) {
+			return $error;
 		}
 		$stored = $this->userConfig->getValueString($this->userId, Application::APP_ID, 'fetch_status', '');
 		$status = $stored === '' ? null : json_decode($stored, true);

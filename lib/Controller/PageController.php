@@ -11,7 +11,6 @@ use OCA\Arcade\Service\LibraryService;
 use OCA\Arcade\Service\RecentService;
 use OCA\Arcade\Service\SettingsService;
 use OCA\Files\Event\LoadSidebar;
-use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\FrontpageRoute;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
@@ -27,7 +26,7 @@ use OCP\IRequest;
 /**
  * @psalm-suppress UnusedClass
  */
-class PageController extends Controller {
+class PageController extends ArcadeController {
 	private const MAX_PAGE_SIZE = 500;
 
 	public function __construct(
@@ -40,7 +39,7 @@ class PageController extends Controller {
 		private IRootFolder $rootFolder,
 		private IJobList $jobList,
 		private IEventDispatcher $eventDispatcher,
-		private ?string $userId,
+		protected ?string $userId,
 	) {
 		parent::__construct($appName, $request);
 	}
@@ -99,8 +98,8 @@ class PageController extends Controller {
 		string $tag = '',
 		bool $refresh = false,
 	): JSONResponse {
-		if ($this->userId === null) {
-			return new JSONResponse([], Http::STATUS_UNAUTHORIZED);
+		if (($error = $this->requireUser()) !== null) {
+			return $error;
 		}
 		$settings = $this->settingsService->getUserSettings($this->userId);
 		$folderPath = $settings['library_folder'];
@@ -194,8 +193,8 @@ class PageController extends Controller {
 	#[NoAdminRequired]
 	#[FrontpageRoute(verb: 'GET', url: '/arcade/suggest')]
 	public function suggest(): JSONResponse {
-		if ($this->userId === null) {
-			return new JSONResponse([], Http::STATUS_UNAUTHORIZED);
+		if (($error = $this->requireUser()) !== null) {
+			return $error;
 		}
 		$settings = $this->settingsService->getUserSettings($this->userId);
 		$userFolder = $this->rootFolder->getUserFolder($this->userId);
