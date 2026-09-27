@@ -1,6 +1,13 @@
 # Development
 
-Building the app, what lives where, and what it stores.
+For whoever changes the code: building the app, what lives where, and
+what it stores.
+
+The rest of `docs/` is for people who use the app: [usage.md](usage.md)
+is the player's guide, [library.md](library.md) covers browsing and the
+Files integration, [settings.md](settings.md) is the administrator's
+guide, and [systems.md](systems.md) is the reference of systems, cores,
+extensions and BIOS files.
 
 ```sh
 npm install
