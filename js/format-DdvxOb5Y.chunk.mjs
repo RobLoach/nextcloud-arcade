@@ -1,0 +1,2 @@
+import{t as u}from"./translation-DoG5ZELJ-BMAs1nHq.chunk.mjs";function r(n,e){if(!n||n<60)return"";const t=Math.floor(n/3600),s=Math.round(n%3600/60);return e(t,s)}function o(n){return r(n,(e,t)=>e>0?u("arcade","{hours} h {minutes} min",{hours:e,minutes:t}):u("arcade","{minutes} min",{minutes:t}))}function a(n){return r(n,(e,t)=>e>0?u("arcade","{hours}h {minutes}m played",{hours:e,minutes:t}):u("arcade","{minutes}m played",{minutes:t}))}export{o as a,a as f};
+//# sourceMappingURL=format-DdvxOb5Y.chunk.mjs.map

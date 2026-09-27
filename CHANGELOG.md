@@ -6,6 +6,17 @@ All notable changes to NextCloud Arcade. The format follows
 
 ## [Unreleased]
 
+## [0.39.7] - 2026-09-27
+
+### Fixed
+- The "Saved" message on the settings pages no longer disappears early
+  when two changes are saved within a few seconds of each other.
+- Opening a game no longer asks the server for its screenshot list twice.
+
+### Changed
+- Duplicated logic across the app was consolidated behind shared helpers;
+  no behavior changes beyond the fixes above.
+
 ## [0.39.6] - 2026-09-27
 
 ### Added
