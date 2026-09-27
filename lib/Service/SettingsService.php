@@ -116,12 +116,22 @@ class SettingsService {
 	 * @return array<string, string> system id => kind of image
 	 */
 	public function getThumbnailTypes(): array {
-		$stored = $this->appConfig->getValueString(Application::APP_ID, 'thumbnail_types', lazy: true);
+		return $this->lazyJson('thumbnail_types', $this->sanitizeThumbnailTypes(...));
+	}
+
+	/**
+	 * A JSON blob stored lazy in the app config, decoded and sanitized;
+	 * an empty or unreadable one is just nothing.
+	 *
+	 * @param callable(array<string, mixed>): array $sanitize
+	 */
+	private function lazyJson(string $key, callable $sanitize): array {
+		$stored = $this->appConfig->getValueString(Application::APP_ID, $key, lazy: true);
 		if ($stored === '') {
 			return [];
 		}
-		$types = json_decode($stored, true);
-		return is_array($types) ? $this->sanitizeThumbnailTypes($types) : [];
+		$decoded = json_decode($stored, true);
+		return is_array($decoded) ? $sanitize($decoded) : [];
 	}
 
 	/**
@@ -142,12 +152,7 @@ class SettingsService {
 	 * @return array<string, array<string, string>>
 	 */
 	public function getCoreOptions(): array {
-		$stored = $this->appConfig->getValueString(Application::APP_ID, 'core_options', lazy: true);
-		if ($stored === '') {
-			return [];
-		}
-		$options = json_decode($stored, true);
-		return is_array($options) ? $this->sanitizeCoreOptions($options) : [];
+		return $this->lazyJson('core_options', $this->sanitizeCoreOptions(...));
 	}
 
 	/**
