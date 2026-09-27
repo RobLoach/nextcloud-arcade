@@ -92,7 +92,7 @@ class ThumbnailFetchService {
 		if (!$this->isAllowed()) {
 			return ['fetched' => 0, 'tried' => 0, 'missing' => count($games), 'written' => []];
 		}
-		$cache = $this->cacheFactory->createDistributed(Application::APP_ID . '_fetch');
+		$cache = Caches::create($this->cacheFactory, Application::APP_ID . '_fetch');
 		$client = $this->clientService->newClient();
 
 		$fetched = 0;
