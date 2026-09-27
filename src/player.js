@@ -4,21 +4,11 @@ import { getCurrentUser, getRequestToken } from '@nextcloud/auth'
 import { defaultRemoteURL, defaultRootPath } from '@nextcloud/files/dav'
 import { translate as t } from '@nextcloud/l10n'
 import { generateFilePath, generateUrl } from '@nextcloud/router'
+import { api } from './api.js'
 import { inputConfig, retroarchKey } from './keys.js'
 import { biosForSystem, coreForSystem, systemForFile, systemFromBytes, systemLabel } from './systems.js'
 
 const SRAM_SYNC_INTERVAL = 60 * 1000
-
-/**
- * Thrown when an archive holds no game: the viewer offers the file for
- * download instead of showing an emulator error over a family photo zip.
- */
-export class NotAGameError extends Error {
-	constructor(message) {
-		super(message)
-		this.name = 'NotAGameError'
-	}
-}
 
 // The games whose battery save was just deleted. The emulator still holds
 // the old save in memory, and the next sync would write it right back, so
@@ -56,12 +46,11 @@ export function davUrl(path) {
  * @return {Promise<string>} the file id
  */
 export async function fileIdOf(path) {
-	const response = await fetch(davUrl(path), {
+	const response = await api(davUrl(path), {
 		method: 'PROPFIND',
 		headers: {
 			'Content-Type': 'application/xml; charset=utf-8',
 			Depth: '0',
-			requesttoken: getRequestToken() ?? '',
 		},
 		credentials: 'same-origin',
 		body: '<?xml version="1.0"?>'
@@ -69,9 +58,6 @@ export async function fileIdOf(path) {
 			+ '<d:prop><oc:fileid/></d:prop>'
 			+ '</d:propfind>',
 	})
-	if (!response.ok) {
-		throw new Error(`${response.status} ${response.statusText}`)
-	}
 	const multistatus = new DOMParser().parseFromString(await response.text(), 'application/xml')
 	const fileId = multistatus.getElementsByTagNameNS('http://owncloud.org/ns', 'fileid')[0]?.textContent ?? ''
 	if (fileId === '') {
@@ -122,7 +108,7 @@ async function resolveRom(blob, romName, systemHint) {
 			return { rom: new File([data], name.split('/').pop()), system }
 		}
 	}
-	throw new NotAGameError(t('arcade', 'No supported ROM found in the archive'))
+	throw new Error(t('arcade', 'No supported ROM found in the archive'))
 }
 
 /**
@@ -390,12 +376,9 @@ export function startSramSync(instance, romPath, canSave = true) {
 			if (sram === undefined || sram.size === 0) {
 				return
 			}
-			await fetch(sramUrl(romPath), {
+			await api(sramUrl(romPath), {
 				method: 'POST',
-				headers: {
-					'Content-Type': 'application/octet-stream',
-					requesttoken: getRequestToken() ?? '',
-				},
+				headers: { 'Content-Type': 'application/octet-stream' },
 				body: sram,
 				// So the final upload survives the page closing.
 				keepalive: true,

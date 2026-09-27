@@ -2,6 +2,8 @@ import { translate as t } from '@nextcloud/l10n'
 import { generateUrl } from '@nextcloud/router'
 import { api } from '../api.js'
 import { ICONS, icon } from '../icons.js'
+import { previewUrl } from '../play.js'
+import { createPanel } from './panel.js'
 
 /**
  * Build the panel listing the screenshots taken of a game.
@@ -12,16 +14,7 @@ import { ICONS, icon } from '../icons.js'
  * @return {{element: HTMLElement, refresh: Function}} the panel
  */
 export function createGalleryPanel({ romPath, flash }) {
-	const element = document.createElement('div')
-	element.className = 'arcade-gallery hidden'
-
-	element.setAttribute('role', 'dialog')
-	element.setAttribute('aria-modal', 'false')
-	element.setAttribute('aria-label', t('arcade', 'Screenshots'))
-
-	const heading = document.createElement('h3')
-	heading.textContent = t('arcade', 'Screenshots')
-	element.appendChild(heading)
+	const element = createPanel('arcade-gallery', t('arcade', 'Screenshots'))
 
 	const grid = document.createElement('div')
 	grid.className = 'arcade-gallery-grid'
@@ -43,14 +36,23 @@ export function createGalleryPanel({ romPath, flash }) {
 		}
 	}
 
+	// What count() fetched for the button, kept for the first refresh, so
+	// the launch does not ask for the same list twice.
+	let counted = null
+
+	const list = async () => {
+		const response = await api(generateUrl(
+			'/apps/arcade/arcade/screenshots?file={file}',
+			{ file: romPath },
+		))
+		return await response.json()
+	}
+
 	const refresh = async () => {
 		let data
 		try {
-			const response = await api(generateUrl(
-				'/apps/arcade/arcade/screenshots?file={file}',
-				{ file: romPath },
-			))
-			data = await response.json()
+			data = counted ?? await list()
+			counted = null
 		} catch (error) {
 			console.error('Could not list the screenshots', error)
 			return
@@ -77,9 +79,7 @@ export function createGalleryPanel({ romPath, flash }) {
 			link.title = screenshot.basename
 
 			const image = document.createElement('img')
-			image.src = generateUrl('/core/preview?fileId={fileId}&x=256&y=192&a=1', {
-				fileId: screenshot.fileId,
-			})
+			image.src = previewUrl(screenshot.fileId, 256, 192)
 			image.alt = screenshot.basename
 			image.loading = 'lazy'
 			link.appendChild(image)
@@ -109,12 +109,8 @@ export function createGalleryPanel({ romPath, flash }) {
 	 */
 	const count = async () => {
 		try {
-			const response = await api(generateUrl(
-				'/apps/arcade/arcade/screenshots?file={file}',
-				{ file: romPath },
-			))
-			const data = await response.json()
-			return data.screenshots.length
+			counted = await list()
+			return counted.screenshots.length
 		} catch (error) {
 			return 0
 		}

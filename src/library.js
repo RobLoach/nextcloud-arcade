@@ -1,8 +1,10 @@
-import { getRequestToken } from '@nextcloud/auth'
 import { loadState } from '@nextcloud/initial-state'
 import { translate as t, translatePlural as n } from '@nextcloud/l10n'
 import { generateUrl } from '@nextcloud/router'
+import { api } from './api.js'
+import { formatDuration, formatPlayTime } from './format.js'
 import { attachLibraryGamepad } from './librarypad.js'
+import { playUrl, previewUrl } from './play.js'
 import { systemLabel } from './systems.js'
 
 const VIEWS = ['grid', 'list', 'table']
@@ -59,14 +61,7 @@ function icon(path) {
  * @return {Promise<Response>} the response, always ok
  */
 async function post(url, params) {
-	const response = await fetch(generateUrl(url + '?' + new URLSearchParams(params)), {
-		method: 'POST',
-		headers: { requesttoken: getRequestToken() ?? '' },
-	})
-	if (!response.ok) {
-		throw new Error(`${response.status} ${response.statusText}`)
-	}
-	return response
+	return await api(generateUrl(url + '?' + new URLSearchParams(params)), { method: 'POST' })
 }
 
 /**
@@ -138,49 +133,6 @@ function gameSystem(game) {
 }
 
 /**
- * @param {number} seconds a length of time
- * @return {string} that length in words, empty under a minute
- */
-function formatDuration(seconds) {
-	if (!seconds || seconds < 60) {
-		return ''
-	}
-	const hours = Math.floor(seconds / 3600)
-	const minutes = Math.round((seconds % 3600) / 60)
-	return hours > 0
-		? t('arcade', '{hours} h {minutes} min', { hours, minutes })
-		: t('arcade', '{minutes} min', { minutes })
-}
-
-/**
- * @param {number} seconds time played
- * @return {string} that time, in words
- */
-function formatPlayTime(seconds) {
-	if (!seconds || seconds < 60) {
-		return ''
-	}
-	const hours = Math.floor(seconds / 3600)
-	const minutes = Math.round((seconds % 3600) / 60)
-	return hours > 0
-		? t('arcade', '{hours}h {minutes}m played', { hours, minutes })
-		: t('arcade', '{minutes}m played', { minutes })
-}
-
-/**
- * @param {object} game the game
- * @return {string} the URL that plays the game
- */
-function gameUrl(game) {
-	// By file id where there is one, so the link survives renames and
-	// moves; the path form stays as the fallback.
-	if (game.id) {
-		return generateUrl('/apps/arcade/?fileId={fileId}', { fileId: game.id })
-	}
-	return generateUrl('/apps/arcade/?file={file}', { file: game.path })
-}
-
-/**
  * @param {object} game the game
  * @param {number} size the requested thumbnail size in pixels
  * @return {HTMLElement} the thumbnail image, or a placeholder
@@ -203,20 +155,14 @@ function thumbnailFor(game, size) {
 
 	if (type !== undefined) {
 		image.className = `arcade-library-thumbnail arcade-library-thumbnail-${type}`
-		image.src = generateUrl('/core/preview?fileId={fileId}&x={size}&y={size}&a=1', {
-			fileId: available[type],
-			size,
-		})
+		image.src = previewUrl(available[type], size)
 		return image
 	}
 
 	// No image of its own: show the game as it was last seen.
 	if (game.fallback?.type === 'screenshot') {
 		image.className = 'arcade-library-thumbnail arcade-library-thumbnail-snap'
-		image.src = generateUrl('/core/preview?fileId={fileId}&x={size}&y={size}&a=1', {
-			fileId: game.fallback.fileId,
-			size,
-		})
+		image.src = previewUrl(game.fallback.fileId, size)
 		return image
 	}
 	if (game.fallback?.type === 'state') {
@@ -245,7 +191,7 @@ function renderCard(game, reload) {
 
 	const link = document.createElement('a')
 	link.className = 'arcade-library-game-link'
-	link.href = gameUrl(game)
+	link.href = playUrl(game.path, game.id)
 	link.appendChild(thumbnailFor(game, 256))
 
 	const name = document.createElement('span')
@@ -332,7 +278,7 @@ function renderList(games) {
 	for (const game of games) {
 		const row = document.createElement('a')
 		row.className = 'arcade-library-row'
-		row.href = gameUrl(game)
+		row.href = playUrl(game.path, game.id)
 		row.appendChild(thumbnailFor(game, 64))
 
 		const name = document.createElement('span')
@@ -395,7 +341,7 @@ function renderTable(games, reload) {
 
 		const nameCell = document.createElement('td')
 		const link = document.createElement('a')
-		link.href = gameUrl(game)
+		link.href = playUrl(game.path, game.id)
 		link.textContent = gameName(game)
 		link.title = game.basename
 		nameCell.appendChild(link)
@@ -665,12 +611,7 @@ function renderSuggestion(suggestion, reload) {
 async function loadSuggestions(status, reload) {
 	let suggestions = []
 	try {
-		const response = await fetch(generateUrl('/apps/arcade/arcade/suggest'), {
-			headers: { requesttoken: getRequestToken() ?? '' },
-		})
-		if (!response.ok) {
-			throw new Error(`${response.status} ${response.statusText}`)
-		}
+		const response = await api(generateUrl('/apps/arcade/arcade/suggest'))
 		suggestions = (await response.json()).suggestions ?? []
 	} catch (error) {
 		console.error('Could not look for ROM folders', error)
@@ -766,7 +707,7 @@ export async function renderLibrary(container, onError) {
 
 		let data
 		try {
-			const response = await fetch(generateUrl(
+			const response = await api(generateUrl(
 				'/apps/arcade/arcade/library?offset={offset}&limit={limit}&sort={sort}&order={order}'
 					+ '&search={search}&system={system}&tag={tag}&refresh={refresh}',
 				{
@@ -779,13 +720,7 @@ export async function renderLibrary(container, onError) {
 					tag: state.tag,
 					refresh: refresh ? 1 : 0,
 				},
-			), {
-				headers: { requesttoken: getRequestToken() ?? '' },
-				signal: pending.signal,
-			})
-			if (!response.ok) {
-				throw new Error(`${response.status} ${response.statusText}`)
-			}
+			), { signal: pending.signal })
 			data = await response.json()
 		} catch (error) {
 			if (error.name === 'AbortError') {

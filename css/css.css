@@ -90,12 +90,6 @@
 	margin: 0 0 calc(var(--default-grid-baseline, 4px) * 2) 0;
 }
 
-.arcade .arcade-library-status {
-	color: var(--color-text-maxcontrast);
-	min-height: 1.2em;
-	margin-bottom: calc(var(--default-grid-baseline, 4px) * 2);
-}
-
 .arcade .arcade-library-recent-row {
 	display: flex;
 	gap: calc(var(--default-grid-baseline, 4px) * 4);

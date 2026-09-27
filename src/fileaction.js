@@ -1,8 +1,8 @@
 import { loadState } from '@nextcloud/initial-state'
 import { translate as t } from '@nextcloud/l10n'
-import { generateUrl } from '@nextcloud/router'
 import { ICONS, icon } from './icons.js'
-import { isPlayable, romMimes, systemForFolderPath } from './systems.js'
+import { playGame } from './play.js'
+import { isPlayable, systemForFolderPath } from './systems.js'
 
 const ACTION_ID = 'arcade-play'
 
@@ -124,13 +124,7 @@ const action = {
 		// Everything else -- zips included, which the Viewer no longer
 		// claims -- goes to the app page, by file id when the node
 		// carries one so the link survives renames and moves.
-		if (window.OCA?.Viewer !== undefined && romMimes().includes(node.mime)) {
-			window.OCA.Viewer.open({ path: node.path })
-			return null
-		}
-		window.location.href = node.fileid
-			? generateUrl('/apps/arcade/?fileId={fileId}', { fileId: node.fileid })
-			: generateUrl('/apps/arcade/?file={file}', { file: node.path })
+		playGame(node.path, node.mime, node.fileid)
 		return null
 	},
 }

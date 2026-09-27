@@ -63,13 +63,6 @@
 	text-decoration: line-through;
 }
 
-#arcade-settings details.arcade-section > summary {
-	font-size: 1.1em;
-	font-weight: bold;
-	padding: calc(var(--default-grid-baseline, 4px) * 2) 0;
-	cursor: pointer;
-}
-
 #arcade-settings .arcade-bios-system h3 {
 	margin-bottom: 0;
 }

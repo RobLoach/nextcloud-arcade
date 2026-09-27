@@ -106,9 +106,26 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 	let autosaveTimer = null
 	let statesPanel = null
 	let statesButton = null
+	let galleryPanel = null
+	let galleryButton = null
+	// Hiding a panel and letting go of its button always travel together.
 	const hideStates = () => {
 		statesPanel?.element.classList.add('hidden')
 		statesButton?.classList.remove('active')
+	}
+	const hideGallery = () => {
+		galleryPanel?.element.classList.add('hidden')
+		galleryButton?.classList.remove('active')
+	}
+	const statesOpen = () => statesPanel !== null && !statesPanel.element.classList.contains('hidden')
+	const galleryOpen = () => galleryPanel !== null && !galleryPanel.element.classList.contains('hidden')
+	const togglePanel = (panel, element, onOpen) => {
+		const visible = !panel.element.classList.contains('hidden')
+		panel.element.classList.toggle('hidden', visible)
+		element.classList.toggle('active', !visible)
+		if (!visible) {
+			onOpen()
+		}
 	}
 	if (canSave) {
 		statesPanel = createStatesPanel({
@@ -117,22 +134,15 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 			flash,
 			// Saving or loading a slot is the end of the interaction, so get
 			// the panel out of the way and back to the game.
-			onDone: () => {
-				statesPanel.element.classList.add('hidden')
-				statesButton?.classList.remove('active')
-			},
+			onDone: hideStates,
 		})
 		statesButton = button(ICONS.save, t('arcade', 'Save states'), (element) => {
-			const visible = !statesPanel.element.classList.contains('hidden')
-			statesPanel.element.classList.toggle('hidden', visible)
-			element.classList.toggle('active', !visible)
-			if (!visible) {
+			togglePanel(statesPanel, element, () => {
 				// Both panels cover the game, so only one shows at a time.
-				galleryPanel?.element.classList.add('hidden')
-				galleryButton?.classList.remove('active')
+				hideGallery()
 				closeActionsMenu()
 				statesPanel.refresh()
-			}
+			})
 		})
 		offerResume({
 			container,
@@ -213,19 +223,14 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 	})
 
 	// The screenshots of this game, which also live in the user's files.
-	let galleryPanel = null
-	let galleryButton = null
 	if (getCurrentUser() !== null && romPath && (settings.screenshots_folder ?? '') !== '') {
 		galleryPanel = createGalleryPanel({ romPath, flash })
 		galleryButton = button(ICONS.gallery, t('arcade', 'Screenshots'), (element) => {
-			const visible = !galleryPanel.element.classList.contains('hidden')
-			galleryPanel.element.classList.toggle('hidden', visible)
-			element.classList.toggle('active', !visible)
-			if (!visible) {
+			togglePanel(galleryPanel, element, () => {
 				hideStates()
 				closeActionsMenu()
 				galleryPanel.refresh()
-			}
+			})
 		})
 		// Nothing to show until there is a screenshot of this game.
 		galleryButton.classList.add('hidden')
@@ -340,8 +345,7 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 			if (!visible) {
 				// The menu and the panels cover the same spot.
 				hideStates()
-				galleryPanel?.element.classList.add('hidden')
-				galleryButton?.classList.remove('active')
+				hideGallery()
 				refreshSidebarItem?.()
 			}
 		}, topbar)
@@ -411,12 +415,10 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 			closeActionsMenu()
 			return
 		}
-		const panelOpen = (statesPanel !== null && !statesPanel.element.classList.contains('hidden'))
-			|| (galleryPanel !== null && !galleryPanel.element.classList.contains('hidden'))
+		const panelOpen = statesOpen() || galleryOpen()
 		if (panelOpen) {
 			hideStates()
-			galleryPanel?.element.classList.add('hidden')
-			galleryButton?.classList.remove('active')
+			hideGallery()
 			return
 		}
 		escapeAction?.()
@@ -472,8 +474,7 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 	let idleTimer = null
 	const chromeBusy = () => paused
 		|| (actionsMenu !== null && !actionsMenu.classList.contains('hidden'))
-		|| (statesPanel !== null && !statesPanel.element.classList.contains('hidden'))
-		|| (galleryPanel !== null && !galleryPanel.element.classList.contains('hidden'))
+		|| statesOpen() || galleryOpen()
 		|| container.querySelector('.arcade-resume') !== null
 		|| toolbar.contains(document.activeElement) || toolbar.matches(':hover')
 		|| (topbar !== null && (topbar.contains(document.activeElement) || topbar.matches(':hover')))
