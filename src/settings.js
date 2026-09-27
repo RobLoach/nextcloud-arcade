@@ -37,12 +37,18 @@ function flashStatus(status) {
 async function pickFolder(input) {
 	// The file picker weighs more than the rest of this page put together,
 	// so it is fetched when somebody actually goes looking for a folder.
-	const { FilePickerType, getFilePickerBuilder } = await import('./picker.js')
+	const { getFilePickerBuilder } = await import('./picker.js')
 	const picker = getFilePickerBuilder(t('arcade', 'Choose a folder'))
 		.setMultiSelect(false)
 		.setMimeTypeFilter(['httpd/unix-directory'])
 		.allowDirectories(true)
-		.setType(FilePickerType.Choose)
+		.addButton({
+			label: t('arcade', 'Choose'),
+			variant: 'primary',
+			// pick() below resolves with the path on its own; nothing
+			// more is wanted from the button itself.
+			callback: () => {},
+		})
 		.startAt(input.value || '/')
 		.build()
 	try {
