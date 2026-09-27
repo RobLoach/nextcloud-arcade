@@ -178,10 +178,15 @@ class BiosServiceTest extends TestCase {
 		$service = $this->service();
 		$service->write('gb_bios.bin', 'the firmware');
 		$this->files['stray.bin'] = 'lost';
-		$this->assertSame(
-			['gb_bios.bin' => strlen('the firmware'), 'stray.bin' => 4],
-			$service->stored(),
-		);
+
+		// A wanted file shows up in the status with its stored size.
+		$file = $this->statusOf($service->statusFor('admin'), 'gb_bios.bin');
+		$this->assertTrue($file['present']);
+		$this->assertSame('store', $file['source']);
+		$this->assertSame(strlen('the firmware'), $file['size']);
+		// The stray is in the store listing too: deleting it is refused
+		// the way anything living only in the store is.
+		$this->assertSame('store', $service->deleteFor('admin', 'stray.bin'));
 	}
 
 	public function testAFileCanBeTakenBack(): void {

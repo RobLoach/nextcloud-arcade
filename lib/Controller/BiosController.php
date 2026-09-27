@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace OCA\Arcade\Controller;
 
 use OCA\Arcade\Service\BiosService;
-use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\FrontpageRoute;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
@@ -26,7 +25,7 @@ use OCP\IRequest;
  * @psalm-suppress UnusedClass
  */
 #[OpenAPI(OpenAPI::SCOPE_IGNORE)]
-class BiosController extends Controller {
+class BiosController extends ArcadeController {
 	// BIOS files are small; the largest asked for is well under a megabyte.
 	private const MAX_BIOS_SIZE = 16 * 1024 * 1024;
 
@@ -34,7 +33,7 @@ class BiosController extends Controller {
 		string $appName,
 		IRequest $request,
 		private BiosService $biosService,
-		private ?string $userId,
+		protected ?string $userId,
 	) {
 		parent::__construct($appName, $request);
 	}
@@ -66,8 +65,8 @@ class BiosController extends Controller {
 	 */
 	#[FrontpageRoute(verb: 'GET', url: '/arcade/bios/status')]
 	public function status(): JSONResponse {
-		if ($this->userId === null) {
-			return new JSONResponse([], Http::STATUS_UNAUTHORIZED);
+		if (($error = $this->requireUser()) !== null) {
+			return $error;
 		}
 		return new JSONResponse($this->biosService->statusFor($this->userId));
 	}
@@ -82,8 +81,8 @@ class BiosController extends Controller {
 	#[UserRateLimit(limit: 60, period: 60)]
 	#[FrontpageRoute(verb: 'POST', url: '/arcade/bios')]
 	public function upload(string $name = ''): JSONResponse {
-		if ($this->userId === null) {
-			return new JSONResponse([], Http::STATUS_UNAUTHORIZED);
+		if (($error = $this->requireUser()) !== null) {
+			return $error;
 		}
 		$canonical = BiosService::canonicalName($name);
 		if ($canonical === null) {
@@ -92,8 +91,8 @@ class BiosController extends Controller {
 				Http::STATUS_BAD_REQUEST,
 			);
 		}
-		$data = $this->readBody(self::MAX_BIOS_SIZE + 1);
-		if (!is_string($data) || $data === '' || strlen($data) > self::MAX_BIOS_SIZE) {
+		$data = $this->readBody(self::MAX_BIOS_SIZE);
+		if ($data === null) {
 			return new JSONResponse(
 				['error' => 'The file is empty or larger than a BIOS could be'],
 				Http::STATUS_BAD_REQUEST,
@@ -119,8 +118,8 @@ class BiosController extends Controller {
 	#[UserRateLimit(limit: 60, period: 60)]
 	#[FrontpageRoute(verb: 'DELETE', url: '/arcade/bios')]
 	public function remove(string $name = ''): JSONResponse {
-		if ($this->userId === null) {
-			return new JSONResponse([], Http::STATUS_UNAUTHORIZED);
+		if (($error = $this->requireUser()) !== null) {
+			return $error;
 		}
 		$canonical = BiosService::canonicalName($name);
 		if ($canonical === null) {
@@ -137,13 +136,5 @@ class BiosController extends Controller {
 			return new JSONResponse([], Http::STATUS_NOT_FOUND);
 		}
 		return new JSONResponse([]);
-	}
-
-	/**
-	 * The raw request body, up to $limit bytes. Overridable so tests can
-	 * stand in for php://input, which cannot be written to from a test.
-	 */
-	protected function readBody(int $limit): string|false {
-		return file_get_contents('php://input', length: $limit);
 	}
 }

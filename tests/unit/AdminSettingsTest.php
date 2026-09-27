@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace OCA\Arcade\Tests\Unit;
 
+use OCA\Arcade\Service\BiosService;
 use OCA\Arcade\Service\SettingsService;
 use OCA\Arcade\Settings\Admin;
+use OCP\Files\AppData\IAppDataFactory;
+use OCP\Files\IRootFolder;
 use OCP\IUser;
 use OCP\IUserSession;
 use PHPUnit\Framework\TestCase;
@@ -31,7 +34,12 @@ class AdminSettingsTest extends TestCase {
 		$settingsService->method('getUserSettings')
 			->with($userId ?? $this->anything())
 			->willReturn($settings);
-		return new Admin($settingsService, $session);
+		$biosService = new BiosService(
+			$this->createStub(IAppDataFactory::class),
+			$this->createStub(IRootFolder::class),
+			$settingsService,
+		);
+		return new Admin($settingsService, $biosService, $session);
 	}
 
 	public function testTheResolvedSystemFolderOfTheAdministratorIsHandedOver(): void {

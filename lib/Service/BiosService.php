@@ -62,12 +62,7 @@ class BiosService {
 	 * when no core asks for a file of that name at all.
 	 */
 	public static function canonicalName(string $name): ?string {
-		foreach (self::names() as $known) {
-			if (strcasecmp($known, $name) === 0) {
-				return $known;
-			}
-		}
-		return null;
+		return self::matchIgnoringCase(self::names(), $name);
 	}
 
 	/**
@@ -101,10 +96,9 @@ class BiosService {
 			$folder = $this->systemFolder($userId, false);
 			if ($folder !== null) {
 				try {
-					foreach ($folder->getDirectoryListing() as $node) {
-						if ($node instanceof File && strcasecmp($node->getName(), $name) === 0) {
-							return $node->getContent();
-						}
+					$node = $this->nodeNamed($folder, $name);
+					if ($node !== null) {
+						return $node->getContent();
 					}
 				} catch (NotFoundException|NotPermittedException|GenericFileException|LockedException) {
 					// The folder could not be read; the store may still help.
@@ -172,7 +166,7 @@ class BiosService {
 	 *
 	 * @return array<string, int> name => size in bytes
 	 */
-	public function stored(): array {
+	private function stored(): array {
 		$stored = [];
 		try {
 			$folder = $this->folder(false);
@@ -244,10 +238,8 @@ class BiosService {
 			return false;
 		}
 		try {
-			foreach ($folder->getDirectoryListing() as $node) {
-				if (!$node instanceof File || strcasecmp($node->getName(), $name) !== 0) {
-					continue;
-				}
+			$node = $this->nodeNamed($folder, $name);
+			if ($node !== null) {
 				if ($node->getName() === $name) {
 					$node->putContent($data);
 					return true;
@@ -273,11 +265,10 @@ class BiosService {
 		$folder = $this->systemFolder($userId, false);
 		if ($folder !== null) {
 			try {
-				foreach ($folder->getDirectoryListing() as $node) {
-					if ($node instanceof File && strcasecmp($node->getName(), $name) === 0) {
-						$node->delete();
-						return 'deleted';
-					}
+				$node = $this->nodeNamed($folder, $name);
+				if ($node !== null) {
+					$node->delete();
+					return 'deleted';
 				}
 			} catch (NotFoundException|NotPermittedException) {
 				// The folder could not be read; the store may still know it.
@@ -302,8 +293,21 @@ class BiosService {
 		return null;
 	}
 
+	/**
+	 * The file of a folder that carries this name, matched without regard
+	 * to case, or null when the listing holds none.
+	 */
+	private function nodeNamed(Folder $folder, string $name): ?File {
+		foreach ($folder->getDirectoryListing() as $node) {
+			if ($node instanceof File && strcasecmp($node->getName(), $name) === 0) {
+				return $node;
+			}
+		}
+		return null;
+	}
+
 	/** The user's system folder as a path, '' when none is set. */
-	private function systemFolderPath(string $userId): string {
+	public function systemFolderPath(string $userId): string {
 		$folder = $this->settingsService->getUserSettings($userId)['system_folder'] ?? '';
 		return is_string($folder) ? $folder : '';
 	}

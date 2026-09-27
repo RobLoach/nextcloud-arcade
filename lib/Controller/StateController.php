@@ -7,7 +7,6 @@ namespace OCA\Arcade\Controller;
 use OCA\Arcade\Activity\ActivityPublisher;
 use OCA\Arcade\Service\SettingsService;
 use OCA\Arcade\Service\StateService;
-use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\FrontpageRoute;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
@@ -25,7 +24,7 @@ use OCP\IRequest;
  * @psalm-suppress UnusedClass
  */
 #[OpenAPI(OpenAPI::SCOPE_IGNORE)]
-class StateController extends Controller {
+class StateController extends ArcadeController {
 	// RetroArch save states are a few MB; leave plenty of headroom.
 	private const MAX_STATE_SIZE = 64 * 1024 * 1024;
 	private const MAX_THUMBNAIL_SIZE = 4 * 1024 * 1024;
@@ -36,7 +35,7 @@ class StateController extends Controller {
 		private StateService $stateService,
 		private SettingsService $settingsService,
 		private ActivityPublisher $activityPublisher,
-		private ?string $userId,
+		protected ?string $userId,
 	) {
 		parent::__construct($appName, $request);
 	}
@@ -204,13 +203,5 @@ class StateController extends Controller {
 	 */
 	private function isWritableSlot(string $file, int $slot): bool {
 		return $this->isValidRequest($file, $slot) && $slot <= StateService::SLOTS;
-	}
-
-	private function readBody(int $maxSize): ?string {
-		$body = file_get_contents('php://input', length: $maxSize + 1);
-		if ($body === false || $body === '' || strlen($body) > $maxSize) {
-			return null;
-		}
-		return $body;
 	}
 }

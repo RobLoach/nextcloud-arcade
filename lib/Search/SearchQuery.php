@@ -10,19 +10,13 @@ use OCP\Files\Search\ISearchQuery;
 use OCP\IUser;
 
 /**
- * A query against the file cache, handed to Folder::search().
+ * A query against the file cache, handed to Folder::search(). The one
+ * search of the app takes the whole listing unpaged and unordered, so
+ * everything but the operation stays at its default.
  */
 class SearchQuery implements ISearchQuery {
-	/**
-	 * @param list<ISearchOrder> $order
-	 */
 	public function __construct(
 		private ISearchOperator $operation,
-		private int $limit = 0,
-		private int $offset = 0,
-		private array $order = [],
-		private ?IUser $user = null,
-		private bool $limitToHome = false,
 	) {
 	}
 
@@ -31,26 +25,26 @@ class SearchQuery implements ISearchQuery {
 	}
 
 	public function getLimit(): int {
-		return $this->limit;
+		return 0;
 	}
 
 	public function getOffset(): int {
-		return $this->offset;
+		return 0;
 	}
 
 	/**
 	 * @return list<ISearchOrder>
 	 */
 	public function getOrder(): array {
-		return $this->order;
+		return [];
 	}
 
 	public function getUser(): ?IUser {
-		return $this->user;
+		return null;
 	}
 
 	public function limitToHome(): bool {
-		return $this->limitToHome;
+		return false;
 	}
 
 	/**

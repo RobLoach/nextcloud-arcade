@@ -335,15 +335,6 @@ class CoreMap {
 	}
 
 	/**
-	 * The BIOS files a system may ask for.
-	 *
-	 * @return list<string>
-	 */
-	public static function biosFor(string $systemId): array {
-		return self::SYSTEMS[$systemId]['bios'] ?? [];
-	}
-
-	/**
 	 * @return array<string, string> extension => mimetype
 	 */
 	public static function extensionMimeMap(): array {

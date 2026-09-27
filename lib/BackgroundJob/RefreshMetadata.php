@@ -5,14 +5,13 @@ declare(strict_types=1);
 namespace OCA\Arcade\BackgroundJob;
 
 use OCA\Arcade\Listener\MetadataListener;
+use OCA\Arcade\Service\Folders;
 use OCA\Arcade\Service\LibraryService;
 use OCA\Arcade\Service\SettingsService;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\BackgroundJob\IJobList;
 use OCP\BackgroundJob\QueuedJob;
-use OCP\Files\Folder;
 use OCP\Files\IRootFolder;
-use OCP\Files\NotFoundException;
 use OCP\FilesMetadata\IFilesMetadataManager;
 use Psr\Log\LoggerInterface;
 
@@ -89,13 +88,6 @@ class RefreshMetadata extends QueuedJob {
 	}
 
 	/**
-	 * How many games are asked after in one go. Asking after every game of
-	 * a library at once would mean thousands of ids in one query, and all
-	 * that is wanted is the next batch of them.
-	 */
-	private const CHUNK = 500;
-
-	/**
 	 * The ids of the games nothing is known about yet, up to a batch of
 	 * them: the library is walked a chunk at a time and the walking stops
 	 * as soon as there is enough to be getting on with.
@@ -105,12 +97,8 @@ class RefreshMetadata extends QueuedJob {
 	private function missing(string $userId): array {
 		$settings = $this->settingsService->getUserSettings($userId);
 		$userFolder = $this->rootFolder->getUserFolder($userId);
-		try {
-			$folder = $userFolder->get($settings['library_folder']);
-		} catch (NotFoundException) {
-			return [];
-		}
-		if (!$folder instanceof Folder) {
+		$folder = Folders::folderAt($userFolder, $settings['library_folder']);
+		if ($folder === null) {
 			return [];
 		}
 
@@ -125,7 +113,7 @@ class RefreshMetadata extends QueuedJob {
 		$ids = array_values(array_filter(array_column($games, 'id')));
 
 		$missing = [];
-		foreach (array_chunk($ids, self::CHUNK) as $chunk) {
+		foreach (array_chunk($ids, LibraryService::ID_CHUNK) as $chunk) {
 			$known = [];
 			foreach ($this->metadataManager->getMetadataForFiles($chunk) as $id => $metadata) {
 				// The system is set the moment a game is looked at, so a

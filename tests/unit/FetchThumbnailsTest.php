@@ -55,6 +55,12 @@ class FetchThumbnailsTest extends TestCase {
 		$this->fetchService = $this->createMock(ThumbnailFetchService::class);
 		// The instance lets the server go looking, unless a test says not.
 		$this->fetchService->method('isAllowed')->willReturn(true);
+		// The word the job leaves about how it is getting on.
+		$this->fetchService->method('report')->willReturnCallback(
+			function (string $userId, string $message): void {
+				$this->status = $message;
+			},
+		);
 		$this->jobList = $this->createMock(IJobList::class);
 		$this->preview = $this->createMock(IPreview::class);
 	}
@@ -81,12 +87,6 @@ class FetchThumbnailsTest extends TestCase {
 		$rootFolder->method('getUserFolder')->willReturn($userFolder);
 
 		$config = $this->createStub(IUserConfig::class);
-		$config->method('setValueString')->willReturnCallback(
-			function (string $user, string $app, string $key, string $value): bool {
-				$this->status = $value;
-				return true;
-			},
-		);
 		$config->method('setValueInt')->willReturnCallback(
 			function (string $user, string $app, string $key, int $value): bool {
 				$this->tally = $value;

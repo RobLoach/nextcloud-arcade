@@ -7,6 +7,7 @@ namespace OCA\Arcade\Settings;
 use OCA\Arcade\AppInfo\Application;
 use OCA\Arcade\CoreMap;
 use OCA\Arcade\CoreOptions;
+use OCA\Arcade\Service\BiosService;
 use OCA\Arcade\Service\SettingsService;
 use OCP\AppFramework\Http\TemplateResponse;
 use OCP\IUserSession;
@@ -20,6 +21,7 @@ use OCP\Util;
 class Admin implements ISettings {
 	public function __construct(
 		private SettingsService $settingsService,
+		private BiosService $biosService,
 		private IUserSession $userSession,
 	) {
 	}
@@ -49,11 +51,7 @@ class Admin implements ISettings {
 	 */
 	public function systemFolder(): string {
 		$user = $this->userSession->getUser();
-		if ($user === null) {
-			return '';
-		}
-		$folder = $this->settingsService->getUserSettings($user->getUID())['system_folder'] ?? '';
-		return is_string($folder) ? $folder : '';
+		return $user === null ? '' : $this->biosService->systemFolderPath($user->getUID());
 	}
 
 	public function getSection(): string {

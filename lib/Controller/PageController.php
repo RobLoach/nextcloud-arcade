@@ -6,12 +6,11 @@ namespace OCA\Arcade\Controller;
 
 use OCA\Arcade\AppInfo\Application;
 use OCA\Arcade\BackgroundJob\RefreshMetadata;
-use OCA\Arcade\CoreMap;
+use OCA\Arcade\Service\Folders;
 use OCA\Arcade\Service\LibraryService;
 use OCA\Arcade\Service\RecentService;
 use OCA\Arcade\Service\SettingsService;
 use OCA\Files\Event\LoadSidebar;
-use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\FrontpageRoute;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
@@ -21,15 +20,13 @@ use OCP\AppFramework\Http\TemplateResponse;
 use OCP\AppFramework\Services\IInitialState;
 use OCP\BackgroundJob\IJobList;
 use OCP\EventDispatcher\IEventDispatcher;
-use OCP\Files\Folder;
 use OCP\Files\IRootFolder;
-use OCP\Files\NotFoundException;
 use OCP\IRequest;
 
 /**
  * @psalm-suppress UnusedClass
  */
-class PageController extends Controller {
+class PageController extends ArcadeController {
 	private const MAX_PAGE_SIZE = 500;
 
 	public function __construct(
@@ -42,7 +39,7 @@ class PageController extends Controller {
 		private IRootFolder $rootFolder,
 		private IJobList $jobList,
 		private IEventDispatcher $eventDispatcher,
-		private ?string $userId,
+		protected ?string $userId,
 	) {
 		parent::__construct($appName, $request);
 	}
@@ -63,20 +60,7 @@ class PageController extends Controller {
 			}
 		}
 		$this->initialState->provideInitialState('file', $file);
-		$this->initialState->provideInitialState('systems', CoreMap::SYSTEMS);
-		// The words that say nothing about a system, so the browser can
-		// read a folder name the way the server does without keeping a
-		// copy of the lists.
-		$this->initialState->provideInitialState('folderWords', [
-			'noise' => CoreMap::NOISE,
-			'vendors' => CoreMap::VENDORS,
-		]);
-		$this->initialState->provideInitialState(
-			'settings',
-			$this->userId === null
-				? $this->settingsService->getDefaults()
-				: $this->settingsService->getUserSettings($this->userId),
-		);
+		$this->settingsService->providePlayerState($this->initialState, $this->userId);
 
 		// The Files sidebar, so the player's actions menu can open it on a
 		// game. The class name above is a plain compile-time string, but the
@@ -114,18 +98,14 @@ class PageController extends Controller {
 		string $tag = '',
 		bool $refresh = false,
 	): JSONResponse {
-		if ($this->userId === null) {
-			return new JSONResponse([], Http::STATUS_UNAUTHORIZED);
+		if (($error = $this->requireUser()) !== null) {
+			return $error;
 		}
 		$settings = $this->settingsService->getUserSettings($this->userId);
 		$folderPath = $settings['library_folder'];
 		$userFolder = $this->rootFolder->getUserFolder($this->userId);
-		try {
-			$folder = $userFolder->get($folderPath);
-		} catch (NotFoundException) {
-			$folder = null;
-		}
-		if (!$folder instanceof Folder) {
+		$folder = Folders::folderAt($userFolder, $folderPath);
+		if ($folder === null) {
 			return $this->respond([
 				'folder' => $folderPath,
 				'exists' => false,
@@ -213,8 +193,8 @@ class PageController extends Controller {
 	#[NoAdminRequired]
 	#[FrontpageRoute(verb: 'GET', url: '/arcade/suggest')]
 	public function suggest(): JSONResponse {
-		if ($this->userId === null) {
-			return new JSONResponse([], Http::STATUS_UNAUTHORIZED);
+		if (($error = $this->requireUser()) !== null) {
+			return $error;
 		}
 		$settings = $this->settingsService->getUserSettings($this->userId);
 		$userFolder = $this->rootFolder->getUserFolder($this->userId);

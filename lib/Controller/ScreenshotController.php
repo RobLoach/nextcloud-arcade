@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace OCA\Arcade\Controller;
 
+use OCA\Arcade\Service\Folders;
 use OCA\Arcade\Service\SettingsService;
 use OCA\Arcade\Service\ThumbnailService;
 use OCP\AppFramework\Controller;
@@ -16,7 +17,6 @@ use OCP\AppFramework\Http\JSONResponse;
 use OCP\Files\File;
 use OCP\Files\Folder;
 use OCP\Files\IRootFolder;
-use OCP\Files\NotFoundException;
 use OCP\IRequest;
 
 /**
@@ -82,11 +82,6 @@ class ScreenshotController extends Controller {
 		if ($path === '') {
 			return null;
 		}
-		try {
-			$folder = $this->rootFolder->getUserFolder((string)$this->userId)->get($path);
-		} catch (NotFoundException) {
-			return null;
-		}
-		return $folder instanceof Folder ? $folder : null;
+		return Folders::forUser($this->rootFolder, (string)$this->userId, $path);
 	}
 }

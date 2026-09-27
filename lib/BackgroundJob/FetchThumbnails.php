@@ -6,6 +6,7 @@ namespace OCA\Arcade\BackgroundJob;
 
 use OCA\Arcade\AppInfo\Application;
 use OCA\Arcade\Notification\Notifier;
+use OCA\Arcade\Service\Folders;
 use OCA\Arcade\Service\LibraryService;
 use OCA\Arcade\Service\SettingsService;
 use OCA\Arcade\Service\ThumbnailFetchService;
@@ -13,10 +14,8 @@ use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\BackgroundJob\IJobList;
 use OCP\BackgroundJob\QueuedJob;
 use OCP\Config\IUserConfig;
-use OCP\Files\Folder;
 use OCP\Files\File;
 use OCP\Files\IRootFolder;
-use OCP\Files\NotFoundException;
 use OCP\IPreview;
 use OCP\Notification\IManager as INotificationManager;
 use Psr\Log\LoggerInterface;
@@ -83,7 +82,7 @@ class FetchThumbnails extends QueuedJob {
 			$this->fetchFor($userId);
 		} catch (\Throwable $e) {
 			$this->logger->error('Could not look for box art', ['exception' => $e]);
-			$this->report($userId, 'Something went wrong while looking for box art');
+			$this->fetchService->report($userId, 'Something went wrong while looking for box art');
 			// A broken run is over too; its half-made tally must not leak
 			// into the next one.
 			$this->clearTally($userId);
@@ -95,24 +94,24 @@ class FetchThumbnails extends QueuedJob {
 		// An administrator can turn the looking up off for the instance,
 		// and a job queued before that must not go anyway.
 		if (!$this->fetchService->isAllowed()) {
-			$this->report($userId, 'Looking up box art is turned off for this instance');
+			$this->fetchService->report($userId, 'Looking up box art is turned off for this instance');
 			$this->clearTally($userId);
 			return;
 		}
 		if ($settings['thumbnails_folder'] === '') {
-			$this->report($userId, 'No thumbnails folder is set');
+			$this->fetchService->report($userId, 'No thumbnails folder is set');
 			$this->clearTally($userId);
 			return;
 		}
 
 		$userFolder = $this->rootFolder->getUserFolder($userId);
-		$library = $this->folderAt($userFolder, $settings['library_folder']);
+		$library = Folders::folderAt($userFolder, $settings['library_folder']);
 		if ($library === null) {
-			$this->report($userId, 'The games library folder does not exist');
+			$this->fetchService->report($userId, 'The games library folder does not exist');
 			$this->clearTally($userId);
 			return;
 		}
-		$thumbnails = $this->folderAt($userFolder, $settings['thumbnails_folder'])
+		$thumbnails = Folders::folderAt($userFolder, $settings['thumbnails_folder'])
 			?? $userFolder->newFolder(trim($settings['thumbnails_folder'], '/'));
 
 		// A fresh scan, so games given an image in an earlier run are left
@@ -133,7 +132,7 @@ class FetchThumbnails extends QueuedJob {
 			// Also the end of a run whose last batch fetched everything
 			// that was left: the requeued job arrives here with the tally
 			// of the earlier batches still waiting to be told.
-			$this->report($userId, 'Every game has a picture');
+			$this->fetchService->report($userId, 'Every game has a picture');
 			$this->finishRun($userId, $this->tally($userId));
 			return;
 		}
@@ -150,14 +149,14 @@ class FetchThumbnails extends QueuedJob {
 				self::TALLY,
 				$this->tally($userId) + $result['fetched'],
 			);
-			$this->report($userId, sprintf(
+			$this->fetchService->report($userId, sprintf(
 				'Looking for box art, %d still to go',
 				max(0, count($missing) - $result['fetched']),
 			));
 			$this->jobList->add(self::class, ['userId' => $userId]);
 			return;
 		}
-		$this->report($userId, sprintf(
+		$this->fetchService->report($userId, sprintf(
 			'Found box art for %d games, %d were nowhere to be found',
 			$result['fetched'],
 			$result['missing'],
@@ -221,27 +220,5 @@ class FetchThumbnails extends QueuedJob {
 				}
 			}
 		}
-	}
-
-	private function folderAt(Folder $userFolder, string $path): ?Folder {
-		try {
-			$folder = $userFolder->get($path);
-		} catch (NotFoundException) {
-			return null;
-		}
-		return $folder instanceof Folder ? $folder : null;
-	}
-
-	/**
-	 * Leave word for the settings page, which has no other way of knowing
-	 * how a job that runs on its own is getting on.
-	 */
-	private function report(string $userId, string $message): void {
-		$this->userConfig->setValueString(
-			$userId,
-			Application::APP_ID,
-			'fetch_status',
-			json_encode(['message' => $message, 'time' => time()]),
-		);
 	}
 }

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace OCA\Arcade\Listener;
 
 use OCA\Arcade\AppInfo\Application;
-use OCA\Arcade\CoreMap;
 use OCA\Arcade\Service\SettingsService;
 use OCA\Viewer\Event\LoadViewer;
 use OCP\AppFramework\Services\IInitialState;
@@ -31,20 +30,9 @@ class LoadViewerListener implements IEventListener {
 		if (!$event instanceof LoadViewer) {
 			return;
 		}
-		$this->initialState->provideInitialState('systems', CoreMap::SYSTEMS);
-		// The words that say nothing about a system, so the browser can
-		// read a folder name the way the server does without keeping a
-		// copy of the lists.
-		$this->initialState->provideInitialState('folderWords', [
-			'noise' => CoreMap::NOISE,
-			'vendors' => CoreMap::VENDORS,
-		]);
-		$user = $this->userSession->getUser();
-		$this->initialState->provideInitialState(
-			'settings',
-			$user === null
-				? $this->settingsService->getDefaults()
-				: $this->settingsService->getUserSettings($user->getUID()),
+		$this->settingsService->providePlayerState(
+			$this->initialState,
+			$this->userSession->getUser()?->getUID(),
 		);
 		Util::addStyle(Application::APP_ID, 'player');
 		// Load after the viewer script so OCA.Viewer is available.

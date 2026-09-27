@@ -4,11 +4,9 @@ declare(strict_types=1);
 
 namespace OCA\Arcade\Controller;
 
-use OCA\Arcade\AppInfo\Application;
 use OCA\Arcade\BackgroundJob\FetchThumbnails;
 use OCA\Arcade\Service\SettingsService;
 use OCA\Arcade\Service\ThumbnailFetchService;
-use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\FrontpageRoute;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
@@ -16,7 +14,6 @@ use OCP\AppFramework\Http\Attribute\OpenAPI;
 use OCP\AppFramework\Http\Attribute\UserRateLimit;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\BackgroundJob\IJobList;
-use OCP\Config\IUserConfig;
 use OCP\IRequest;
 
 /**
@@ -26,15 +23,14 @@ use OCP\IRequest;
  * @psalm-suppress UnusedClass
  */
 #[OpenAPI(OpenAPI::SCOPE_IGNORE)]
-class ThumbnailController extends Controller {
+class ThumbnailController extends ArcadeController {
 	public function __construct(
 		string $appName,
 		IRequest $request,
 		private SettingsService $settingsService,
 		private IJobList $jobList,
 		private ThumbnailFetchService $fetchService,
-		private IUserConfig $userConfig,
-		private ?string $userId,
+		protected ?string $userId,
 	) {
 		parent::__construct($appName, $request);
 	}
@@ -46,8 +42,8 @@ class ThumbnailController extends Controller {
 	#[UserRateLimit(limit: 30, period: 3600)]
 	#[FrontpageRoute(verb: 'POST', url: '/arcade/thumbnails/fetch')]
 	public function fetch(): JSONResponse {
-		if ($this->userId === null) {
-			return new JSONResponse([], Http::STATUS_UNAUTHORIZED);
+		if (($error = $this->requireUser()) !== null) {
+			return $error;
 		}
 		$settings = $this->settingsService->getUserSettings($this->userId);
 		if (!$this->fetchService->isAllowed()) {
@@ -67,31 +63,19 @@ class ThumbnailController extends Controller {
 		if (!$this->jobList->has(FetchThumbnails::class, $argument)) {
 			$this->jobList->add(FetchThumbnails::class, $argument);
 		}
-		$this->setStatus('Looking for box art in the background');
+		$this->fetchService->report($this->userId, 'Looking for box art in the background');
 		return new JSONResponse($this->status());
 	}
 
 	#[NoAdminRequired]
 	#[FrontpageRoute(verb: 'GET', url: '/arcade/thumbnails/fetch')]
 	public function status(): JSONResponse|array {
-		if ($this->userId === null) {
-			return new JSONResponse([], Http::STATUS_UNAUTHORIZED);
+		if (($error = $this->requireUser()) !== null) {
+			return $error;
 		}
-		$stored = $this->userConfig->getValueString($this->userId, Application::APP_ID, 'fetch_status', '');
-		$status = $stored === '' ? null : json_decode($stored, true);
 		return [
-			'message' => is_array($status) ? ($status['message'] ?? '') : '',
-			'time' => is_array($status) ? ($status['time'] ?? 0) : 0,
+			...$this->fetchService->status($this->userId),
 			'queued' => $this->jobList->has(FetchThumbnails::class, ['userId' => $this->userId]),
 		];
-	}
-
-	private function setStatus(string $message): void {
-		$this->userConfig->setValueString(
-			(string)$this->userId,
-			Application::APP_ID,
-			'fetch_status',
-			json_encode(['message' => $message, 'time' => time()]),
-		);
 	}
 }

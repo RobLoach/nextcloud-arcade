@@ -8,6 +8,7 @@ use OCA\Arcade\AppInfo\Application;
 use OCA\Arcade\Controls;
 use OCA\Arcade\CoreMap;
 use OCA\Arcade\CoreOptions;
+use OCP\AppFramework\Services\IInitialState;
 use OCP\Config\IUserConfig;
 use OCP\Files\Folder;
 use OCP\Files\IRootFolder;
@@ -115,12 +116,22 @@ class SettingsService {
 	 * @return array<string, string> system id => kind of image
 	 */
 	public function getThumbnailTypes(): array {
-		$stored = $this->appConfig->getValueString(Application::APP_ID, 'thumbnail_types', lazy: true);
+		return $this->lazyJson('thumbnail_types', $this->sanitizeThumbnailTypes(...));
+	}
+
+	/**
+	 * A JSON blob stored lazy in the app config, decoded and sanitized;
+	 * an empty or unreadable one is just nothing.
+	 *
+	 * @param callable(array<string, mixed>): array $sanitize
+	 */
+	private function lazyJson(string $key, callable $sanitize): array {
+		$stored = $this->appConfig->getValueString(Application::APP_ID, $key, lazy: true);
 		if ($stored === '') {
 			return [];
 		}
-		$types = json_decode($stored, true);
-		return is_array($types) ? $this->sanitizeThumbnailTypes($types) : [];
+		$decoded = json_decode($stored, true);
+		return is_array($decoded) ? $sanitize($decoded) : [];
 	}
 
 	/**
@@ -141,12 +152,7 @@ class SettingsService {
 	 * @return array<string, array<string, string>>
 	 */
 	public function getCoreOptions(): array {
-		$stored = $this->appConfig->getValueString(Application::APP_ID, 'core_options', lazy: true);
-		if ($stored === '') {
-			return [];
-		}
-		$options = json_decode($stored, true);
-		return is_array($options) ? $this->sanitizeCoreOptions($options) : [];
+		return $this->lazyJson('core_options', $this->sanitizeCoreOptions(...));
 	}
 
 	/**
@@ -245,6 +251,33 @@ class SettingsService {
 	 */
 	public function getUserSettings(string $userId): array {
 		return $this->settings[$userId] ??= $this->readUserSettings($userId);
+	}
+
+	/**
+	 * The settings of a user, or the defaults when there is no user to
+	 * ask for -- a public page, say.
+	 *
+	 * @return array<string, mixed>
+	 */
+	public function forUser(?string $userId): array {
+		return $userId === null ? $this->getDefaults() : $this->getUserSettings($userId);
+	}
+
+	/**
+	 * Everything the player needs to know before a file is even named:
+	 * the systems, the words that say nothing about one, and the settings
+	 * of whoever is looking.
+	 */
+	public function providePlayerState(IInitialState $initialState, ?string $userId): void {
+		$initialState->provideInitialState('systems', CoreMap::SYSTEMS);
+		// The words that say nothing about a system, so the browser can
+		// read a folder name the way the server does without keeping a
+		// copy of the lists.
+		$initialState->provideInitialState('folderWords', [
+			'noise' => CoreMap::NOISE,
+			'vendors' => CoreMap::VENDORS,
+		]);
+		$initialState->provideInitialState('settings', $this->forUser($userId));
 	}
 
 	/**

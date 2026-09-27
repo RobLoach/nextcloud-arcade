@@ -74,7 +74,7 @@ class RecentService {
 	}
 
 	public function record(string $userId, string $path): void {
-		$id = $this->fileId($userId, $path);
+		$id = Folders::fileId($this->rootFolder, $userId, $path);
 		if ($id === null) {
 			return;
 		}
@@ -91,7 +91,7 @@ class RecentService {
 		if ($seconds <= 0) {
 			return;
 		}
-		$id = $this->fileId($userId, $path);
+		$id = Folders::fileId($this->rootFolder, $userId, $path);
 		if ($id === null) {
 			return;
 		}
@@ -112,7 +112,7 @@ class RecentService {
 	 * @return bool whether the game is a favorite afterwards
 	 */
 	public function toggleFavorite(string $userId, string $path): bool {
-		$id = $this->fileId($userId, $path);
+		$id = Folders::fileId($this->rootFolder, $userId, $path);
 		$tags = $this->tags($userId);
 		if ($id === null || $tags === null) {
 			return false;
@@ -133,11 +133,4 @@ class RecentService {
 		return $this->tagManager->load('files', [], false, $userId);
 	}
 
-	private function fileId(string $userId, string $path): ?int {
-		try {
-			return $this->rootFolder->getUserFolder($userId)->get($path)->getId();
-		} catch (\Throwable) {
-			return null;
-		}
-	}
 }

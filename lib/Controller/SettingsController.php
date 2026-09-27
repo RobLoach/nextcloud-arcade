@@ -5,8 +5,6 @@ declare(strict_types=1);
 namespace OCA\Arcade\Controller;
 
 use OCA\Arcade\Service\SettingsService;
-use OCP\AppFramework\Controller;
-use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\FrontpageRoute;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\AppFramework\Http\Attribute\OpenAPI;
@@ -17,12 +15,12 @@ use OCP\IRequest;
  * @psalm-suppress UnusedClass
  */
 #[OpenAPI(OpenAPI::SCOPE_IGNORE)]
-class SettingsController extends Controller {
+class SettingsController extends ArcadeController {
 	public function __construct(
 		string $appName,
 		IRequest $request,
 		private SettingsService $settingsService,
-		private ?string $userId,
+		protected ?string $userId,
 	) {
 		parent::__construct($appName, $request);
 	}
@@ -30,8 +28,8 @@ class SettingsController extends Controller {
 	#[NoAdminRequired]
 	#[FrontpageRoute(verb: 'GET', url: '/arcade/settings')]
 	public function get(): JSONResponse {
-		if ($this->userId === null) {
-			return new JSONResponse([], Http::STATUS_UNAUTHORIZED);
+		if (($error = $this->requireUser()) !== null) {
+			return $error;
 		}
 		return new JSONResponse($this->settingsService->getUserSettings($this->userId));
 	}
@@ -46,8 +44,8 @@ class SettingsController extends Controller {
 	#[NoAdminRequired]
 	#[FrontpageRoute(verb: 'POST', url: '/arcade/settings')]
 	public function save(): JSONResponse {
-		if ($this->userId === null) {
-			return new JSONResponse([], Http::STATUS_UNAUTHORIZED);
+		if (($error = $this->requireUser()) !== null) {
+			return $error;
 		}
 		$settings = $this->request->getParams();
 		return new JSONResponse($this->settingsService->setUserSettings($this->userId, $settings));

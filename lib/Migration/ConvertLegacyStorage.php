@@ -8,6 +8,7 @@ use OCA\Arcade\AppInfo\Application;
 use OCA\Arcade\CoreMap;
 use OCA\Arcade\Db\GameMapper;
 use OCA\Arcade\Db\PlayMapper;
+use OCA\Arcade\Service\Folders;
 use OCA\Arcade\Service\SettingsService;
 use OCA\Arcade\Service\StateService;
 use OCP\Config\IUserConfig;
@@ -168,7 +169,7 @@ class ConvertLegacyStorage implements IRepairStep {
 			if (ctype_digit($key) || $entry['path'] === '') {
 				continue;
 			}
-			$id = $this->fileId($userId, $entry['path']);
+			$id = Folders::fileId($this->rootFolder, $userId, $entry['path']);
 			if ($id === null) {
 				// The game is gone; its files keep the name they had.
 				continue;
@@ -244,11 +245,11 @@ class ConvertLegacyStorage implements IRepairStep {
 		}
 		try {
 			$userFolder = $this->rootFolder->getUserFolder($userId);
-			$saves = $userFolder->get(trim($savesPath, '/'));
+			$saves = Folders::folderAt($userFolder, trim($savesPath, '/'));
 		} catch (\Throwable) {
 			return;
 		}
-		if (!$saves instanceof Folder) {
+		if ($saves === null) {
 			return;
 		}
 		// One listing says which old-layout folders there are at all.
@@ -374,7 +375,7 @@ class ConvertLegacyStorage implements IRepairStep {
 					if ($path === '') {
 						continue;
 					}
-					$id = $this->fileId($userId, $path);
+					$id = Folders::fileId($this->rootFolder, $userId, $path);
 					if ($id === null) {
 						continue;
 					}
@@ -411,11 +412,4 @@ class ConvertLegacyStorage implements IRepairStep {
 		return $suffixes;
 	}
 
-	private function fileId(string $userId, string $path): ?int {
-		try {
-			return $this->rootFolder->getUserFolder($userId)->get($path)->getId();
-		} catch (\Throwable) {
-			return null;
-		}
-	}
 }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace OCA\Arcade\Activity;
 
 use OCA\Arcade\AppInfo\Application;
+use OCA\Arcade\Service\Folders;
 use OCA\Arcade\Service\StateService;
 use OCP\Activity\IManager;
 use OCP\Files\IRootFolder;
@@ -106,11 +107,9 @@ class ActivityPublisher {
 	 */
 	private function gameParameter(string $userId, string $path): array {
 		$name = basename($path);
-		try {
-			$id = $this->rootFolder->getUserFolder($userId)->get($path)->getId();
-			return ['id' => $id, 'name' => $name, 'path' => $path];
-		} catch (\Throwable) {
-			return ['name' => $name, 'path' => $path];
-		}
+		$id = Folders::fileId($this->rootFolder, $userId, $path);
+		return $id === null
+			? ['name' => $name, 'path' => $path]
+			: ['id' => $id, 'name' => $name, 'path' => $path];
 	}
 }
