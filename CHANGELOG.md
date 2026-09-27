@@ -6,6 +6,31 @@ All notable changes to NextCloud Arcade. The format follows
 
 ## [Unreleased]
 
+## [0.40.1] - 2026-09-27
+
+### Security
+- The emulator's Content Security Policy allowances on public share pages
+  now apply only to shares that actually hold a game; every other share
+  keeps the instance's default policy.
+- The library and folder-suggestion endpoints are rate limited, generously
+  enough that no player ever meets the limit, and the suggestion scan is
+  bounded in the database query itself.
+- Fetched box art is checked before it is stored: size, content type and
+  the first bytes all have to look like an image.
+- Save state endpoints check that the game is among the user's files;
+  deleting saves of a game that is already gone still works.
+
+### Changed
+- The app now falls back to the local memory cache when no distributed one
+  is configured, and the admin overview says so when there is none at all
+  -- without one, the library was rescanned on every request.
+- The fallback images of games without box art are cached against the
+  screenshots and saves folders, saving a folder listing per game on
+  every library request.
+- Smaller savings across the board: folder etags and save folders are
+  resolved once per request, the preview index survives memcached's size
+  cap, and the weekly sweep only asks about users who have signed in.
+
 ## [0.40.0] - 2026-09-27
 
 ### Changed
