@@ -1,7 +1,7 @@
-import { getRequestToken } from '@nextcloud/auth'
 import { loadState } from '@nextcloud/initial-state'
 import { translate as t, translatePlural as n } from '@nextcloud/l10n'
 import { generateUrl } from '@nextcloud/router'
+import { api } from './api.js'
 import { formatDuration, formatPlayTime } from './format.js'
 import { attachLibraryGamepad } from './librarypad.js'
 import { systemLabel } from './systems.js'
@@ -60,14 +60,7 @@ function icon(path) {
  * @return {Promise<Response>} the response, always ok
  */
 async function post(url, params) {
-	const response = await fetch(generateUrl(url + '?' + new URLSearchParams(params)), {
-		method: 'POST',
-		headers: { requesttoken: getRequestToken() ?? '' },
-	})
-	if (!response.ok) {
-		throw new Error(`${response.status} ${response.statusText}`)
-	}
-	return response
+	return await api(generateUrl(url + '?' + new URLSearchParams(params)), { method: 'POST' })
 }
 
 /**
@@ -636,12 +629,7 @@ function renderSuggestion(suggestion, reload) {
 async function loadSuggestions(status, reload) {
 	let suggestions = []
 	try {
-		const response = await fetch(generateUrl('/apps/arcade/arcade/suggest'), {
-			headers: { requesttoken: getRequestToken() ?? '' },
-		})
-		if (!response.ok) {
-			throw new Error(`${response.status} ${response.statusText}`)
-		}
+		const response = await api(generateUrl('/apps/arcade/arcade/suggest'))
 		suggestions = (await response.json()).suggestions ?? []
 	} catch (error) {
 		console.error('Could not look for ROM folders', error)
@@ -737,7 +725,7 @@ export async function renderLibrary(container, onError) {
 
 		let data
 		try {
-			const response = await fetch(generateUrl(
+			const response = await api(generateUrl(
 				'/apps/arcade/arcade/library?offset={offset}&limit={limit}&sort={sort}&order={order}'
 					+ '&search={search}&system={system}&tag={tag}&refresh={refresh}',
 				{
@@ -750,13 +738,7 @@ export async function renderLibrary(container, onError) {
 					tag: state.tag,
 					refresh: refresh ? 1 : 0,
 				},
-			), {
-				headers: { requesttoken: getRequestToken() ?? '' },
-				signal: pending.signal,
-			})
-			if (!response.ok) {
-				throw new Error(`${response.status} ${response.statusText}`)
-			}
+			), { signal: pending.signal })
 			data = await response.json()
 		} catch (error) {
 			if (error.name === 'AbortError') {
