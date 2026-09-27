@@ -107,7 +107,9 @@ to, and with the user they belong to — but a game deleted into the trash
 keeps them, since it can be restored, with the same file id and the same
 name. They go when the trash lets go of it. `occ arcade:cleanup` sweeps up
 what event listeners cannot catch, such as a whole folder of games deleted
-in one go; `--dry-run` reports without removing. States written by versions before
+in one go; `--dry-run` reports without removing. The same sweep also runs
+by itself once a week, as a background job, so an instance where nobody
+runs the command still cleans up after the trash. States written by versions before
 0.14 live in one flat folder instead of one per user; they are still read,
 and are cleaned up when their game is deleted.
 
@@ -121,7 +123,7 @@ Outside of the files of a user, the app writes:
 | `oc_appconfig` | Core options, thumbnail types, and the folder defaults of the instance |
 | `oc_arcade_plays` | When and how long each game was played, per user and file id |
 | `oc_arcade_games` | The games that have save states |
-| `oc_jobs` | A queued box art lookup, while one is running |
+| `oc_jobs` | A queued box art lookup while one is running, and the weekly save state cleanup sweep |
 | `oc_mimetypes`, `oc_filecache` | The ROM mimetypes, and the files given them |
 | `oc_files_metadata` | The system, title, region, MD5 and CRC32 of each ROM, by file id |
 | `appdata_*/arcade/` | Save states and battery saves, for as long as no saves folder is set; the BIOS store of the instance |

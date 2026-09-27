@@ -43,6 +43,9 @@ The library carries box art, play statistics, save states, screenshots, battery 
 		<php min-version="8.3"/>
 		<nextcloud min-version="34" max-version="35"/>
 	</dependencies>
+	<background-jobs>
+		<job>OCA\Arcade\BackgroundJob\CleanupSweep</job>
+	</background-jobs>
 	<repair-steps>
 		<post-migration>
 			<step>OCA\Arcade\Migration\RegisterMimeTypes</step>

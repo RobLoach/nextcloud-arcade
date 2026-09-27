@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace OCA\Arcade\AppInfo;
 
+use OCA\Arcade\BackgroundJob\CleanupSweep;
 use OCA\Arcade\BackgroundJob\FetchThumbnails;
 use OCA\Arcade\BackgroundJob\RefreshMetadata;
 use OCA\Arcade\CoreMap;
@@ -32,12 +33,14 @@ use OCP\Util;
 
 class Application extends App implements IBootstrap {
 	/**
-	 * The caches the app fills, and the jobs it queues. Both are dropped
-	 * when the app is disabled or removed, so a new one of either belongs
-	 * in this list and nowhere else.
+	 * The caches the app fills, and the jobs it runs -- queued and
+	 * recurring alike. Both are dropped when the app is disabled or
+	 * removed, so a new one of either belongs in this list and nowhere
+	 * else; a recurring job is also declared in info.xml, which is what
+	 * brings it back when the app is enabled again.
 	 */
 	public const CACHES = ['_library', '_fetch', '_preview'];
-	public const JOBS = [FetchThumbnails::class, RefreshMetadata::class];
+	public const JOBS = [FetchThumbnails::class, RefreshMetadata::class, CleanupSweep::class];
 
 	public const APP_ID = 'arcade';
 

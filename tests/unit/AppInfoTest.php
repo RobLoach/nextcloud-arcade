@@ -33,7 +33,7 @@ class AppInfoTest extends TestCase {
 		$named = $this->info()->xpath(
 			'//repair-steps//step | //commands/command | //settings/admin | //settings/admin-section'
 			. ' | //settings/personal | //settings/personal-section'
-			. ' | //activity//setting | //activity//provider',
+			. ' | //activity//setting | //activity//provider | //background-jobs/job',
 		);
 		$this->assertNotEmpty($named, 'the info names no classes at all, which cannot be right');
 		foreach ($named as $class) {
@@ -60,6 +60,9 @@ class AppInfoTest extends TestCase {
 			],
 			'activity settings' => ['Activity', 'OCP\\Activity\\ISetting', '//activity//setting'],
 			'activity providers' => ['Activity', 'OCP\\Activity\\IProvider', '//activity//provider'],
+			// Only the recurring jobs: a queued job is added when there is
+			// work for it, a recurring one exists solely by being declared.
+			'recurring jobs' => ['BackgroundJob', 'OCP\\BackgroundJob\\TimedJob', '//background-jobs/job'],
 		];
 	}
 
