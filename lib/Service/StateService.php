@@ -55,6 +55,15 @@ class StateService {
 	 * @var array<string, array<string, Folder>>
 	 */
 	private array $gameFolders = [];
+	/**
+	 * The saves folder of each game already resolved this request, by user
+	 * then ROM path. The states listing resolves and lists the same folder
+	 * twice over -- once for the slots, once for the battery save -- and
+	 * it cannot move in between. A false means looked for and not there.
+	 *
+	 * @var array<string, array<string, Folder|false>>
+	 */
+	private array $resolvedGameFolders = [];
 
 	public function __construct(
 		private IAppDataFactory $appDataFactory,
@@ -197,7 +206,12 @@ class StateService {
 		}
 		$this->forgetKeys($userId, ...$keys);
 		// And the folder of the game in the user's own saves folder.
-		$this->getGameFolder($userId, $romPath, false)?->delete();
+		$folder = $this->getGameFolder($userId, $romPath, false);
+		if ($folder !== null) {
+			$folder->delete();
+			// Or the memo would hand the deleted folder back later on.
+			unset($this->resolvedGameFolders[$userId][$romPath]);
+		}
 	}
 
 	/**
@@ -214,7 +228,12 @@ class StateService {
 		}
 		$this->deleteAppData($userId, self::sramFileName($key));
 		if (is_string($was)) {
-			$this->getGameFolder($userId, $was, false)?->delete();
+			$folder = $this->getGameFolder($userId, $was, false);
+			if ($folder !== null) {
+				$folder->delete();
+				// Or the memo would hand the deleted folder back later on.
+				unset($this->resolvedGameFolders[$userId][$was]);
+			}
 		}
 		$this->forgetKeys($userId, $key);
 	}
@@ -463,6 +482,20 @@ class StateService {
 	 * the folders do not exist yet).
 	 */
 	private function getGameFolder(string $userId, string $romPath, bool $create): ?Folder {
+		$found = $this->resolvedGameFolders[$userId][$romPath] ?? null;
+		if ($found instanceof Folder) {
+			return $found;
+		}
+		if ($found === false && !$create) {
+			return null;
+		}
+		$folder = $this->lookupGameFolder($userId, $romPath, $create);
+		$this->resolvedGameFolders[$userId][$romPath] = $folder ?? false;
+		return $folder;
+	}
+
+	/** The resolving behind getGameFolder(), which remembers the answer. */
+	private function lookupGameFolder(string $userId, string $romPath, bool $create): ?Folder {
 		$savesPath = $this->savesFolderPath($userId);
 		if ($savesPath === '') {
 			return null;

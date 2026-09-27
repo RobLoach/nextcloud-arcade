@@ -40,9 +40,12 @@ class CleanupService {
 		};
 
 		// The folders are named after the user they belong to, so the users
-		// there are tell which folders are still spoken for.
+		// there are tell which folders are still spoken for. Only a user who
+		// has signed in at least once -- "seen", answered from the local
+		// database -- can have a folder, where callForAllUsers would also ask
+		// every backend (an LDAP one at length) about users who cannot.
 		$keys = [];
-		$this->userManager->callForAllUsers(function ($user) use (&$keys): void {
+		$this->userManager->callForSeenUsers(function ($user) use (&$keys): void {
 			$keys[$this->stateService->folderKeyOf($user->getUID())] = $user->getUID();
 		});
 
