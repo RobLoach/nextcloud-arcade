@@ -13,6 +13,7 @@ use OCP\Http\Client\IClient;
 use OCP\Http\Client\IClientService;
 use OCP\Http\Client\IResponse;
 use OCP\ICache;
+use OCP\Config\IUserConfig;
 use OCP\ICacheFactory;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
@@ -65,7 +66,7 @@ class ThumbnailFetchTest extends TestCase {
 		$cacheFactory->method('createDistributed')->willReturn($cache);
 
 		unset($response);
-		return new ThumbnailFetchService($clientService, $cacheFactory, $this->settingsService(), $this->createStub(LoggerInterface::class));
+		return new ThumbnailFetchService($clientService, $cacheFactory, $this->settingsService(), $this->createStub(IUserConfig::class), $this->createStub(LoggerInterface::class));
 	}
 
 	/**
@@ -156,6 +157,7 @@ class ThumbnailFetchTest extends TestCase {
 			$this->createStub(IClientService::class),
 			$this->createStub(ICacheFactory::class),
 			$settings,
+			$this->createStub(IUserConfig::class),
 			$this->createStub(LoggerInterface::class),
 		);
 

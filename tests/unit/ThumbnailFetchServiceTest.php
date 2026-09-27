@@ -7,6 +7,7 @@ namespace OCA\Arcade\Tests\Unit;
 use OCA\Arcade\Service\SettingsService;
 use OCA\Arcade\Service\ThumbnailFetchService;
 use OCP\Http\Client\IClientService;
+use OCP\Config\IUserConfig;
 use OCP\ICacheFactory;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
@@ -19,6 +20,7 @@ class ThumbnailFetchServiceTest extends TestCase {
 			$this->createStub(IClientService::class),
 			$this->createStub(ICacheFactory::class),
 			$this->settingsService(),
+			$this->createStub(IUserConfig::class),
 			$this->createStub(LoggerInterface::class),
 		);
 	}

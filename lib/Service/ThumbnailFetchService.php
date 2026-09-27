@@ -9,6 +9,7 @@ use OCA\Arcade\CoreMap;
 use OCP\Files\File;
 use OCP\Files\Folder;
 use OCP\Files\NotFoundException;
+use OCP\Config\IUserConfig;
 use OCP\Http\Client\IClientService;
 use OCP\ICacheFactory;
 use Psr\Log\LoggerInterface;
@@ -36,8 +37,36 @@ class ThumbnailFetchService {
 		private IClientService $clientService,
 		private ICacheFactory $cacheFactory,
 		private SettingsService $settingsService,
+		private IUserConfig $userConfig,
 		private LoggerInterface $logger,
 	) {
+	}
+
+	/**
+	 * Leave word about how the looking is going, for the settings page:
+	 * the job runs on its own and has no other way of being heard.
+	 */
+	public function report(string $userId, string $message): void {
+		$this->userConfig->setValueString(
+			$userId,
+			Application::APP_ID,
+			'fetch_status',
+			json_encode(['message' => $message, 'time' => time()]),
+		);
+	}
+
+	/**
+	 * The last word left by report(), for the settings page to show.
+	 *
+	 * @return array{message: mixed, time: mixed}
+	 */
+	public function status(string $userId): array {
+		$stored = $this->userConfig->getValueString($userId, Application::APP_ID, 'fetch_status', '');
+		$status = $stored === '' ? null : json_decode($stored, true);
+		return [
+			'message' => is_array($status) ? ($status['message'] ?? '') : '',
+			'time' => is_array($status) ? ($status['time'] ?? 0) : 0,
+		];
 	}
 
 	/**

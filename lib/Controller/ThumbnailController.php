@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace OCA\Arcade\Controller;
 
-use OCA\Arcade\AppInfo\Application;
 use OCA\Arcade\BackgroundJob\FetchThumbnails;
 use OCA\Arcade\Service\SettingsService;
 use OCA\Arcade\Service\ThumbnailFetchService;
@@ -15,7 +14,6 @@ use OCP\AppFramework\Http\Attribute\OpenAPI;
 use OCP\AppFramework\Http\Attribute\UserRateLimit;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\BackgroundJob\IJobList;
-use OCP\Config\IUserConfig;
 use OCP\IRequest;
 
 /**
@@ -32,7 +30,6 @@ class ThumbnailController extends ArcadeController {
 		private SettingsService $settingsService,
 		private IJobList $jobList,
 		private ThumbnailFetchService $fetchService,
-		private IUserConfig $userConfig,
 		protected ?string $userId,
 	) {
 		parent::__construct($appName, $request);
@@ -66,7 +63,7 @@ class ThumbnailController extends ArcadeController {
 		if (!$this->jobList->has(FetchThumbnails::class, $argument)) {
 			$this->jobList->add(FetchThumbnails::class, $argument);
 		}
-		$this->setStatus('Looking for box art in the background');
+		$this->fetchService->report($this->userId, 'Looking for box art in the background');
 		return new JSONResponse($this->status());
 	}
 
@@ -76,21 +73,9 @@ class ThumbnailController extends ArcadeController {
 		if (($error = $this->requireUser()) !== null) {
 			return $error;
 		}
-		$stored = $this->userConfig->getValueString($this->userId, Application::APP_ID, 'fetch_status', '');
-		$status = $stored === '' ? null : json_decode($stored, true);
 		return [
-			'message' => is_array($status) ? ($status['message'] ?? '') : '',
-			'time' => is_array($status) ? ($status['time'] ?? 0) : 0,
+			...$this->fetchService->status($this->userId),
 			'queued' => $this->jobList->has(FetchThumbnails::class, ['userId' => $this->userId]),
 		];
-	}
-
-	private function setStatus(string $message): void {
-		$this->userConfig->setValueString(
-			(string)$this->userId,
-			Application::APP_ID,
-			'fetch_status',
-			json_encode(['message' => $message, 'time' => time()]),
-		);
 	}
 }
