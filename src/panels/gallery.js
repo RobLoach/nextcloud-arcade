@@ -35,14 +35,23 @@ export function createGalleryPanel({ romPath, flash }) {
 		}
 	}
 
+	// What count() fetched for the button, kept for the first refresh, so
+	// the launch does not ask for the same list twice.
+	let counted = null
+
+	const list = async () => {
+		const response = await api(generateUrl(
+			'/apps/arcade/arcade/screenshots?file={file}',
+			{ file: romPath },
+		))
+		return await response.json()
+	}
+
 	const refresh = async () => {
 		let data
 		try {
-			const response = await api(generateUrl(
-				'/apps/arcade/arcade/screenshots?file={file}',
-				{ file: romPath },
-			))
-			data = await response.json()
+			data = counted ?? await list()
+			counted = null
 		} catch (error) {
 			console.error('Could not list the screenshots', error)
 			return
@@ -101,12 +110,8 @@ export function createGalleryPanel({ romPath, flash }) {
 	 */
 	const count = async () => {
 		try {
-			const response = await api(generateUrl(
-				'/apps/arcade/arcade/screenshots?file={file}',
-				{ file: romPath },
-			))
-			const data = await response.json()
-			return data.screenshots.length
+			counted = await list()
+			return counted.screenshots.length
 		} catch (error) {
 			return 0
 		}
