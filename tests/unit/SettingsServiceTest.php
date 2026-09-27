@@ -158,6 +158,28 @@ class SettingsServiceTest extends TestCase {
 		$this->assertSame([], $settings['core_options']);
 	}
 
+	public function testAPartialSaveLeavesTheOtherSettingsAlone(): void {
+		// The onboarding posts the library folder by itself; whatever else
+		// the user had set has to survive that.
+		$config = $this->createMock(IUserConfig::class);
+		$saved = json_encode(['thumbnails_folder' => '/Thumbs', 'video_smooth' => true]);
+		$config->method('getValueString')->willReturnCallback(static fn (): string => $saved);
+		$config->method('setValueString')->willReturnCallback(
+			function (string $user, string $app, string $key, string $value) use (&$saved): bool {
+				$saved = $value;
+				return true;
+			},
+		);
+		$service = new SettingsService($config, $this->createStub(IAppConfig::class), $this->emptyRootFolder());
+
+		$service->setUserSettings(self::USER, ['library_folder' => '/ROMs']);
+
+		$written = json_decode($saved, true);
+		$this->assertSame('/ROMs', $written['library_folder']);
+		$this->assertSame('/Thumbs', $written['thumbnails_folder'], 'the folder nobody posted stays');
+		$this->assertTrue($written['video_smooth'], 'and so does the toggle');
+	}
+
 	public function testBrokenStoredSettingsFallBackToTheDefaults(): void {
 		$this->assertSame(
 			$this->service()->getDefaults(),

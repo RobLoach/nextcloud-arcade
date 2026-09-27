@@ -398,12 +398,34 @@ class SettingsService {
 		foreach (array_keys(self::INSTANCE_ONLY) as $key) {
 			unset($sanitized[$key]);
 		}
+		// The body may carry only the keys that changed -- the onboarding
+		// sets the library folder alone -- so what was stored stays, and
+		// only what was posted is written over it.
+		$sanitized = array_merge($this->storedUserSettings($userId), $sanitized);
 		// A folder handed in as a path is remembered by its id as well,
 		// so the setting follows the folder if it moves.
 		$sanitized = $this->resolveFolders($userId, $sanitized);
 		$this->userConfig->setValueString($userId, Application::APP_ID, 'settings', json_encode($sanitized));
 		unset($this->settings[$userId]);
 		return $this->getUserSettings($userId);
+	}
+
+	/**
+	 * The settings row as it is stored, cleaned the way reading cleans it:
+	 * without the instance-owned keys an old version may have written.
+	 *
+	 * @return array<string, mixed>
+	 */
+	private function storedUserSettings(string $userId): array {
+		$stored = $this->userConfig->getValueString($userId, Application::APP_ID, 'settings', '');
+		$decoded = $stored === '' ? null : json_decode($stored, true);
+		if (!is_array($decoded)) {
+			return [];
+		}
+		return array_diff_key(
+			$decoded,
+			array_flip(['core_options', ...array_keys(self::INSTANCE_ONLY)]),
+		);
 	}
 
 	/**
