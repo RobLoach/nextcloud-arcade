@@ -84,7 +84,7 @@ class ConvertLegacyStorage implements IRepairStep {
 		// the list of users can turn back into one.
 		$users = [];
 		$this->userManager->callForAllUsers(static function ($user) use (&$users): void {
-			$users[hash('sha256', $user->getUID())] = $user->getUID();
+			$users[StateService::userKey($user->getUID())] = $user->getUID();
 		});
 
 		// The files still sitting flat in the states root, listed once.
@@ -266,14 +266,16 @@ class ConvertLegacyStorage implements IRepairStep {
 				continue;
 			}
 			$system = CoreMap::shortNameForPath($entry['path']);
-			$stem = pathinfo(basename($entry['path']), PATHINFO_FILENAME);
+			$stem = StateService::stemOf($entry['path']);
 			if ($system === '' || !isset($present[$stem])) {
 				// A game that does not say its system saves where it always did.
 				continue;
 			}
+			// Where the service files the game today: "$base/$system/$stem".
+			$gamePath = StateService::gameFolderPath($savesPath, $entry['path']);
 			try {
 				$node = $userFolder->get("$base/$stem");
-				if (!$node instanceof Folder || $userFolder->nodeExists("$base/$system/$stem")) {
+				if (!$node instanceof Folder || $userFolder->nodeExists($gamePath)) {
 					continue;
 				}
 				try {
@@ -284,7 +286,7 @@ class ConvertLegacyStorage implements IRepairStep {
 				if (!$target instanceof Folder) {
 					continue;
 				}
-				$node->move($userFolder->getPath() . "/$base/$system/$stem");
+				$node->move($userFolder->getPath() . '/' . $gamePath);
 			} catch (\Throwable) {
 				// Keeping the folder where it is beats losing the saves.
 			}
@@ -398,16 +400,17 @@ class ConvertLegacyStorage implements IRepairStep {
 	}
 
 	/**
-	 * Every name a game's files can carry after its key: one state and one
-	 * screenshot per slot, and the battery save.
+	 * Every name a game's files can carry after its key, spelled by the
+	 * service that writes them: one state and one screenshot per slot, and
+	 * the battery save.
 	 *
 	 * @return list<string>
 	 */
 	private function suffixes(): array {
-		$suffixes = ['.srm'];
-		for ($slot = 0; $slot <= StateService::HIGHEST_SLOT; $slot++) {
-			$suffixes[] = "-$slot.state";
-			$suffixes[] = "-$slot.png";
+		$suffixes = [StateService::sramFileName('')];
+		foreach (StateService::slots() as $slot) {
+			$suffixes[] = StateService::fileName('', $slot, 'state');
+			$suffixes[] = StateService::fileName('', $slot, 'png');
 		}
 		return $suffixes;
 	}

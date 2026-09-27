@@ -2,7 +2,8 @@ import { loadState } from '@nextcloud/initial-state'
 import { translate as t, translatePlural as n } from '@nextcloud/l10n'
 import { generateUrl } from '@nextcloud/router'
 import { api } from './api.js'
-import { formatDuration, formatPlayTime } from './format.js'
+import { formatDuration, formatPlayTime, formatSize } from './format.js'
+import { ICONS, icon } from './icons.js'
 import { attachLibraryGamepad } from './librarypad.js'
 import { playUrl, previewUrl } from './play.js'
 import { systemLabel } from './systems.js'
@@ -11,15 +12,6 @@ const VIEWS = ['grid', 'list', 'table']
 const PAGE_SIZES = [24, 60, 120, 240]
 const VIEW_KEY = 'arcade-library-view'
 const PAGE_SIZE_KEY = 'arcade-library-page-size'
-
-const ICONS = {
-	star: 'M12,15.39L8.24,17.66L9.23,13.38L5.91,10.5L10.29,10.13L12,6.09L13.71,10.13L18.09,10.5L14.77,13.38L15.76,17.66M22,9.24L14.81,8.63L12,2L9.19,8.63L2,9.24L7.45,13.97L5.82,21L12,17.27L18.18,21L16.54,13.97L22,9.24Z',
-	grid: 'M3,11H11V3H3M3,21H11V13H3M13,21H21V13H13M13,3V11H21V3',
-	list: 'M3,4H21V8H3V4M3,10H21V14H3V10M3,16H21V20H3V16Z',
-	table: 'M5,4H19A2,2 0 0,1 21,6V18A2,2 0 0,1 19,20H5A2,2 0 0,1 3,18V6A2,2 0 0,1 5,4M5,8V12H11V8H5M13,8V12H19V8H13M5,14V18H11V14H5M13,14V18H19V14H13Z',
-	gamepad: 'M7.97,16L5,19C4.67,19.3 4.23,19.5 3.75,19.5A1.75,1.75 0 0,1 2,17.75V17.5L3,10.12C3.21,7.81 5.14,6 7.5,6H16.5C18.86,6 20.79,7.81 21,10.12L22,17.5V17.75A1.75,1.75 0 0,1 20.25,19.5C19.77,19.5 19.33,19.3 19,19L16.03,16H7.97M7,8V10H5V11H7V13H8V11H10V10H8V8H7M16.5,8A0.75,0.75 0 0,0 15.75,8.75A0.75,0.75 0 0,0 16.5,9.5A0.75,0.75 0 0,0 17.25,8.75A0.75,0.75 0 0,0 16.5,8M14.75,9.75A0.75,0.75 0 0,0 14,10.5A0.75,0.75 0 0,0 14.75,11.25A0.75,0.75 0 0,0 15.5,10.5A0.75,0.75 0 0,0 14.75,9.75M18.25,9.75A0.75,0.75 0 0,0 17.5,10.5A0.75,0.75 0 0,0 18.25,11.25A0.75,0.75 0 0,0 19,10.5A0.75,0.75 0 0,0 18.25,9.75M16.5,11.5A0.75,0.75 0 0,0 15.75,12.25A0.75,0.75 0 0,0 16.5,13A0.75,0.75 0 0,0 17.25,12.25A0.75,0.75 0 0,0 16.5,11.5Z',
-	refresh: 'M17.65,6.35C16.2,4.9 14.21,4 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20C15.73,20 18.84,17.45 19.73,14H17.65C16.83,16.33 14.61,18 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6C13.66,6 15.14,6.69 16.22,7.78L13,11H20V4L17.65,6.35Z',
-}
 
 // Boxarts are the cover of a game and read best big; logos are made to be
 // recognized small. The rest is used when those are missing.
@@ -45,14 +37,6 @@ const state = {
 	search: '',
 	system: '',
 	tag: '',
-}
-
-/**
- * @param {string} path the MDI icon path
- * @return {string} an inline SVG
- */
-function icon(path) {
-	return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true"><path d="${path}"/></svg>`
 }
 
 /**
@@ -96,21 +80,6 @@ function writeCache(key, data) {
 	} catch (error) {
 		// A full or unavailable session storage only costs us the cache.
 	}
-}
-
-/**
- * @param {number} bytes a file size
- * @return {string} the size in human readable units
- */
-function formatSize(bytes) {
-	const units = ['B', 'KB', 'MB', 'GB']
-	let size = bytes
-	let unit = 0
-	while (size >= 1024 && unit < units.length - 1) {
-		size /= 1024
-		unit++
-	}
-	return `${size < 10 && unit > 0 ? size.toFixed(1) : Math.round(size)} ${units[unit]}`
 }
 
 /**

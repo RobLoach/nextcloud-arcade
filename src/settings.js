@@ -1,6 +1,7 @@
 import { translate as t } from '@nextcloud/l10n'
 import { generateUrl } from '@nextcloud/router'
 import { api } from './api.js'
+import { formatSize } from './format.js'
 import { keyLabel, retroarchKey } from './keys.js'
 
 const container = document.getElementById('arcade-settings')
@@ -249,20 +250,6 @@ async function showFetchStatus() {
 const BIOS_MAX_SIZE = 16 * 1024 * 1024
 
 /**
- * @param {number} bytes a file size
- * @return {string} the size as people write it
- */
-function formatBiosSize(bytes) {
-	if (bytes < 1024) {
-		return `${bytes} B`
-	}
-	if (bytes < 1024 * 1024) {
-		return `${(bytes / 1024).toFixed(1)} KB`
-	}
-	return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-}
-
-/**
  * Ask the server what the system folder and the instance store hold, and
  * show every row accordingly. A file from the store cannot be removed
  * here -- that store belongs to occ arcade:bios -- so its row says where
@@ -295,9 +282,9 @@ async function refreshBios() {
 		let state = t('arcade', 'Missing')
 		if (fromStore) {
 			state = t('arcade', 'Present ({size}, instance store, managed with occ arcade:bios)',
-				{ size: formatBiosSize(file.size) })
+				{ size: formatSize(file.size) })
 		} else if (file.present) {
-			state = t('arcade', 'Present ({size})', { size: formatBiosSize(file.size) })
+			state = t('arcade', 'Present ({size})', { size: formatSize(file.size) })
 		}
 		row.querySelector('.arcade-bios-state').textContent = state
 		row.querySelector('.arcade-bios-input').classList.toggle('hidden', file.present)

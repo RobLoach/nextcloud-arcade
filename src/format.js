@@ -36,3 +36,18 @@ export function formatPlayTime(seconds) {
 		? t('arcade', '{hours}h {minutes}m played', { hours, minutes })
 		: t('arcade', '{minutes}m played', { minutes })))
 }
+
+/**
+ * @param {number} bytes a file size
+ * @return {string} the size in human readable units
+ */
+export function formatSize(bytes) {
+	const units = ['B', 'KB', 'MB', 'GB']
+	let size = bytes
+	let unit = 0
+	while (size >= 1024 && unit < units.length - 1) {
+		size /= 1024
+		unit++
+	}
+	return `${size < 10 && unit > 0 ? size.toFixed(1) : Math.round(size)} ${units[unit]}`
+}
