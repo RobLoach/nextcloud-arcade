@@ -166,6 +166,17 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 		}
 	}
 
+	// Every way out of the game goes through here first, so the game is
+	// left where it was and can be picked up again. Nothing to save
+	// without a slot to save into, or when it was not asked for.
+	const saveBeforeLeaving = async () => {
+		if (settings.autosave_on_close !== true || statesPanel === null) {
+			return
+		}
+		flash(t('arcade', 'Saving the game …'))
+		await statesPanel.save(AUTO_SLOT)
+	}
+
 	// Virtual gamepad for touch play.
 	let touchControls = null
 	if (isTouchDevice()) {
@@ -292,10 +303,7 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 				? 'OCA'
 				: window.OCA.Files === undefined ? 'OCA.Files' : 'OCA.Files.Sidebar'
 			console.warn(`arcade: cannot open the Files sidebar, window.${missing} is undefined; opening the Files app instead`)
-			if (settings.autosave_on_close === true && statesPanel !== null) {
-				flash(t('arcade', 'Saving the game …'))
-				await statesPanel.save(AUTO_SLOT)
-			}
+			await saveBeforeLeaving()
 			const absolute = romPath.startsWith('/') ? romPath : `/${romPath}`
 			const dir = absolute.replace(/\/[^/]*$/, '') || '/'
 			let target
@@ -389,11 +397,7 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 	if (closeUrl !== '') {
 		closeButton = button(ICONS.close, t('arcade', 'Close'), async (element) => {
 			element.disabled = true
-			// Leave the game where it was, so it can be picked up again.
-			if (settings.autosave_on_close === true && statesPanel !== null) {
-				flash(t('arcade', 'Saving the game …'))
-				await statesPanel.save(AUTO_SLOT)
-			}
+			await saveBeforeLeaving()
 			onClose?.()
 			try {
 				instance.exit()
