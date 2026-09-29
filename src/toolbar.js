@@ -49,6 +49,10 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 
 	const status = document.createElement('span')
 	status.className = 'arcade-toolbar-status'
+	// Everything the player is ever told happens here and nowhere else --
+	// a deleted battery save, a state that would not save, a missing BIOS
+	// -- so it is read out as it arrives rather than only seen.
+	status.setAttribute('role', 'status')
 	let statusTimer = null
 	const flash = (text) => {
 		status.textContent = text
@@ -72,19 +76,38 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 		return element
 	}
 
+	// A button that is either on or off says so, rather than only looking
+	// it: the class is a colour, aria-pressed is the state itself.
+	const setPressed = (element, on) => {
+		element.classList.toggle('active', on)
+		element.setAttribute('aria-pressed', String(on))
+	}
+	// One that opens something says that instead.
+	const setExpanded = (element, open) => {
+		element?.classList.toggle('active', open)
+		element?.setAttribute('aria-expanded', String(open))
+	}
+
 	let paused = false
-	const pauseButton = button(ICONS.pause, t('arcade', 'Pause'), (element) => {
-		paused = !paused
+	const pauseButton = button(ICONS.pause, t('arcade', 'Pause'), () => {
 		if (paused) {
-			instance.pause()
-		} else {
 			instance.resume()
+		} else {
+			instance.pause()
 		}
-		element.innerHTML = icon(paused ? ICONS.play : ICONS.pause)
-		element.title = paused ? t('arcade', 'Resume') : t('arcade', 'Pause')
-		element.setAttribute('aria-label', element.title)
-		element.classList.toggle('active', paused)
+		setPaused(!paused)
 	})
+	// The one place that decides what "paused" looks like, so the flag and
+	// the button cannot drift apart -- as they did when restarting resumed
+	// the core behind the button's back.
+	const setPaused = (value) => {
+		paused = value
+		pauseButton.innerHTML = icon(paused ? ICONS.play : ICONS.pause)
+		pauseButton.title = paused ? t('arcade', 'Resume') : t('arcade', 'Pause')
+		pauseButton.setAttribute('aria-label', pauseButton.title)
+		setPressed(pauseButton, paused)
+	}
+	setPressed(pauseButton, false)
 
 	// A game left in a background tab keeps the processor busy for nothing,
 	// but a game that goes quiet on its own is a surprise, so it is asked
@@ -110,6 +133,10 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 	// own so a hotkey could reach it without a button to click.
 	const restartGame = () => {
 		instance.restart()
+		// restart() brings the core back running, so a button still saying
+		// "Resume" would be a lie -- and one the idle chrome and the
+		// autosave both go on believing for the rest of the session.
+		setPaused(false)
 		flash(t('arcade', 'Restarted'))
 	}
 
@@ -124,18 +151,18 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 	// Hiding a panel and letting go of its button always travel together.
 	const hideStates = () => {
 		statesPanel?.element.classList.add('hidden')
-		statesButton?.classList.remove('active')
+		setExpanded(statesButton, false)
 	}
 	const hideGallery = () => {
 		galleryPanel?.element.classList.add('hidden')
-		galleryButton?.classList.remove('active')
+		setExpanded(galleryButton, false)
 	}
 	const statesOpen = () => statesPanel !== null && !statesPanel.element.classList.contains('hidden')
 	const galleryOpen = () => galleryPanel !== null && !galleryPanel.element.classList.contains('hidden')
 	const togglePanel = (panel, element, onOpen) => {
 		const visible = !panel.element.classList.contains('hidden')
 		panel.element.classList.toggle('hidden', visible)
-		element.classList.toggle('active', !visible)
+		setExpanded(element, !visible)
 		if (!visible) {
 			onOpen()
 		}
@@ -157,6 +184,8 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 				statesPanel.refresh()
 			})
 		})
+		statesButton.setAttribute('aria-haspopup', 'dialog')
+		setExpanded(statesButton, false)
 		offerResume({
 			container,
 			romPath,
@@ -192,21 +221,24 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 	let touchControls = null
 	if (isTouchDevice()) {
 		touchControls = attachTouchControls({ container, instance })
-		button(ICONS.gamepad, t('arcade', 'Touch controls'), (element) => {
+		const touchButton = button(ICONS.gamepad, t('arcade', 'Touch controls'), (element) => {
 			const hidden = touchControls.element.classList.toggle('hidden')
-			element.classList.toggle('active', !hidden)
-		}).classList.add('active')
+			setPressed(element, !hidden)
+		})
+		setPressed(touchButton, true)
 	}
 
-	button(ICONS.mute, t('arcade', 'Mute'), (element) => {
+	const muteButton = button(ICONS.mute, t('arcade', 'Mute'), (element) => {
 		instance.sendCommand('MUTE')
-		element.classList.toggle('active')
+		setPressed(element, !element.classList.contains('active'))
 	})
+	setPressed(muteButton, false)
 
 	const fastForwardButton = button(ICONS.fastForward, t('arcade', 'Fast-forward'), (element) => {
 		instance.sendCommand('FAST_FORWARD')
-		element.classList.toggle('active')
+		setPressed(element, !element.classList.contains('active'))
 	})
+	setPressed(fastForwardButton, false)
 
 	// RetroArch's built-in menu, with core options, control remapping, etc.
 	// It sits in the actions menu; the handler stays separate so a hotkey
@@ -268,6 +300,8 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 				galleryPanel.refresh()
 			})
 		})
+		galleryButton.setAttribute('aria-haspopup', 'dialog')
+		setExpanded(galleryButton, false)
 		// Nothing to show until there is a screenshot of this game.
 		galleryButton.classList.add('hidden')
 		galleryPanel.count().then((count) => {
@@ -291,8 +325,7 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 	let refreshSidebarItem = null
 	const closeActionsMenu = () => {
 		actionsMenu?.classList.add('hidden')
-		actionsButton?.classList.remove('active')
-		actionsButton?.setAttribute('aria-expanded', 'false')
+		setExpanded(actionsButton, false)
 	}
 	if (closeUrl !== '') {
 		actionsMenu = document.createElement('div')
@@ -391,8 +424,7 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 		actionsButton = button(ICONS.dots, t('arcade', 'Actions'), (element) => {
 			const visible = !actionsMenu.classList.contains('hidden')
 			actionsMenu.classList.toggle('hidden', visible)
-			element.classList.toggle('active', !visible)
-			element.setAttribute('aria-expanded', String(!visible))
+			setExpanded(element, !visible)
 			if (!visible) {
 				// The menu and the panels cover the same spot.
 				hideStates()
@@ -401,7 +433,7 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 			}
 		}, topbar)
 		actionsButton.setAttribute('aria-haspopup', 'true')
-		actionsButton.setAttribute('aria-expanded', 'false')
+		setExpanded(actionsButton, false)
 	}
 
 	// A click anywhere else puts the menu away, the way core menus behave.
