@@ -6,6 +6,13 @@ All notable changes to NextCloud Arcade. The format follows
 
 ## [Unreleased]
 
+## [0.41.0] - 2026-09-27
+
+### Added
+- The app answers Nextcloud's capabilities endpoint, so a client can ask
+  what it supports -- the systems it plays, the features it offers and the
+  limits an administrator set -- without guessing.
+
 ## [0.40.1] - 2026-09-27
 
 ### Security
