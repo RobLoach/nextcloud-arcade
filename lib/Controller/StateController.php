@@ -195,7 +195,7 @@ class StateController extends ArcadeController {
 	 * @psalm-assert-if-true string $this->userId
 	 */
 	private function isValidRequest(string $file, int $slot): bool {
-		return $this->isPlausibleRequest($file, $slot) && $this->gameExists($file);
+		return $this->isPlausibleRequest($file, $slot) && $this->gameExists($this->userId, $file);
 	}
 
 	/**
@@ -225,12 +225,10 @@ class StateController extends ArcadeController {
 			&& $slot <= StateService::HIGHEST_SLOT;
 	}
 
-	private function gameExists(string $file): bool {
-		if ($this->userId === null) {
-			return false;
-		}
+	/** Only ever asked once the plausibility check has vouched for the user. */
+	private function gameExists(string $userId, string $file): bool {
 		try {
-			return $this->rootFolder->getUserFolder($this->userId)->nodeExists($file);
+			return $this->rootFolder->getUserFolder($userId)->nodeExists($file);
 		} catch (\Throwable) {
 			return false;
 		}
