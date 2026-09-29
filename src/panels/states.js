@@ -11,8 +11,9 @@ import { createPanel } from './panel.js'
  * @param {string} options.romPath path identifying the game
  * @param {Function} options.flash shows a status message
  * @param {Function} options.onDone called after a slot was saved or loaded
- * @return {{element: HTMLElement, refresh: Function, load: Function, save: Function}}
- *         the panel; load and save answer whether they got through
+ * @return {{element: HTMLElement, refresh: Function, load: Function, save: Function, settled: Function}}
+ *         the panel; load and save answer whether they got through, and
+ *         settled waits out whichever of them is running
  */
 export function createStatesPanel({ instance, romPath, flash, onDone }) {
 	const element = createPanel('arcade-states', t('arcade', 'Save states'))
@@ -44,11 +45,6 @@ export function createStatesPanel({ instance, romPath, flash, onDone }) {
 		return buttonElement
 	}
 
-	// One state operation at a time. A held hotkey repeats about sixty
-	// times a second, and each saveState() clears the file the one before
-	// it is still waiting for, so the slot ends up holding a truncated
-	// state -- and the server sees a minute's worth of requests for it.
-	let busy = false
 	// The buttons of each rendered slot, with the state they were rendered
 	// in, so the slot being worked on can be held and let go again.
 	const slotButtons = new Map()
@@ -65,12 +61,36 @@ export function createStatesPanel({ instance, romPath, flash, onDone }) {
 		return element
 	}
 
-	const save = async (slot) => {
-		if (busy) {
-			return false
+	// One state operation at a time. A held hotkey repeats about sixty
+	// times a second, and each saveState() clears the file the one before
+	// it is still waiting for, so the slot ends up holding a truncated
+	// state -- and the server sees a minute's worth of requests for it.
+	// The extra ones are turned away, and their slot is held while the
+	// one that got through runs, so it cannot be pressed either.
+	let inFlight = null
+	const alone = (slot, work) => {
+		if (inFlight !== null) {
+			return Promise.resolve(false)
 		}
-		busy = true
 		setSlotBusy(slot, true)
+		inFlight = work().finally(() => {
+			inFlight = null
+			setSlotBusy(slot, false)
+		})
+		return inFlight
+	}
+	// Lets whatever is in the air land. A caller that must not be turned
+	// away -- the save on the way out of the game -- waits its turn here
+	// rather than being told no by a tick of the autosave.
+	const settled = async () => {
+		try {
+			await inFlight
+		} catch {
+			// How it went is the business of whoever started it.
+		}
+	}
+
+	const save = (slot) => alone(slot, async () => {
 		try {
 			let { state, thumbnail } = await instance.saveState()
 			if (thumbnail === undefined) {
@@ -99,18 +119,10 @@ export function createStatesPanel({ instance, romPath, flash, onDone }) {
 			console.error('Could not save the state', error)
 			flash(t('arcade', 'Could not save the state'))
 			return false
-		} finally {
-			busy = false
-			setSlotBusy(slot, false)
 		}
-	}
+	})
 
-	const load = async (slot) => {
-		if (busy) {
-			return false
-		}
-		busy = true
-		setSlotBusy(slot, true)
+	const load = (slot) => alone(slot, async () => {
 		try {
 			const response = await api(stateUrl('/state', romPath, slot))
 			const state = await response.blob()
@@ -131,11 +143,8 @@ export function createStatesPanel({ instance, romPath, flash, onDone }) {
 			console.error('Could not load the state', error)
 			flash(t('arcade', 'Could not load the state'))
 			return false
-		} finally {
-			busy = false
-			setSlotBusy(slot, false)
 		}
-	}
+	})
 
 	const remove = async (slot) => {
 		try {
@@ -326,5 +335,5 @@ export function createStatesPanel({ instance, romPath, flash, onDone }) {
 		}
 	}
 
-	return { element, refresh, load, save }
+	return { element, refresh, load, save, settled }
 }

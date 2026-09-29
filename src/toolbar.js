@@ -237,6 +237,10 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 			return true
 		}
 		flash(t('arcade', 'Saving the game …'))
+		// A tick of the autosave may be in the air. Letting it land first
+		// keeps this save from being turned away as a repeat of it, and
+		// so from reporting a failure that never happened.
+		await statesPanel.settled()
 		return await statesPanel.save(AUTO_SLOT)
 	}
 
