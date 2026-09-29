@@ -225,13 +225,14 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 
 	// Every way out of the game goes through here first, so the game is
 	// left where it was and can be picked up again. Nothing to save
-	// without a slot to save into, or when it was not asked for.
+	// without a slot to save into, or when it was not asked for -- and
+	// nothing to save is as good as saved.
 	const saveBeforeLeaving = async () => {
 		if (settings.autosave_on_close !== true || statesPanel === null) {
-			return
+			return true
 		}
 		flash(t('arcade', 'Saving the game …'))
-		await statesPanel.save(AUTO_SLOT)
+		return await statesPanel.save(AUTO_SLOT)
 	}
 
 	// Virtual gamepad for touch play.
@@ -404,7 +405,12 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 				? 'OCA'
 				: window.OCA.Files === undefined ? 'OCA.Files' : 'OCA.Files.Sidebar'
 			console.warn(`arcade: cannot open the Files sidebar, window.${missing} is undefined; opening the Files app instead`)
-			await waitAtMost(saveBeforeLeaving(), SAVE_BEFORE_LEAVING_WAIT, undefined)
+			if (!await waitAtMost(saveBeforeLeaving(), SAVE_BEFORE_LEAVING_WAIT, false)) {
+				// Leaving this page ends the game, so a save that did not
+				// happen means staying put and saying so.
+				flash(t('arcade', 'Could not save the game, so the details were not opened.'))
+				return
+			}
 			const absolute = romPath.startsWith('/') ? romPath : `/${romPath}`
 			const dir = absolute.replace(/\/[^/]*$/, '') || '/'
 			let target
@@ -482,12 +488,26 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 
 	let closeButton = null
 	if (closeUrl !== '') {
+		// A save that did not happen is not something to walk away from
+		// quietly, so the first press says so and the button comes back
+		// as what it now really is: leaving without the save.
+		let leaveUnsaved = false
 		closeButton = button(ICONS.close, t('arcade', 'Close'), async (element) => {
 			element.disabled = true
 			// Bounded: the save polls the core's file system for the file
 			// it wrote, and a core that never writes it would otherwise
 			// hold the page here for a minute with nothing to press.
-			await waitAtMost(saveBeforeLeaving(), SAVE_BEFORE_LEAVING_WAIT, undefined)
+			const saved = leaveUnsaved
+				|| await waitAtMost(saveBeforeLeaving(), SAVE_BEFORE_LEAVING_WAIT, false)
+			if (!saved) {
+				leaveUnsaved = true
+				element.disabled = false
+				element.title = t('arcade', 'Close without saving')
+				element.setAttribute('aria-label', element.title)
+				element.focus()
+				flash(t('arcade', 'Could not save the game. Press Close again to leave without saving.'))
+				return
+			}
 			// Closing is the session's to do, not the toolbar's: it waits
 			// for the battery save before it takes the core away.
 			await onClose?.()
