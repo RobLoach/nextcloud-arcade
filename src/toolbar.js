@@ -152,6 +152,11 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 	let statesButton = null
 	let galleryPanel = null
 	let galleryButton = null
+	// The screenshots button only earns its place once the game has a
+	// screenshot, which can happen at any moment of the session.
+	const showGalleryButton = (show) => {
+		galleryButton?.classList.toggle('hidden', !show)
+	}
 	// Hiding a panel and letting go of its button always travel together.
 	// So does the focus: a panel that goes away while it holds the focus
 	// would drop it on the body, leaving the keyboard nowhere.
@@ -291,6 +296,11 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 				const system = shortNameForPath(romPath)
 				await saveScreenshot(system === '' ? folder : `${folder}/${system}`, stem, blob)
 				flash(t('arcade', 'Screenshot saved to {folder}', { folder }))
+				// There is one now, so the button that shows them has
+				// something to show -- it used to be asked once at launch
+				// and never again, so a game's first screenshot stayed out
+				// of reach until the page was opened anew.
+				showGalleryButton(true)
 				galleryPanel?.refresh()
 			} else {
 				const url = URL.createObjectURL(blob)
@@ -310,7 +320,13 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 
 	// The screenshots of this game, which also live in the user's files.
 	if (getCurrentUser() !== null && romPath && (settings.screenshots_folder ?? '') !== '') {
-		galleryPanel = createGalleryPanel({ romPath, flash })
+		galleryPanel = createGalleryPanel({
+			romPath,
+			flash,
+			// Every listing the panel makes is also an answer to "is there
+			// anything to show", so the button follows it both ways.
+			onCount: (count) => showGalleryButton(count > 0),
+		})
 		galleryButton = button(ICONS.gallery, t('arcade', 'Screenshots'), (element) => {
 			togglePanel(galleryPanel, element, () => {
 				hideStates()
@@ -321,10 +337,8 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 		galleryButton.setAttribute('aria-haspopup', 'dialog')
 		setExpanded(galleryButton, false)
 		// Nothing to show until there is a screenshot of this game.
-		galleryButton.classList.add('hidden')
-		galleryPanel.count().then((count) => {
-			galleryButton.classList.toggle('hidden', count === 0)
-		})
+		showGalleryButton(false)
+		galleryPanel.count().then((count) => showGalleryButton(count > 0))
 	}
 
 	const fullscreenButton = button(ICONS.fullscreen, t('arcade', 'Fullscreen'), () => {

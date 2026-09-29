@@ -49,12 +49,28 @@ export function createStatesPanel({ instance, romPath, flash, onDone }) {
 	// it is still waiting for, so the slot ends up holding a truncated
 	// state -- and the server sees a minute's worth of requests for it.
 	let busy = false
+	// The buttons of each rendered slot, with the state they were rendered
+	// in, so the slot being worked on can be held and let go again.
+	const slotButtons = new Map()
+	const setSlotBusy = (slot, working) => {
+		for (const [element, disabled] of slotButtons.get(slot) ?? []) {
+			element.disabled = working || disabled
+		}
+	}
+	const addSlotButton = (slot, element) => {
+		if (!slotButtons.has(slot)) {
+			slotButtons.set(slot, [])
+		}
+		slotButtons.get(slot).push([element, element.disabled])
+		return element
+	}
 
 	const save = async (slot) => {
 		if (busy) {
 			return false
 		}
 		busy = true
+		setSlotBusy(slot, true)
 		try {
 			let { state, thumbnail } = await instance.saveState()
 			if (thumbnail === undefined) {
@@ -85,6 +101,7 @@ export function createStatesPanel({ instance, romPath, flash, onDone }) {
 			return false
 		} finally {
 			busy = false
+			setSlotBusy(slot, false)
 		}
 	}
 
@@ -93,9 +110,18 @@ export function createStatesPanel({ instance, romPath, flash, onDone }) {
 			return false
 		}
 		busy = true
+		setSlotBusy(slot, true)
 		try {
 			const response = await api(stateUrl('/state', romPath, slot))
-			await instance.loadState(await response.blob())
+			const state = await response.blob()
+			if (state.size === 0) {
+				// Handed an empty file, RetroArch waits for a state that
+				// will never come -- a minute of nothing, and then a
+				// message about loading rather than about the file.
+				flash(t('arcade', 'That save state is empty, so there is nothing to load'))
+				return false
+			}
+			await instance.loadState(state)
 			flash(slot === AUTO_SLOT
 				? t('arcade', 'Game restored')
 				: t('arcade', 'State loaded from slot {slot}', { slot }))
@@ -107,6 +133,7 @@ export function createStatesPanel({ instance, romPath, flash, onDone }) {
 			return false
 		} finally {
 			busy = false
+			setSlotBusy(slot, false)
 		}
 	}
 
@@ -174,32 +201,46 @@ export function createStatesPanel({ instance, romPath, flash, onDone }) {
 		row.appendChild(deleteButton)
 	}
 
-	const refresh = async () => {
-		let data
-		try {
-			const response = await api(stateUrl('/states', romPath))
-			data = await response.json()
-		} catch (error) {
-			console.error('Could not list the states', error)
-			return
-		}
-		const bySlot = new Map(data.states.map((state) => [state.slot, state]))
+	// A panel that cannot say what is in the slots says that, rather than
+	// standing there empty with no way to ask again.
+	const renderFailure = () => {
+		slotsContainer.innerHTML = ''
+		sramContainer.innerHTML = ''
+		slotButtons.clear()
+		const row = document.createElement('div')
+		row.className = 'arcade-states-slot'
+		const label = document.createElement('span')
+		label.className = 'arcade-states-label'
+		label.textContent = t('arcade', 'Could not read the save states.')
+		row.appendChild(label)
+		row.appendChild(smallButton(t('arcade', 'Retry'), () => refresh()))
+		slotsContainer.appendChild(row)
+	}
+
+	const render = (data) => {
+		// Whatever the server sent, this is what it is taken to mean. The
+		// caller catches as well, but a panel is not worth blanking over
+		// a missing field.
+		const states = Array.isArray(data?.states) ? data.states : []
+		const slotCount = Number.isFinite(Number(data?.slots)) ? Number(data.slots) : 0
+		const bySlot = new Map(states.map((state) => [state.slot, state]))
 		// The slots offered now, plus anything left in slots earlier
 		// versions offered, so those saves stay reachable.
 		const slots = []
 		if (bySlot.has(AUTO_SLOT)) {
 			slots.push(AUTO_SLOT)
 		}
-		for (let slot = 1; slot <= data.slots; slot++) {
+		for (let slot = 1; slot <= slotCount; slot++) {
 			slots.push(slot)
 		}
-		for (const state of data.states) {
-			if (state.slot > data.slots) {
+		for (const state of states) {
+			if (state.slot > slotCount) {
 				slots.push(state.slot)
 			}
 		}
 
 		slotsContainer.innerHTML = ''
+		slotButtons.clear()
 		for (const slot of slots) {
 			const state = bySlot.get(slot)
 			const row = document.createElement('div')
@@ -221,7 +262,7 @@ export function createStatesPanel({ instance, romPath, flash, onDone }) {
 			const when = state === undefined ? '' : new Date(state.mtime * 1000).toLocaleString()
 			if (slot === AUTO_SLOT) {
 				label.textContent = t('arcade', 'Auto — {date}', { date: when })
-			} else if (slot > data.slots) {
+			} else if (slot > slotCount) {
 				label.textContent = t('arcade', '{date}, from an older version', { date: when })
 			} else {
 				label.textContent = state === undefined
@@ -241,35 +282,48 @@ export function createStatesPanel({ instance, romPath, flash, onDone }) {
 
 			// The automatic slot is written by the player itself, and slots
 			// beyond the ones offered now are only there to be emptied.
-			if (slot !== AUTO_SLOT && slot <= data.slots) {
-				row.appendChild(smallButton(
+			if (slot !== AUTO_SLOT && slot <= slotCount) {
+				row.appendChild(addSlotButton(slot, smallButton(
 					t('arcade', 'Save'),
 					() => save(slot),
 					false,
 					t('arcade', 'Save to slot {slot}', { slot }),
-				))
+				)))
 			}
-			row.appendChild(smallButton(
+			row.appendChild(addSlotButton(slot, smallButton(
 				t('arcade', 'Load'),
 				() => load(slot),
 				state === undefined,
 				slot === AUTO_SLOT
 					? t('arcade', 'Load the automatic save')
 					: t('arcade', 'Load slot {slot}', { slot }),
-			))
+			)))
 			if (state !== undefined) {
-				row.appendChild(smallButton(
+				row.appendChild(addSlotButton(slot, smallButton(
 					t('arcade', 'Delete'),
 					() => remove(slot),
 					false,
 					slot === AUTO_SLOT
 						? t('arcade', 'Delete the automatic save')
 						: t('arcade', 'Delete slot {slot}', { slot }),
-				))
+				)))
 			}
 			slotsContainer.appendChild(row)
 		}
-		renderSram(data.hasSram === true)
+		renderSram(data?.hasSram === true)
+	}
+
+	const refresh = async () => {
+		try {
+			const response = await api(stateUrl('/states', romPath))
+			render(await response.json())
+		} catch (error) {
+			// The rendering is in here too: a surprise in the shape of the
+			// answer would otherwise escape as an unhandled rejection and
+			// leave the panel blank with nothing said about it.
+			console.error('Could not list the states', error)
+			renderFailure()
+		}
 	}
 
 	return { element, refresh, load, save }
