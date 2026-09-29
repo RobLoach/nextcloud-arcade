@@ -10,17 +10,20 @@ import { api, stateUrl } from '../api.js'
  * @param {string} options.romPath path identifying the game
  * @param {Function} options.load loads a state slot
  * @param {boolean} [options.automatic] load without asking
+ * @param {?AbortSignal} [options.signal] the game is over; offer nothing
  */
-export async function offerResume({ container, romPath, load, automatic = false }) {
+export async function offerResume({ container, romPath, load, automatic = false, signal = null }) {
 	let latest = null
 	try {
-		const response = await api(stateUrl('/states', romPath))
+		const response = await api(stateUrl('/states', romPath), { signal })
 		const data = await response.json()
 		latest = data.states.reduce((a, b) => (a === null || b.mtime > a.mtime ? b : a), null)
 	} catch (error) {
 		console.error('Could not list the states', error)
 	}
-	if (latest === null) {
+	// The list takes a moment, and the game can be closed inside it: a
+	// prompt put up now would outlive the player it belongs to.
+	if (latest === null || signal?.aborted === true) {
 		return
 	}
 	if (automatic) {
@@ -30,6 +33,9 @@ export async function offerResume({ container, romPath, load, automatic = false 
 
 	const prompt = document.createElement('div')
 	prompt.className = 'arcade-resume'
+	// It arrives on its own, after the game has already started, so it is
+	// spoken as it appears rather than only drawn.
+	prompt.setAttribute('role', 'status')
 	const text = document.createElement('span')
 	text.textContent = t('arcade', 'Continue from slot {slot} ({date})?', {
 		slot: latest.slot,
@@ -37,11 +43,12 @@ export async function offerResume({ container, romPath, load, automatic = false 
 	})
 	prompt.appendChild(text)
 
+	// It stays until it is answered: it already has a Dismiss button, and
+	// taking the offer away on a timer loses the game the player had, for
+	// nothing more than the seconds they took to read the date.
 	const dismiss = () => {
-		clearTimeout(timer)
 		prompt.remove()
 	}
-	const timer = setTimeout(dismiss, 15000)
 
 	const resumeButton = document.createElement('button')
 	resumeButton.type = 'button'

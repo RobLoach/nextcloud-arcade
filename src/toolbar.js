@@ -35,6 +35,10 @@ const CHROME_SELECTOR = '.arcade-toolbar, .arcade-topbar, .arcade-actions-menu, 
 export function attachToolbar({ container, instance, romPath, romName, settings = {}, closeUrl = '', onClose = null, notice = '' }) {
 	container.classList.add('arcade-player-container')
 
+	// Fires when the toolbar is taken down, so anything still on its way
+	// knows it has nowhere to arrive.
+	const gone = new AbortController()
+
 	const toolbar = document.createElement('div')
 	toolbar.className = 'arcade-toolbar'
 
@@ -203,6 +207,7 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 			romPath,
 			load: statesPanel.load,
 			automatic: settings.autoload_on_start === true,
+			signal: gone.signal,
 		})
 
 		// And keep saving it while it is played, when asked to. Two tabs
@@ -662,6 +667,7 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 	scheduleHide()
 
 	return () => {
+		gone.abort()
 		clearTimeout(statusTimer)
 		clearInterval(autosaveTimer)
 		clearTimeout(idleTimer)
