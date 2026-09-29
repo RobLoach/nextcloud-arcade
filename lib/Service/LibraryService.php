@@ -543,6 +543,15 @@ class LibraryService {
 	 * however deep it goes and whatever storage a folder of it is mounted
 	 * from -- where walking the folders cost a query for each one of them.
 	 *
+	 * OCP\Files\Cache\IFileAccess::getByAncestorInStorage() was measured
+	 * against this on a five thousand game library: 63ms where the search
+	 * costs 141ms, of a 235ms scan. Not taken, on three counts. It walks one
+	 * storage, so the ROMs of a folder shared into the library go missing. It
+	 * reads the file cache table straight, so a team folder's advanced
+	 * permissions never apply and it hands back files the user is refused. And
+	 * it filters on mimetype alone, where .zip, .bin, .rom and .md carry none
+	 * of the app's own -- a tenth of that library went missing with it.
+	 *
 	 * @param array<string, string> $extensionMap extension => system id
 	 * @param list<array{path: string, basename: string, system: string}> $games
 	 * @param array{games: int, depth: int} $limits how far this scan goes
