@@ -33,18 +33,18 @@ Personal settings → Arcade:
 | Screenshots folder | empty | Where the screenshot button saves images; left empty, they are downloaded |
 | Picture shown for each system | Box art | Box art, title screen, screenshot or logo, per system |
 
-Box art, title screen, screenshot and logo are the `Named_*` folders a
-picture is taken from, so a system shown with title screens is matched
-against `Named_Titles` rather than `Named_Boxarts`.
+Box art, title screen, screenshot and logo name the kind of picture a
+system is drawn with; which file that comes out of is
+[box art matching](usage.md#box-art).
 
 ## Where saves are kept
 
 With a saves folder set, saves are written to your own files, filed under
-the system and the game: `Saves/SNES/Mario/Slot 1.state` with
-`Slot 1.png` next to it, the automatic one as `Auto.state`, and the
-battery save as `Mario.srm`. They sync to your devices like anything
-else. Without a saves folder, a game cannot be saved at all, and the
-player says so.
+the system and the game, so a `Mario.sfc` saves into
+`Saves/Super Nintendo/Mario/Slot 1.state` with `Slot 1.png` next to it,
+the automatic one as `Auto.state`, and the battery save as `Mario.srm`.
+They sync to your devices like anything else. Without a saves folder, a
+game cannot be saved at all, and the player says so.
 
 Versions before 0.19 kept saves in the app's internal storage when no
 folder was set; those are still read and still cleaned up with their
@@ -144,7 +144,7 @@ What the app stores, and why `occ arcade:uninstall` should run before
 The emulator cores are WebAssembly files of a few megabytes that the
 browser downloads and compiles on every launch. On Apache, the app ships
 an `.htaccess` in `img/cores/` that sets the `application/wasm` mimetype
-(streaming compilation), a week-long `Cache-Control`, and gzip
+(streaming compilation), a week-long immutable `Cache-Control`, and
 compression — no configuration needed.
 
 On nginx, add the equivalent to the NextCloud server block:
@@ -152,7 +152,7 @@ On nginx, add the equivalent to the NextCloud server block:
 ```nginx
 location ~ ^/apps/arcade/img/cores/ {
     types { application/wasm wasm; }
-    add_header Cache-Control "public, max-age=604800";
+    add_header Cache-Control "public, max-age=604800, immutable";
     gzip on;
     gzip_types application/wasm application/javascript;
 }
@@ -170,10 +170,12 @@ two downloads overlap.
 ### Content Security Policy
 
 The app adds the allowances Nostalgist.js needs — WebAssembly compilation
-(`wasm-unsafe-eval`) and `blob:` sources for scripts, workers, frames,
-connections, images and media — to the policy of every page, since the
-player also runs inside the Files app. No changes to the NextCloud server
-are required.
+(`wasm-unsafe-eval`) and `blob:` and `data:` sources for scripts, workers,
+frames, connections, images and media. They go on every page a user who
+may use the app could see, since the player also runs inside the Files
+app, and on a public share page only when that share really holds a game;
+every other page of the instance keeps its default policy. No changes to
+the NextCloud server are required.
 
 ## Troubleshooting
 

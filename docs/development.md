@@ -3,11 +3,8 @@
 For whoever changes the code: building the app, what lives where, and
 what it stores.
 
-The rest of `docs/` is for people who use the app: [usage.md](usage.md)
-is the player's guide, [library.md](library.md) covers browsing and the
-Files integration, [settings.md](settings.md) is the administrator's
-guide, and [systems.md](systems.md) is the reference of systems, cores,
-extensions and BIOS files.
+The rest of `docs/` is for people who use the app; which page is which is
+[the table in the README](../README.md#documentation).
 
 ```sh
 npm install
@@ -106,19 +103,17 @@ All of them are user-scoped and require a session.
 | GET | `/apps/arcade/arcade/bios/status` | What is held and what is missing, admin only |
 | POST/DELETE | `/apps/arcade/arcade/bios` | A BIOS file of the admin's System folder, admin only |
 
-The endpoints that write are rate limited, generously enough that no
-player ever meets the limit.
+Rate limits are per user and generous enough that no player ever meets
+one: every endpoint that writes a save, a screenshot, a BIOS file or a
+play record carries one, and so do the two reads that walk a library —
+the listing and the folder suggestion.
 
-Save states and battery saves are removed along with the game they belong
-to, and with the user they belong to — but a game deleted into the trash
-keeps them, since it can be restored, with the same file id and the same
-name. They go when the trash lets go of it. `occ arcade:cleanup` sweeps up
-what event listeners cannot catch, such as a whole folder of games deleted
-in one go; `--dry-run` reports without removing. The same sweep also runs
-by itself once a week, as a background job, so an instance where nobody
-runs the command still cleans up after the trash. States written by versions before
-0.14 live in one flat folder instead of one per user; they are still read,
-and are cleaned up when their game is deleted.
+Save states and battery saves are removed by event listeners along with
+the game they belong to, and with the user they belong to; what the trash
+and the weekly sweep do with the rest is in
+[Troubleshooting](settings.md#troubleshooting). States written by versions
+before 0.14 live in one flat folder instead of one per user; they are
+still read, and are cleaned up when their game is deleted.
 
 ### Capabilities
 
@@ -167,12 +162,12 @@ kept in its own tables under the file id. `occ arcade:uninstall` leaves
 them alone, as it leaves any other file of a user alone.
 
 Nextcloud removes the code of an app and nothing else, so `occ app:remove`
-would leave all of that behind. Run **`occ arcade:uninstall` first**: it puts
-the ROMs back to `application/octet-stream`, drops the settings of every user
+would leave all of that behind. Run
+**[`occ arcade:uninstall`](settings.md#occ-commands) first**: it puts the
+ROMs back to `application/octet-stream`, drops the settings of every user
 and of the instance, removes the save states kept by the app, and cancels
-queued work. `--dry-run` reports without removing, `--force` skips the
-question. Games, saves, screenshots and thumbnails in the folders of a user
-are their own files, and are left alone.
+queued work. Games, saves, screenshots and thumbnails in the folders of a
+user are their own files, and are left alone.
 
 Disabling the app does not do any of that. Nextcloud runs uninstall repair
 steps on disable, and it disables apps by itself when a server upgrade leaves
