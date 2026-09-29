@@ -596,8 +596,13 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 		}
 		wakeChrome()
 	}
+	// Focus is the keyboard's version of moving the pointer: it arriving
+	// anywhere in the player brings the chrome back, so a player who never
+	// touches a mouse can still get at it.
+	const onFocusIn = () => wakeChrome()
 	container.addEventListener('pointermove', onPointerMove)
 	container.addEventListener('pointerdown', onPointerDown)
+	container.addEventListener('focusin', onFocusIn)
 	container.addEventListener('touchstart', onTouchReveal, { capture: true, passive: false })
 	scheduleHide()
 
@@ -610,6 +615,7 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 		document.removeEventListener('click', onDocumentClick)
 		container.removeEventListener('pointermove', onPointerMove)
 		container.removeEventListener('pointerdown', onPointerDown)
+		container.removeEventListener('focusin', onFocusIn)
 		container.removeEventListener('touchstart', onTouchReveal, true)
 		container.classList.remove('arcade-chrome-hidden')
 		touchControls?.detach()
