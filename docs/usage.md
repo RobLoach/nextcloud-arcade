@@ -6,12 +6,12 @@ setting named here is explained in [the settings guide](settings.md).
 
 ## First run
 
-Games are listed from your library folder, `/Games` unless you change it.
 Open a ROM in the Files app and it plays in the file viewer; open the
-Arcade page and pick one there. Before a game can be saved, a saves folder
-has to be chosen in the personal settings — the player says so until one
-is. A screenshots folder is optional: without one, screenshots are
-downloaded instead of filed.
+Arcade page and pick one from your games library folder. Every folder
+Arcade reads or writes is one you name yourself, and a game cannot be
+saved until the saves folder among them is set — the player says so until
+one is. [The personal settings](settings.md#personal-settings) list all of
+them, with what each starts out as.
 
 ## Adding games
 
@@ -24,11 +24,13 @@ uploaded while the app is enabled are filed correctly as they arrive. ROMs
 that were already there keep their generic mimetype until the repair step
 runs — see [Troubleshooting](settings.md#troubleshooting).
 
-In the background, the app also reads what a cartridge says about itself:
-Game Boy, Game Boy Advance, Super Nintendo and Mega Drive headers carry the
-name the console shows, and the last two the region the game was sold in.
-That name is what box art is matched on when the file name finds nothing,
-so a ROM called `rom1.gb` still gets the cover of Super Mario Land.
+In the background, the app also reads what a cartridge says about itself.
+Game Boy, Game Boy Color, Game Boy Advance, Super Nintendo, Mega Drive,
+32X, Atari Lynx, Neo Geo Pocket and Virtual Boy headers carry the name the
+console shows; Super Nintendo and Mega Drive carry the region the game was
+sold in as well. That name is what box art is matched on when the file name
+finds nothing, so a ROM called `rom1.gb` still gets the cover of Super
+Mario Land.
 
 ## Box art
 
@@ -76,8 +78,8 @@ art of the games that have none, downloading it from the libretro
 thumbnail server into that folder. It runs as a background job, so it
 carries on after the page is closed, says how it went when the page is
 opened again, and leaves [a word under the bell](library.md#in-the-files-app)
-when it is done. An administrator can turn the lookup off for the whole
-instance.
+when it is done. The button is only there while an administrator allows
+[the lookup](settings.md#administration-settings) for the instance.
 
 ## Playing
 
@@ -110,9 +112,10 @@ button of the controller is left to the game.
 | Screenshot | P |
 | Close the game | Escape |
 
-Rewind only works once it is turned on in the personal settings, since
-keeping the past around costs some performance. The key is watched by
-RetroArch itself, which is why holding it rewinds and releasing it plays on.
+Rewind does nothing until it is switched on in
+[the personal settings](settings.md#personal-settings). Its key is watched
+by RetroArch itself, which is why holding it rewinds and releasing it plays
+on.
 
 ### The control bar
 

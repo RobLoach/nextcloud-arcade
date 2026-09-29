@@ -33,7 +33,8 @@ It needs:
 
 - Nextcloud 34 or 35
 - PHP 8.3 or newer
-- Background jobs on cron, recommended — games are read by them
+- Background jobs on cron, recommended —
+  [what Arcade puts in them](docs/settings.md#background-jobs)
 
 Then:
 
@@ -50,11 +51,9 @@ Then:
 	occ app:enable arcade
 	```
 
-3. If the ROMs were uploaded before the app was enabled:
-
-	```sh
-	occ maintenance:mimetype:update-db
-	```
+3. If the ROMs were uploaded before the app was enabled, they still carry a
+	generic mimetype — [Troubleshooting](docs/settings.md#troubleshooting) has
+	the one command that fixes it.
 
 4. Open Administration settings → Arcade and set the default Games folder.
 

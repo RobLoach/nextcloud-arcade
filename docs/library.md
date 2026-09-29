@@ -14,8 +14,8 @@ available and the choice is remembered:
 | List | Compact rows with small thumbnails |
 | Table | Sortable columns: name, system, size, modified, played |
 
-The table sorts by how often and how long each game was played, so the
-most played game of the library is one click away.
+The Played column sorts by how long each game was played, and says how
+often on hover, so the most played game of the library is one click away.
 
 ## Search and filters
 
