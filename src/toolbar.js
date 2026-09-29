@@ -219,7 +219,15 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 		button(ICONS.restart, t('arcade', 'Restart'), restartGame)
 	}
 
+	// One shot at a time, for the same reason the state panel takes one
+	// operation at a time: a held hotkey would otherwise fire a burst of
+	// them, each one a file of its own.
+	let shooting = false
 	const screenshotButton = button(ICONS.screenshot, t('arcade', 'Screenshot'), async () => {
+		if (shooting) {
+			return
+		}
+		shooting = true
 		try {
 			const blob = await instance.screenshot()
 			const stem = (romName || 'nostalgist').replace(/\.[^.]+$/, '')
@@ -241,6 +249,8 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 		} catch (error) {
 			console.error('Could not take a screenshot', error)
 			flash(t('arcade', 'Could not take a screenshot'))
+		} finally {
+			shooting = false
 		}
 	})
 
@@ -459,6 +469,12 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 
 	const onKeyDown = (event) => {
 		if (event.ctrlKey || event.altKey || event.metaKey) {
+			return
+		}
+		// Held keys repeat, and none of what the player binds means
+		// anything more the second time: a held save key would be sixty
+		// saves a second of the same slot.
+		if (event.repeat) {
 			return
 		}
 		const target = event.target

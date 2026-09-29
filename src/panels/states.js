@@ -11,7 +11,8 @@ import { createPanel } from './panel.js'
  * @param {string} options.romPath path identifying the game
  * @param {Function} options.flash shows a status message
  * @param {Function} options.onDone called after a slot was saved or loaded
- * @return {{element: HTMLElement, refresh: Function, load: Function}} the panel
+ * @return {{element: HTMLElement, refresh: Function, load: Function, save: Function}}
+ *         the panel; load and save answer whether they got through
  */
 export function createStatesPanel({ instance, romPath, flash, onDone }) {
 	const element = createPanel('arcade-states', t('arcade', 'Save states'))
@@ -37,7 +38,17 @@ export function createStatesPanel({ instance, romPath, flash, onDone }) {
 		return buttonElement
 	}
 
+	// One state operation at a time. A held hotkey repeats about sixty
+	// times a second, and each saveState() clears the file the one before
+	// it is still waiting for, so the slot ends up holding a truncated
+	// state -- and the server sees a minute's worth of requests for it.
+	let busy = false
+
 	const save = async (slot) => {
+		if (busy) {
+			return false
+		}
+		busy = true
 		try {
 			let { state, thumbnail } = await instance.saveState()
 			if (thumbnail === undefined) {
@@ -61,13 +72,21 @@ export function createStatesPanel({ instance, romPath, flash, onDone }) {
 				? t('arcade', 'Game saved')
 				: t('arcade', 'State saved to slot {slot}', { slot }))
 			onDone()
+			return true
 		} catch (error) {
 			console.error('Could not save the state', error)
 			flash(t('arcade', 'Could not save the state'))
+			return false
+		} finally {
+			busy = false
 		}
 	}
 
 	const load = async (slot) => {
+		if (busy) {
+			return false
+		}
+		busy = true
 		try {
 			const response = await api(stateUrl('/state', romPath, slot))
 			await instance.loadState(await response.blob())
@@ -75,9 +94,13 @@ export function createStatesPanel({ instance, romPath, flash, onDone }) {
 				? t('arcade', 'Game restored')
 				: t('arcade', 'State loaded from slot {slot}', { slot }))
 			onDone()
+			return true
 		} catch (error) {
 			console.error('Could not load the state', error)
 			flash(t('arcade', 'Could not load the state'))
+			return false
+		} finally {
+			busy = false
 		}
 	}
 
