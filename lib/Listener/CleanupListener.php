@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace OCA\Arcade\Listener;
 
 use OCA\Arcade\CoreMap;
+use OCA\Arcade\Service\Folders;
 use OCA\Arcade\Service\RecentService;
 use OCA\Arcade\Service\StateService;
 use OCP\EventDispatcher\Event;
@@ -91,7 +92,7 @@ class CleanupListener implements IEventListener {
 		// still leads somewhere in the user's storage is merely trashed,
 		// while one whose id leads nowhere -- no trashbin, or a deletion
 		// that bypassed it -- is gone, states and all.
-		if ($this->isStillAround($userId, $node->getId())) {
+		if (Folders::stillAround($this->rootFolder, $userId, $node->getId())) {
 			return;
 		}
 		$this->stateService->deleteAllForGame($userId, substr($path, strlen($prefix) - 1));
@@ -143,20 +144,6 @@ class CleanupListener implements IEventListener {
 			return;
 		}
 		$this->stateService->deleteAllForFileId($userId, $node->getId());
-	}
-
-	/**
-	 * Whether the file still exists anywhere in its owner's storage. Right
-	 * after a deletion that only says one thing: the trash caught it. The
-	 * benefit of any doubt goes to the saves.
-	 */
-	private function isStillAround(string $userId, int $fileId): bool {
-		try {
-			$home = $this->rootFolder->getUserFolder($userId)->getParent();
-			return $home->getFirstNodeById($fileId) !== null;
-		} catch (\Throwable) {
-			return true;
-		}
 	}
 
 	/**

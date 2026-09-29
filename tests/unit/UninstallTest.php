@@ -185,11 +185,7 @@ class UninstallTest extends TestCase {
 			'the play records and the registry of games with saves',
 		);
 		$this->assertSame(Application::JOBS, $this->removedJobs, 'every job the app queues');
-		$this->assertSame(
-			array_map(static fn (string $cache): string => Application::APP_ID . $cache, Application::CACHES),
-			$this->clearedCaches,
-			'every cache the app fills',
-		);
+		$this->assertSame(Application::CACHES, $this->clearedCaches, 'every cache the app fills');
 		$this->assertSame(
 			['preferences:arcade', 'appconfig:arcade'],
 			$this->forgottenApps,

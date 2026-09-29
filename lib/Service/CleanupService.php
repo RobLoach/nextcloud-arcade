@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace OCA\Arcade\Service;
 
 use OCA\Arcade\Db\GameMapper;
-use OCP\Files\Folder;
 use OCP\Files\IRootFolder;
 use OCP\Files\NotFoundException;
 use OCP\IUserManager;
@@ -109,7 +108,7 @@ class CleanupService {
 			// A game in the trash can come back; only one that is nowhere in
 			// the user's storage at all is truly gone. The keys are the file
 			// id, except for games that never had one.
-			if (ctype_digit((string)$key) && $this->stillAround($userFolder, (int)$key)) {
+			if (ctype_digit((string)$key) && Folders::stillAround($this->rootFolder, $userId, (int)$key)) {
 				continue;
 			}
 			$report("Removing the states of $userId for $path");
@@ -119,18 +118,5 @@ class CleanupService {
 			$removed++;
 		}
 		return $removed;
-	}
-
-	/**
-	 * Whether the file still exists anywhere in the user's storage -- the
-	 * trash included, which is the whole point of asking by id.
-	 */
-	private function stillAround(Folder $userFolder, int $fileId): bool {
-		try {
-			return $userFolder->getParent()->getFirstNodeById($fileId) !== null;
-		} catch (\Throwable) {
-			// When in doubt, the saves stay.
-			return true;
-		}
 	}
 }

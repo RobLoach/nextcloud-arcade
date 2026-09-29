@@ -293,15 +293,9 @@ class SettingsService {
 		if (!is_array($decoded)) {
 			return $defaults;
 		}
-		// Early versions saved the whole settings form, so a row from then
-		// still carries the core options and the instance-only settings.
-		// Those belong to the administrator, and a stale copy here would
-		// shadow whatever is set now, so they are dropped -- and the row
-		// trued up for good by the write-back below.
-		$settings = array_diff_key(
-			$decoded,
-			array_flip(['core_options', ...array_keys(self::INSTANCE_ONLY)]),
-		);
+		// The row is cleaned of what is not the user's to hold -- and trued
+		// up for good by the write-back below.
+		$settings = $this->withoutInstanceKeys($decoded);
 		// The folders are looked up by their ids, so the settings follow
 		// them when they are moved or renamed. Anything learned -- a new
 		// path, or the id of a folder that was only stored as a path
@@ -419,11 +413,22 @@ class SettingsService {
 	private function storedUserSettings(string $userId): array {
 		$stored = $this->userConfig->getValueString($userId, Application::APP_ID, 'settings', '');
 		$decoded = $stored === '' ? null : json_decode($stored, true);
-		if (!is_array($decoded)) {
-			return [];
-		}
+		return is_array($decoded) ? $this->withoutInstanceKeys($decoded) : [];
+	}
+
+	/**
+	 * A stored settings row without the keys that are not the user's to
+	 * hold. Early versions saved the whole settings form, so a row from
+	 * then still carries the core options and the instance-only settings.
+	 * Those belong to the administrator, and a stale copy here would
+	 * shadow whatever is set now.
+	 *
+	 * @param array<string, mixed> $stored
+	 * @return array<string, mixed>
+	 */
+	private function withoutInstanceKeys(array $stored): array {
 		return array_diff_key(
-			$decoded,
+			$stored,
 			array_flip(['core_options', ...array_keys(self::INSTANCE_ONLY)]),
 		);
 	}

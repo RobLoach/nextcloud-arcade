@@ -16,6 +16,7 @@ use OCP\Files\Search\ISearchBinaryOperator;
 use OCP\Files\Search\ISearchComparison;
 use OCP\Files\Search\ISearchQuery;
 use OCP\FilesMetadata\IFilesMetadataManager;
+use OCP\ICache;
 use OCP\ICacheFactory;
 use OCP\SystemTag\ISystemTagManager;
 use OCP\SystemTag\ISystemTagObjectMapper;
@@ -68,13 +69,19 @@ class LibraryService {
 	private array $screenshots = [];
 
 	/**
-	 * The etag of each folder asked about, by path. One request asks for
-	 * the thumbnails folder twice over -- for the cache key and for
-	 * thumbnailsVersion() -- and an etag cannot change within a request.
+	 * The etag of each folder asked about, by user and path. One request
+	 * asks for the thumbnails folder twice over -- for the cache key and
+	 * for thumbnailsVersion() -- and an etag cannot change within a
+	 * request. The user is part of the key because the same path names a
+	 * different folder in every user's files, and the service is one
+	 * object for the whole request.
 	 *
 	 * @var array<string, string>
 	 */
 	private array $folderEtags = [];
+
+	/** The cache this service reads and writes, opened once per request. */
+	private ?ICache $cache = null;
 
 	public function __construct(
 		private ICacheFactory $cacheFactory,
@@ -193,13 +200,13 @@ class LibraryService {
 	 * @return array<string, array{type: string, fileId?: int, slot?: int}>
 	 */
 	private function fallbacksFor(string $userId, Folder $userFolder, array $settings, array $missing): array {
-		$cache = Caches::create($this->cacheFactory, Application::APP_ID . '_library');
+		$cache = $this->cache();
 		$key = implode('|', [
 			'fallbacks',
 			self::FALLBACKS_CACHE_VERSION,
 			$userId,
-			$this->folderEtag($userFolder, (string)($settings['screenshots_folder'] ?? '')),
-			$this->folderEtag($userFolder, (string)($settings['saves_folder'] ?? '')),
+			$this->folderEtag($userId, $userFolder, (string)($settings['screenshots_folder'] ?? '')),
+			$this->folderEtag($userId, $userFolder, (string)($settings['saves_folder'] ?? '')),
 		]);
 		$cached = $cache->get($key);
 		if (is_array($cached) && is_array($cached['paths'] ?? null) && is_array($cached['fallbacks'] ?? null)
@@ -279,7 +286,7 @@ class LibraryService {
 	 * @return list<array<string, mixed>>
 	 */
 	public function getGames(string $userId, Folder $folder, Folder $userFolder, string $folderPath, array $settings, bool $refresh): array {
-		$cache = Caches::create($this->cacheFactory, Application::APP_ID . '_library');
+		$cache = $this->cache();
 		// Nextcloud propagates etags up the tree, so the library folder's
 		// etag changes whenever anything inside it does.
 		$key = implode('|', [
@@ -288,7 +295,7 @@ class LibraryService {
 			$folderPath,
 			$folder->getEtag(),
 			$settings['thumbnails_folder'],
-			$this->folderEtag($userFolder, $settings['thumbnails_folder']),
+			$this->folderEtag($userId, $userFolder, $settings['thumbnails_folder']),
 			(string)($settings['max_games'] ?? self::MAX_GAMES),
 			(string)($settings['max_depth'] ?? self::MAX_DEPTH),
 		]);
@@ -376,22 +383,32 @@ class LibraryService {
 	 *
 	 * @param array<string, mixed> $settings
 	 */
-	public function thumbnailsVersion(Folder $userFolder, array $settings): string {
-		return $this->folderEtag($userFolder, (string)($settings['thumbnails_folder'] ?? ''));
+	public function thumbnailsVersion(string $userId, Folder $userFolder, array $settings): string {
+		return $this->folderEtag($userId, $userFolder, (string)($settings['thumbnails_folder'] ?? ''));
 	}
 
-	private function folderEtag(Folder $userFolder, string $path): string {
+	/**
+	 * The cache the scan and the fallbacks share. One request asks for it
+	 * twice over, and which cache the instance offers cannot change in
+	 * between.
+	 */
+	private function cache(): ICache {
+		return $this->cache ??= Caches::create($this->cacheFactory, Application::CACHE_LIBRARY);
+	}
+
+	private function folderEtag(string $userId, Folder $userFolder, string $path): string {
 		if ($path === '') {
 			return '';
 		}
-		$known = $this->folderEtags[$path] ?? null;
+		$memo = $userId . '|' . $path;
+		$known = $this->folderEtags[$memo] ?? null;
 		if ($known !== null) {
 			return $known;
 		}
 		try {
-			return $this->folderEtags[$path] = $userFolder->get($path)->getEtag();
+			return $this->folderEtags[$memo] = $userFolder->get($path)->getEtag();
 		} catch (NotFoundException) {
-			return $this->folderEtags[$path] = '';
+			return $this->folderEtags[$memo] = '';
 		}
 	}
 

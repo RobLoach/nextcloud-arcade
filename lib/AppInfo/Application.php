@@ -33,6 +33,17 @@ use OCP\User\Events\UserDeletedEvent;
 use OCP\Util;
 
 class Application extends App implements IBootstrap {
+	public const APP_ID = 'arcade';
+
+	/**
+	 * The prefix each cache of the app lives under. Named here rather than
+	 * spelled out where they are opened, so a cache cannot be added without
+	 * the list below -- and so the cleanup -- knowing about it.
+	 */
+	public const CACHE_LIBRARY = self::APP_ID . '_library';
+	public const CACHE_FETCH = self::APP_ID . '_fetch';
+	public const CACHE_PREVIEW = self::APP_ID . '_preview';
+
 	/**
 	 * The caches the app fills, and the jobs it runs -- queued and
 	 * recurring alike. Both are dropped when the app is disabled or
@@ -40,10 +51,8 @@ class Application extends App implements IBootstrap {
 	 * else; a recurring job is also declared in info.xml, which is what
 	 * brings it back when the app is enabled again.
 	 */
-	public const CACHES = ['_library', '_fetch', '_preview'];
+	public const CACHES = [self::CACHE_LIBRARY, self::CACHE_FETCH, self::CACHE_PREVIEW];
 	public const JOBS = [FetchThumbnails::class, RefreshMetadata::class, CleanupSweep::class];
-
-	public const APP_ID = 'arcade';
 
 	/** @psalm-suppress PossiblyUnusedMethod */
 	public function __construct() {

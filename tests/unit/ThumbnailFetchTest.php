@@ -51,7 +51,6 @@ class ThumbnailFetchTest extends TestCase {
 				$found->method('getStatusCode')->willReturn(200);
 				$found->method('getBody')->willReturn($this->server[$name]);
 				$found->method('getHeader')->willReturnMap([
-					['Content-Length', ''],
 					['Content-Type', 'image/png'],
 				]);
 				return $found;

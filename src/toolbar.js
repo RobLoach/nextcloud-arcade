@@ -77,10 +77,14 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 		element.classList.toggle('active', paused)
 	})
 
-	// A game left in a background tab keeps the processor busy for nothing.
+	// A game left in a background tab keeps the processor busy for nothing,
+	// but a game that goes quiet on its own is a surprise, so it is asked
+	// for. The server merges its defaults into every settings payload, so
+	// the flag is only ever absent when there is no payload at all -- and
+	// off is what the default says then too.
 	let pausedByTab = false
 	const onVisibilityChange = () => {
-		if (settings.pause_when_hidden === false) {
+		if (settings.pause_when_hidden !== true) {
 			return
 		}
 		if (document.hidden && !paused) {
@@ -160,6 +164,17 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 				}
 			}, interval * 1000)
 		}
+	}
+
+	// Every way out of the game goes through here first, so the game is
+	// left where it was and can be picked up again. Nothing to save
+	// without a slot to save into, or when it was not asked for.
+	const saveBeforeLeaving = async () => {
+		if (settings.autosave_on_close !== true || statesPanel === null) {
+			return
+		}
+		flash(t('arcade', 'Saving the game …'))
+		await statesPanel.save(AUTO_SLOT)
 	}
 
 	// Virtual gamepad for touch play.
@@ -277,6 +292,27 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 			return element
 		}
 
+		// The same entry for what leads somewhere rather than doing
+		// something: an anchor, so it can be opened in a tab or copied the
+		// way any other link can. Closing the menu is all the click does;
+		// the browser follows the link itself.
+		const linkItem = (iconPath, label, href, attributes = {}) => {
+			const element = document.createElement('a')
+			element.className = 'arcade-actions-item'
+			element.href = href
+			for (const [name, value] of Object.entries(attributes)) {
+				element.setAttribute(name, value)
+			}
+			element.innerHTML = icon(iconPath)
+			element.appendChild(document.createTextNode(label))
+			element.addEventListener('click', (event) => {
+				event.stopPropagation()
+				closeActionsMenu()
+			})
+			actionsMenu.appendChild(element)
+			return element
+		}
+
 		item(ICONS.fullscreen, t('arcade', 'Full screen'), () => fullscreenButton.click())
 		item(ICONS.menu, t('arcade', 'RetroArch menu'), toggleRetroArchMenu)
 		item(ICONS.restart, t('arcade', 'Restart'), restartGame)
@@ -288,10 +324,7 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 				? 'OCA'
 				: window.OCA.Files === undefined ? 'OCA.Files' : 'OCA.Files.Sidebar'
 			console.warn(`arcade: cannot open the Files sidebar, window.${missing} is undefined; opening the Files app instead`)
-			if (settings.autosave_on_close !== false && statesPanel !== null) {
-				flash(t('arcade', 'Saving the game …'))
-				await statesPanel.save(AUTO_SLOT)
-			}
+			await saveBeforeLeaving()
 			const absolute = romPath.startsWith('/') ? romPath : `/${romPath}`
 			const dir = absolute.replace(/\/[^/]*$/, '') || '/'
 			let target
@@ -326,30 +359,12 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 		// The personal Arcade settings, in a tab of their own: leaving this
 		// page would tear the running game down, so the game stays put and
 		// no autosave dance is needed.
-		const settingsLink = document.createElement('a')
-		settingsLink.className = 'arcade-actions-item'
-		settingsLink.href = generateUrl('/settings/user/arcade')
-		settingsLink.target = '_blank'
-		settingsLink.rel = 'noopener noreferrer'
-		settingsLink.innerHTML = icon(ICONS.cog)
-		settingsLink.appendChild(document.createTextNode(t('arcade', 'Settings')))
-		settingsLink.addEventListener('click', (event) => {
-			event.stopPropagation()
-			closeActionsMenu()
+		linkItem(ICONS.cog, t('arcade', 'Settings'), generateUrl('/settings/user/arcade'), {
+			target: '_blank',
+			rel: 'noopener noreferrer',
 		})
-		actionsMenu.appendChild(settingsLink)
 		if (romPath) {
-			const link = document.createElement('a')
-			link.className = 'arcade-actions-item'
-			link.href = davUrl(romPath)
-			link.setAttribute('download', romName || '')
-			link.innerHTML = icon(ICONS.download)
-			link.appendChild(document.createTextNode(t('arcade', 'Download')))
-			link.addEventListener('click', (event) => {
-				event.stopPropagation()
-				closeActionsMenu()
-			})
-			actionsMenu.appendChild(link)
+			linkItem(ICONS.download, t('arcade', 'Download'), davUrl(romPath), { download: romName || '' })
 		}
 
 		actionsButton = button(ICONS.dots, t('arcade', 'Actions'), (element) => {
@@ -385,11 +400,7 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 	if (closeUrl !== '') {
 		closeButton = button(ICONS.close, t('arcade', 'Close'), async (element) => {
 			element.disabled = true
-			// Leave the game where it was, so it can be picked up again.
-			if (settings.autosave_on_close !== false && statesPanel !== null) {
-				flash(t('arcade', 'Saving the game …'))
-				await statesPanel.save(AUTO_SLOT)
-			}
+			await saveBeforeLeaving()
 			onClose?.()
 			try {
 				instance.exit()

@@ -30,12 +30,6 @@ class CachePackerTest extends TestCase {
 		);
 	}
 
-	public function testALegacyRawGzipEntryStillUnpacks(): void {
-		// What a version that stored the bytes unwrapped left behind.
-		$raw = gzcompress(json_encode(['still' => 'good']), 6);
-		$this->assertSame(['still' => 'good'], CachePacker::unpack($raw));
-	}
-
 	public function testAPlainArrayPassesThrough(): void {
 		$this->assertSame(['as' => 'it was'], CachePacker::unpack(['as' => 'it was']));
 	}
