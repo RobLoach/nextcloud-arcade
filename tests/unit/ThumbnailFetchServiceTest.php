@@ -114,12 +114,11 @@ class ThumbnailFetchServiceTest extends TestCase {
 		);
 	}
 
-	private function response(string $body, string $type = 'image/png', string $length = ''): IResponse {
+	private function response(string $body, string $type = 'image/png'): IResponse {
 		$response = $this->createStub(IResponse::class);
 		$response->method('getStatusCode')->willReturn(200);
 		$response->method('getBody')->willReturn($body);
 		$response->method('getHeader')->willReturnMap([
-			['Content-Length', $length],
 			['Content-Type', $type],
 		]);
 		return $response;
@@ -157,16 +156,11 @@ class ThumbnailFetchServiceTest extends TestCase {
 		$this->assertSame(1, $result['fetched']);
 	}
 
-	public function testADeclaredOversizeIsRejectedUnread(): void {
-		$result = $this->fetchWith($this->response(self::PNG_MAGIC . 'tiny', 'image/png', (string)(5 * 1024 * 1024)));
-		$this->assertSame(0, $result['fetched']);
-		$this->assertSame(1, $result['missing']);
-	}
-
 	public function testAnOversizedBodyIsRejected(): void {
 		$body = self::PNG_MAGIC . str_repeat('x', 4 * 1024 * 1024);
 		$result = $this->fetchWith($this->response($body));
 		$this->assertSame(0, $result['fetched']);
+		$this->assertSame(1, $result['missing']);
 	}
 
 	public function testANonImageContentTypeIsRejected(): void {

@@ -196,12 +196,10 @@ class ThumbnailFetchService {
 			// What comes back is stored on the instance and served to the
 			// user's browser, so nothing is accepted on faith: it has to be
 			// small enough for box art, say it is an image, and open like
-			// one.
-			$declared = trim($response->getHeader('Content-Length'));
-			if ($declared !== '' && (int)$declared > self::MAX_IMAGE_BYTES) {
-				$this->logger->debug('Box art rejected: declared size too large', ['url' => $url, 'length' => $declared]);
-				return null;
-			}
+			// one. The size is read off the body rather than off a declared
+			// Content-Length: the call is not streaming, so by the time
+			// there is a header to read the bytes are already here, and a
+			// header could only ever agree or lie.
 			$body = $response->getBody();
 			if (!is_string($body) || $body === '') {
 				return null;
