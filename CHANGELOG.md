@@ -6,6 +6,50 @@ All notable changes to NextCloud Arcade. The format follows
 
 ## [Unreleased]
 
+## [0.42.0] - 2026-09-27
+
+### Fixed
+- The battery save written while playing is no longer lost when the game
+  is closed: the last upload is waited for instead of being cut short by
+  the emulator shutting down.
+- Holding the save or load key no longer writes a broken save state: the
+  repeats are ignored while one is still going.
+- A game closed while it was still loading is stopped properly. It used to
+  keep running unseen, with its sound, its keys and its uploads.
+- Escape leaves fullscreen when the game is fullscreen, instead of leaving
+  fullscreen and quitting the game in the same press. In the Files viewer
+  Escape closes the viewer again.
+- Closing no longer walks away from a save that failed: it says so and
+  asks to be pressed again to leave without saving.
+- Restarting a paused game no longer leaves the button saying "Resume"
+  over a running game, which also kept the chrome and the autosave stuck.
+- The screenshots button now appears as soon as a game has its first
+  screenshot, and the panel shows the ones taken since it opened.
+- A panel that cannot reach the server says so and offers to try again,
+  rather than opening empty.
+- Text typed into the library search is no longer wiped by a listing that
+  arrives while typing.
+- A key binding left waiting for a key no longer swallows the keyboard of
+  the whole page; it gives up on its own, and can be left with Escape, a
+  click elsewhere or by moving on.
+- A key that only the browser would ever see -- Control, Alt or Meta --
+  is refused as a hot key instead of being saved as one that can never
+  work, and a key bound twice within the same kind is pointed out.
+
+### Changed
+- The player and the library can be used from the keyboard throughout:
+  Space and Enter work the buttons of the chrome again, focus follows what
+  was pressed instead of being thrown away by every sort, page or filter,
+  and the chrome that fades over an idle game leaves the tab order with it.
+- What the app has to say is said where a screen reader hears it: the
+  player's status line, the library's result count, its empty state and
+  the first-run suggestions all announce themselves; toggles say whether
+  they are on; each save slot and screenshot names what its buttons act on.
+- The settings switches stay legible in forced-colours mode, and what is
+  wrong with a key binding is written in the page rather than only in a
+  tooltip.
+- Motion is dropped where the system asks for less of it.
+
 ## [0.41.1] - 2026-09-27
 
 ### Fixed
