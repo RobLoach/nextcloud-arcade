@@ -19,7 +19,8 @@ const settings = loadState('arcade', 'settings', {})
  * @param {string} options.basename file name of the game
  * @param {string} [options.source] URL to read the game from instead
  * @param {string} [options.closeUrl] where the close button leads
- * @return {Promise<Function>} stops the game and puts everything away
+ * @return {Promise<Function>} stops the game and puts everything away,
+ *                             answering once the save data is safe
  */
 export async function startSession({ canvas, container, filename, basename, source, closeUrl = '' }) {
 	// The launch learns of anything it went without -- a missing BIOS --
@@ -40,25 +41,38 @@ export async function startSession({ canvas, container, filename, basename, sour
 	})
 	const stopSramSync = startSramSync(instance, filename, (settings.saves_folder ?? '') !== '')
 	const stopPlayTime = recordRecent(filename)
-	const detachToolbar = attachToolbar({
-		container,
-		instance,
-		romPath: filename,
-		romName: basename,
-		settings,
-		closeUrl,
-		onClose: stopPlayTime,
-		notice,
-	})
 
-	return () => {
+	// The one way out, wherever it is asked for -- the close button, the
+	// Viewer being torn down, a new game taking this one's place. The
+	// battery save is waited for first: exiting takes the core away, and
+	// the last upload reads the save out of it.
+	let detachToolbar = null
+	let stopped = false
+	const stop = async () => {
+		if (stopped) {
+			return
+		}
+		stopped = true
 		stopPlayTime()
-		stopSramSync()
-		detachToolbar()
+		await stopSramSync()
+		detachToolbar?.()
 		try {
 			instance.exit()
 		} catch (error) {
 			console.error('Arcade failed to exit', error)
 		}
 	}
+
+	detachToolbar = attachToolbar({
+		container,
+		instance,
+		romPath: filename,
+		romName: basename,
+		settings,
+		closeUrl,
+		onClose: stop,
+		notice,
+	})
+
+	return stop
 }

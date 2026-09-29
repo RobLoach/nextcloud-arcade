@@ -9,6 +9,11 @@ import { createStatesPanel } from './panels/states.js'
 import { davUrl, fileIdOf } from './player.js'
 import { shortNameForPath } from './systems.js'
 import { attachTouchControls, isTouchDevice } from './touch.js'
+import { waitAtMost } from './wait.js'
+
+// How long the save on the way out is given before the player leaves
+// anyway. Long enough for a healthy core, short enough to stay a door.
+const SAVE_BEFORE_LEAVING_WAIT = 5000
 
 /**
  * Attach a control bar for a running emulator.
@@ -155,7 +160,9 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 			automatic: settings.autoload_on_start === true,
 		})
 
-		// And keep saving it while it is played, when asked to.
+		// And keep saving it while it is played, when asked to. Two tabs
+		// on the same game write over each other's automatic slot here,
+		// last tick winning; coordinating them is not attempted.
 		const interval = Number(settings.autosave_interval ?? 0)
 		if (interval > 0) {
 			autosaveTimer = setInterval(() => {
@@ -324,7 +331,7 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 				? 'OCA'
 				: window.OCA.Files === undefined ? 'OCA.Files' : 'OCA.Files.Sidebar'
 			console.warn(`arcade: cannot open the Files sidebar, window.${missing} is undefined; opening the Files app instead`)
-			await saveBeforeLeaving()
+			await waitAtMost(saveBeforeLeaving(), SAVE_BEFORE_LEAVING_WAIT, undefined)
 			const absolute = romPath.startsWith('/') ? romPath : `/${romPath}`
 			const dir = absolute.replace(/\/[^/]*$/, '') || '/'
 			let target
@@ -400,13 +407,13 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 	if (closeUrl !== '') {
 		closeButton = button(ICONS.close, t('arcade', 'Close'), async (element) => {
 			element.disabled = true
-			await saveBeforeLeaving()
-			onClose?.()
-			try {
-				instance.exit()
-			} catch (error) {
-				console.error('Arcade failed to exit', error)
-			}
+			// Bounded: the save polls the core's file system for the file
+			// it wrote, and a core that never writes it would otherwise
+			// hold the page here for a minute with nothing to press.
+			await waitAtMost(saveBeforeLeaving(), SAVE_BEFORE_LEAVING_WAIT, undefined)
+			// Closing is the session's to do, not the toolbar's: it waits
+			// for the battery save before it takes the core away.
+			await onClose?.()
 			window.location.href = closeUrl
 		}, topbar)
 	}

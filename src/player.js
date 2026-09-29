@@ -7,8 +7,13 @@ import { generateFilePath, generateUrl } from '@nextcloud/router'
 import { api } from './api.js'
 import { inputConfig, retroarchKey } from './keys.js'
 import { biosForSystem, coreForSystem, systemForFile, systemFromBytes, systemLabel } from './systems.js'
+import { waitAtMost } from './wait.js'
 
 const SRAM_SYNC_INTERVAL = 60 * 1000
+// How long the last upload of a closing game is given. Nostalgist polls
+// the core's file system for the written save, so even a healthy one
+// takes a moment; a wedged one must not keep the player here.
+const SRAM_FINAL_WAIT = 5000
 
 // The games whose battery save was just deleted. The emulator still holds
 // the old save in memory, and the next sync would write it right back, so
@@ -358,11 +363,12 @@ async function fetchSram(romPath) {
  *
  * @param {Nostalgist} instance the running emulator
  * @param {string} romPath path identifying the game
- * @return {Function} stops the synchronization
+ * @return {Function} stops the synchronization, answering once the last
+ *                    upload is through or has been given up on
  */
 export function startSramSync(instance, romPath, canSave = true) {
 	if (!romPath || !canSave || getCurrentUser() === null) {
-		return () => {}
+		return async () => {}
 	}
 	// A fresh launch starts from what the server holds, so it syncs again
 	// even when the battery save was deleted in an earlier session.
@@ -376,6 +382,12 @@ export function startSramSync(instance, romPath, canSave = true) {
 			if (sram === undefined || sram.size === 0) {
 				return
 			}
+			// Asked again, because reading the save out of the core takes
+			// long enough for it to have been deleted meanwhile: the check
+			// above the read is not the one that decides.
+			if (sramSyncStopped.has(romPath)) {
+				return
+			}
 			await api(sramUrl(romPath), {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/octet-stream' },
@@ -387,14 +399,20 @@ export function startSramSync(instance, romPath, canSave = true) {
 			console.error('Could not save the SRAM', error)
 		}
 	}
+	// Two tabs on the same game still write over one another: each holds
+	// its own copy of the save and uploads it on this timer, so the last
+	// tick wins. Coordinating them is not attempted here.
 	const timer = setInterval(upload, SRAM_SYNC_INTERVAL)
 	const onPageHide = () => {
 		upload()
 	}
 	window.addEventListener('pagehide', onPageHide)
-	return () => {
+	return async () => {
 		clearInterval(timer)
 		window.removeEventListener('pagehide', onPageHide)
-		upload()
+		// Everything played since the last tick lives only in this upload,
+		// so the caller waits for it before tearing the emulator down --
+		// an exit takes the core, and with it the save, away mid-read.
+		await waitAtMost(upload(), SRAM_FINAL_WAIT, undefined)
 	}
 }
