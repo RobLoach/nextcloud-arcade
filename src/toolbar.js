@@ -342,11 +342,21 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 	}
 
 	const fullscreenButton = button(ICONS.fullscreen, t('arcade', 'Fullscreen'), () => {
-		if (document.fullscreenElement !== null) {
-			document.exitFullscreen()
-		} else {
-			container.requestFullscreen?.()
+		// Only this game's own full screen is this button's to leave: in
+		// the Files Viewer the page may be filling the screen for reasons
+		// of its own, and throwing that away is not what was asked.
+		if (document.fullscreenElement === container) {
+			document.exitFullscreen().catch((error) => {
+				console.error('Could not leave fullscreen', error)
+			})
+			return
 		}
+		// Browsers turn the request down -- a permissions policy, a click
+		// they did not count as a gesture -- and say so by rejecting.
+		container.requestFullscreen?.().catch((error) => {
+			console.error('Could not go fullscreen', error)
+			flash(t('arcade', 'Could not go fullscreen'))
+		})
 	})
 
 	// The three-dots actions menu, with what the Files Viewer offers in its
