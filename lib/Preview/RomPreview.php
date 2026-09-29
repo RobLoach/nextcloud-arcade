@@ -17,6 +17,7 @@ use OCP\Files\Folder;
 use OCP\Files\IRootFolder;
 use OCP\Files\NotFoundException;
 use OCP\FilesMetadata\IFilesMetadataManager;
+use OCP\ICache;
 use OCP\ICacheFactory;
 use OCP\IImage;
 use OCP\Image;
@@ -34,6 +35,9 @@ use OCP\Preview\IProviderV2;
 class RomPreview implements IProviderV2 {
 	/** The index of a thumbnails folder is reused across previews. */
 	private const INDEX_TTL = 300;
+
+	/** The cache this provider reads and writes, opened once per request. */
+	private ?ICache $cache = null;
 
 	public function __construct(
 		private IRootFolder $rootFolder,
@@ -136,7 +140,7 @@ class RomPreview implements IProviderV2 {
 	 * @param array<string, mixed> $settings
 	 */
 	private function pictureId(string $userId, Folder $userFolder, File $file, array $settings): int {
-		$cache = Caches::create($this->cacheFactory, Application::CACHE_PREVIEW);
+		$cache = $this->cache();
 		$key = $userId . '|' . $settings['thumbnails_folder'] . '|' . $file->getId();
 		$cached = $cache->get($key);
 		if (is_int($cached)) {
@@ -165,7 +169,7 @@ class RomPreview implements IProviderV2 {
 	 * @return array<string, mixed>
 	 */
 	private function index(string $userId, Folder $userFolder, string $thumbnailsPath): array {
-		$cache = Caches::create($this->cacheFactory, Application::CACHE_PREVIEW);
+		$cache = $this->cache();
 		$key = 'index|' . $userId . '|' . $thumbnailsPath;
 		$cached = CachePacker::unpack($cache->get($key));
 		if ($cached !== null) {
@@ -176,5 +180,14 @@ class RomPreview implements IProviderV2 {
 		$index = $folder instanceof Folder ? $this->thumbnailService->buildIndex($folder) : [];
 		$cache->set($key, CachePacker::pack($index), self::INDEX_TTL);
 		return $index;
+	}
+
+	/**
+	 * The cache the answers and the index share. One preview asks for it
+	 * twice over, and which cache the instance offers cannot change in
+	 * between.
+	 */
+	private function cache(): ICache {
+		return $this->cache ??= Caches::create($this->cacheFactory, Application::CACHE_PREVIEW);
 	}
 }

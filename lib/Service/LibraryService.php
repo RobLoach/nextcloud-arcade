@@ -16,6 +16,7 @@ use OCP\Files\Search\ISearchBinaryOperator;
 use OCP\Files\Search\ISearchComparison;
 use OCP\Files\Search\ISearchQuery;
 use OCP\FilesMetadata\IFilesMetadataManager;
+use OCP\ICache;
 use OCP\ICacheFactory;
 use OCP\SystemTag\ISystemTagManager;
 use OCP\SystemTag\ISystemTagObjectMapper;
@@ -78,6 +79,9 @@ class LibraryService {
 	 * @var array<string, string>
 	 */
 	private array $folderEtags = [];
+
+	/** The cache this service reads and writes, opened once per request. */
+	private ?ICache $cache = null;
 
 	public function __construct(
 		private ICacheFactory $cacheFactory,
@@ -196,7 +200,7 @@ class LibraryService {
 	 * @return array<string, array{type: string, fileId?: int, slot?: int}>
 	 */
 	private function fallbacksFor(string $userId, Folder $userFolder, array $settings, array $missing): array {
-		$cache = Caches::create($this->cacheFactory, Application::CACHE_LIBRARY);
+		$cache = $this->cache();
 		$key = implode('|', [
 			'fallbacks',
 			self::FALLBACKS_CACHE_VERSION,
@@ -282,7 +286,7 @@ class LibraryService {
 	 * @return list<array<string, mixed>>
 	 */
 	public function getGames(string $userId, Folder $folder, Folder $userFolder, string $folderPath, array $settings, bool $refresh): array {
-		$cache = Caches::create($this->cacheFactory, Application::CACHE_LIBRARY);
+		$cache = $this->cache();
 		// Nextcloud propagates etags up the tree, so the library folder's
 		// etag changes whenever anything inside it does.
 		$key = implode('|', [
@@ -381,6 +385,15 @@ class LibraryService {
 	 */
 	public function thumbnailsVersion(string $userId, Folder $userFolder, array $settings): string {
 		return $this->folderEtag($userId, $userFolder, (string)($settings['thumbnails_folder'] ?? ''));
+	}
+
+	/**
+	 * The cache the scan and the fallbacks share. One request asks for it
+	 * twice over, and which cache the instance offers cannot change in
+	 * between.
+	 */
+	private function cache(): ICache {
+		return $this->cache ??= Caches::create($this->cacheFactory, Application::CACHE_LIBRARY);
 	}
 
 	private function folderEtag(string $userId, Folder $userFolder, string $path): string {
