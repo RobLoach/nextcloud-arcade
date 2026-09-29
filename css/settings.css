@@ -42,9 +42,22 @@
 
 #arcade-settings .arcade-key {
 	display: flex;
+	flex-wrap: wrap;
 	align-items: center;
 	justify-content: space-between;
 	gap: calc(var(--default-grid-baseline, 4px) * 2);
+}
+
+/* What is wrong with a binding, said in the page rather than only in a
+   tooltip. It takes a line of its own under the pair it belongs to. */
+#arcade-settings .arcade-key-hint {
+	flex-basis: 100%;
+	color: var(--color-warning-text, var(--color-text-maxcontrast));
+	font-size: 0.9em;
+}
+
+#arcade-settings .arcade-key-hint:empty {
+	display: none;
 }
 
 #arcade-settings .arcade-key-binding {

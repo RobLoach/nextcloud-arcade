@@ -90,30 +90,40 @@ $thumbnailTypes = $_['thumbnailTypes'];
 		<span class="msg" aria-live="polite"></span>
 		<p class="settings-hint"><?php p($l->t('Click a key to set it, then press the one to use. A key that works a button of the controller is left to the game.')); ?></p>
 
-		<h4><?php p($l->t('Keys')); ?></h4>
-		<div class="arcade-keys">
-			<?php foreach ($buttons as $name => $button): ?>
+		<?php /* The button of a binding holds only the key glyph -- "↑", or
+		        "—" for no key at all -- so what the key is for is spelled by
+		        the label beside it, tied to the button with aria-labelledby.
+		        Naming the button after itself as well keeps the glyph in the
+		        name: "Up, ↑". */ ?>
+		<?php
+		$renderKeys = static function (array $bindings, string $kind) use ($l, $settings): void {
+			foreach ($bindings as $name => $binding) {
+				$id = 'arcade-key-' . $kind . '-' . $name;
+				$labelId = 'arcade-key-label-' . $kind . '-' . $name;
+				$hintId = 'arcade-key-hint-' . $kind . '-' . $name;
+				?>
 				<div class="arcade-key">
-					<span><?php p($l->t($button['label'])); ?></span>
-					<button type="button" class="arcade-key-binding"
-						data-kind="buttons" data-binding="<?php p($name); ?>"
-						data-default="<?php p($button['default']); ?>"
-						data-code="<?php p($settings['buttons'][$name] ?? $button['default']); ?>"></button>
+					<span id="<?php p($labelId); ?>"><?php p($l->t($binding['label'])); ?></span>
+					<button type="button" class="arcade-key-binding" id="<?php p($id); ?>"
+						aria-labelledby="<?php p($labelId . ' ' . $id); ?>"
+						data-kind="<?php p($kind); ?>" data-binding="<?php p($name); ?>"
+						data-default="<?php p($binding['default']); ?>"
+						data-code="<?php p($settings[$kind][$name] ?? $binding['default']); ?>"></button>
+					<span class="arcade-key-hint" id="<?php p($hintId); ?>"></span>
 				</div>
-			<?php endforeach; ?>
+				<?php
+			}
+		};
+		?>
+
+		<h3><?php p($l->t('Keys')); ?></h3>
+		<div class="arcade-keys">
+			<?php $renderKeys($buttons, 'buttons'); ?>
 		</div>
 
-		<h4><?php p($l->t('Hot Keys')); ?></h4>
+		<h3><?php p($l->t('Hot Keys')); ?></h3>
 		<div class="arcade-keys">
-			<?php foreach ($hotkeys as $name => $hotkey): ?>
-				<div class="arcade-key">
-					<span><?php p($l->t($hotkey['label'])); ?></span>
-					<button type="button" class="arcade-key-binding"
-						data-kind="hotkeys" data-binding="<?php p($name); ?>"
-						data-default="<?php p($hotkey['default']); ?>"
-						data-code="<?php p($settings['hotkeys'][$name] ?? $hotkey['default']); ?>"></button>
-				</div>
-			<?php endforeach; ?>
+			<?php $renderKeys($hotkeys, 'hotkeys'); ?>
 		</div>
 		<p>
 			<button type="button" id="arcade-keys-reset"><?php p($l->t('Put the keys back as they were')); ?></button>
