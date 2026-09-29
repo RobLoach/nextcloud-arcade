@@ -220,7 +220,7 @@ class ThumbnailFetchService {
 				return null;
 			}
 			return $body;
-		} catch (\Throwable $e) {
+		} catch (\Throwable) {
 			// A game that is not there answers with an error, which is the
 			// common case rather than a problem.
 			return null;
