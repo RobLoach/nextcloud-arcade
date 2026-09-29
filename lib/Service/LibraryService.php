@@ -68,9 +68,12 @@ class LibraryService {
 	private array $screenshots = [];
 
 	/**
-	 * The etag of each folder asked about, by path. One request asks for
-	 * the thumbnails folder twice over -- for the cache key and for
-	 * thumbnailsVersion() -- and an etag cannot change within a request.
+	 * The etag of each folder asked about, by user and path. One request
+	 * asks for the thumbnails folder twice over -- for the cache key and
+	 * for thumbnailsVersion() -- and an etag cannot change within a
+	 * request. The user is part of the key because the same path names a
+	 * different folder in every user's files, and the service is one
+	 * object for the whole request.
 	 *
 	 * @var array<string, string>
 	 */
@@ -198,8 +201,8 @@ class LibraryService {
 			'fallbacks',
 			self::FALLBACKS_CACHE_VERSION,
 			$userId,
-			$this->folderEtag($userFolder, (string)($settings['screenshots_folder'] ?? '')),
-			$this->folderEtag($userFolder, (string)($settings['saves_folder'] ?? '')),
+			$this->folderEtag($userId, $userFolder, (string)($settings['screenshots_folder'] ?? '')),
+			$this->folderEtag($userId, $userFolder, (string)($settings['saves_folder'] ?? '')),
 		]);
 		$cached = $cache->get($key);
 		if (is_array($cached) && is_array($cached['paths'] ?? null) && is_array($cached['fallbacks'] ?? null)
@@ -288,7 +291,7 @@ class LibraryService {
 			$folderPath,
 			$folder->getEtag(),
 			$settings['thumbnails_folder'],
-			$this->folderEtag($userFolder, $settings['thumbnails_folder']),
+			$this->folderEtag($userId, $userFolder, $settings['thumbnails_folder']),
 			(string)($settings['max_games'] ?? self::MAX_GAMES),
 			(string)($settings['max_depth'] ?? self::MAX_DEPTH),
 		]);
@@ -376,22 +379,23 @@ class LibraryService {
 	 *
 	 * @param array<string, mixed> $settings
 	 */
-	public function thumbnailsVersion(Folder $userFolder, array $settings): string {
-		return $this->folderEtag($userFolder, (string)($settings['thumbnails_folder'] ?? ''));
+	public function thumbnailsVersion(string $userId, Folder $userFolder, array $settings): string {
+		return $this->folderEtag($userId, $userFolder, (string)($settings['thumbnails_folder'] ?? ''));
 	}
 
-	private function folderEtag(Folder $userFolder, string $path): string {
+	private function folderEtag(string $userId, Folder $userFolder, string $path): string {
 		if ($path === '') {
 			return '';
 		}
-		$known = $this->folderEtags[$path] ?? null;
+		$memo = $userId . '|' . $path;
+		$known = $this->folderEtags[$memo] ?? null;
 		if ($known !== null) {
 			return $known;
 		}
 		try {
-			return $this->folderEtags[$path] = $userFolder->get($path)->getEtag();
+			return $this->folderEtags[$memo] = $userFolder->get($path)->getEtag();
 		} catch (NotFoundException) {
-			return $this->folderEtags[$path] = '';
+			return $this->folderEtags[$memo] = '';
 		}
 	}
 

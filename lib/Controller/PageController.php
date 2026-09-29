@@ -190,7 +190,7 @@ class PageController extends ArcadeController {
 			'games' => $page,
 			// The one value every thumbnail preview URL is versioned by,
 			// so a replaced image escapes the browser's immutable cache.
-			'thumbnailsVersion' => $this->libraryService->thumbnailsVersion($userFolder, $settings),
+			'thumbnailsVersion' => $this->libraryService->thumbnailsVersion($this->userId, $userFolder, $settings),
 		]);
 	}
 

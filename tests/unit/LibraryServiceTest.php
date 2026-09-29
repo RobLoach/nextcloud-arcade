@@ -821,7 +821,7 @@ class LibraryServiceTest extends TestCase {
 
 		$this->assertSame(
 			'etag-thumbs',
-			$this->service->thumbnailsVersion($userFolder, ['thumbnails_folder' => '/Thumbs']),
+			$this->service->thumbnailsVersion('alice', $userFolder, ['thumbnails_folder' => '/Thumbs']),
 			'replacing an image moves the folder etag along, which is what busts the browser cache of the previews',
 		);
 	}
@@ -835,18 +835,35 @@ class LibraryServiceTest extends TestCase {
 		$userFolder->expects($this->once())->method('get')->willReturn($thumbnails);
 
 		$settings = ['thumbnails_folder' => '/Thumbs'];
-		$this->assertSame('etag-thumbs', $this->service->thumbnailsVersion($userFolder, $settings));
-		$this->assertSame('etag-thumbs', $this->service->thumbnailsVersion($userFolder, $settings));
+		$this->assertSame('etag-thumbs', $this->service->thumbnailsVersion('alice', $userFolder, $settings));
+		$this->assertSame('etag-thumbs', $this->service->thumbnailsVersion('alice', $userFolder, $settings));
+	}
+
+	public function testTwoUsersDoNotShareAFolderEtag(): void {
+		// The same path names a different folder in every user's files, and
+		// the service is one object for the whole request.
+		$hers = $this->createStub(Folder::class);
+		$hers->method('getEtag')->willReturn('etag-hers');
+		$his = $this->createStub(Folder::class);
+		$his->method('getEtag')->willReturn('etag-his');
+		$herFolder = $this->createStub(Folder::class);
+		$herFolder->method('get')->willReturn($hers);
+		$hisFolder = $this->createStub(Folder::class);
+		$hisFolder->method('get')->willReturn($his);
+
+		$settings = ['thumbnails_folder' => '/Thumbs'];
+		$this->assertSame('etag-hers', $this->service->thumbnailsVersion('alice', $herFolder, $settings));
+		$this->assertSame('etag-his', $this->service->thumbnailsVersion('bob', $hisFolder, $settings));
 	}
 
 	public function testThumbnailsVersionIsEmptyWithoutAThumbnailsFolder(): void {
 		$userFolder = $this->createStub(Folder::class);
 		$userFolder->method('get')->willThrowException(new NotFoundException());
 
-		$this->assertSame('', $this->service->thumbnailsVersion($userFolder, ['thumbnails_folder' => '']));
+		$this->assertSame('', $this->service->thumbnailsVersion('alice', $userFolder, ['thumbnails_folder' => '']));
 		$this->assertSame(
 			'',
-			$this->service->thumbnailsVersion($userFolder, ['thumbnails_folder' => '/Gone']),
+			$this->service->thumbnailsVersion('alice', $userFolder, ['thumbnails_folder' => '/Gone']),
 			'a configured folder that does not exist versions like no folder at all',
 		);
 	}
