@@ -834,7 +834,19 @@ export async function renderLibrary(container, onError) {
 		const caret = active instanceof HTMLInputElement ? active.selectionStart : null
 
 		container.innerHTML = ''
-		paint(data)
+		const status = paint(data)
+
+		// A live region only announces what arrives after it is in the
+		// document, never what it was inserted already holding -- and the
+		// whole page is inserted at once here. So the line is emptied and
+		// filled again a frame later, which is a change the region can see.
+		const said = status.textContent
+		status.textContent = ''
+		requestAnimationFrame(() => {
+			if (status.isConnected && status.textContent === '') {
+				status.textContent = said
+			}
+		})
 
 		if (focused !== null) {
 			const again = container.querySelector(`[${FOCUS}="${CSS.escape(focused)}"]`)
@@ -863,6 +875,7 @@ export async function renderLibrary(container, onError) {
 	 * render() around this, so nothing here has to think about it.
 	 *
 	 * @param {object} data the library response
+	 * @return {HTMLElement} the page's live region, wherever it ended up
 	 */
 	const paint = (data) => {
 		container.appendChild(renderHeader(load, setView))
@@ -882,7 +895,7 @@ export async function renderLibrary(container, onError) {
 
 		if (!data.exists || data.libraryTotal === 0) {
 			container.appendChild(renderOnboarding(data, load, status))
-			return
+			return status
 		}
 
 		// Only on the plain first page: these are shortcuts, not results.
@@ -920,7 +933,7 @@ export async function renderLibrary(container, onError) {
 				// is already spoken for by the line above it.
 				container.appendChild(renderPagination(data, () => load(), null))
 			}
-			return
+			return status
 		}
 
 		const views = {
@@ -939,6 +952,7 @@ export async function renderLibrary(container, onError) {
 			})
 			container.appendChild(truncated)
 		}
+		return status
 	}
 
 	await load()
