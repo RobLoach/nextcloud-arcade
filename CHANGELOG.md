@@ -6,6 +6,20 @@ All notable changes to NextCloud Arcade. The format follows
 
 ## [Unreleased]
 
+## [0.41.1] - 2026-09-27
+
+### Fixed
+- A battery save written before a saves folder was configured is found
+  again: save states survived that move all along, battery saves did not.
+  Deleting one now clears it from both places, so a delete stays final.
+
+### Changed
+- The documentation states each fact in one place and links to it from
+  the rest; several claims that had drifted from the code were corrected.
+- Housekeeping across the newest code: shared helpers where three copies
+  had appeared, a dead cache-unpacking branch removed, and caches opened
+  once per request instead of twice.
+
 ## [0.41.0] - 2026-09-27
 
 ### Added
