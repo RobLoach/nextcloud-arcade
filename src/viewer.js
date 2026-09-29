@@ -46,6 +46,10 @@ const ArcadeViewer = {
 			started: false,
 			errorMessage: null,
 			stopSession: null,
+			// A ROM takes a while to arrive, and the Viewer can be closed
+			// the whole time it does. Nothing exists to stop yet then, so
+			// the wish to stop is remembered instead.
+			destroyed: false,
 		}
 	},
 
@@ -68,6 +72,9 @@ const ArcadeViewer = {
 	// Vue 2 calls this beforeDestroy, Vue 3 beforeUnmount; both are here so
 	// the handler keeps working if the Viewer ever moves on.
 	beforeDestroy() {
+		this.destroyed = true
+		// Whatever is still on its way can stop coming.
+		this.launch?.abort()
 		this.stopSession?.()
 	},
 
@@ -78,19 +85,34 @@ const ArcadeViewer = {
 
 		async start() {
 			this.started = true
+			// Not in data(): a controller is not state to render, and the
+			// Viewer's Vue would only walk it for reactivity it never uses.
+			this.launch = new AbortController()
 			try {
 				if (!isPlayable(this.basename, this.mime)) {
 					throw new Error(t('arcade', 'Unsupported ROM type: {file}', { file: this.basename }))
 				}
 				const { startSession } = await import('./session.js')
-				this.stopSession = await startSession({
+				const stop = await startSession({
 					canvas: this.$refs.canvas,
 					container: this.$el,
 					filename: this.filename,
 					basename: this.basename,
 					source: this.source,
+					signal: this.launch.signal,
 				})
+				this.stopSession = stop
+				if (this.destroyed) {
+					// Closed while it was loading: beforeDestroy had nothing
+					// to stop then, so a whole emulator -- sound, timers,
+					// listeners and all -- would be left running for good.
+					stop()
+					return
+				}
 			} catch (error) {
+				if (this.destroyed) {
+					return
+				}
 				console.error('Arcade failed to start', error)
 				this.errorMessage = t('arcade', 'Could not start the emulator: {error}', { error: error.message })
 			}

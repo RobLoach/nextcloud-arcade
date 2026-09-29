@@ -19,10 +19,11 @@ const settings = loadState('arcade', 'settings', {})
  * @param {string} options.basename file name of the game
  * @param {string} [options.source] URL to read the game from instead
  * @param {string} [options.closeUrl] where the close button leads
+ * @param {?AbortSignal} [options.signal] abandons the launch when it fires
  * @return {Promise<Function>} stops the game and puts everything away,
  *                             answering once the save data is safe
  */
-export async function startSession({ canvas, container, filename, basename, source, closeUrl = '' }) {
+export async function startSession({ canvas, container, filename, basename, source, closeUrl = '', signal = null }) {
 	// The launch learns of anything it went without -- a missing BIOS --
 	// before the toolbar and its status line exist, so the word is held
 	// here and handed over below, for the toolbar to flash once it is on
@@ -38,6 +39,7 @@ export async function startSession({ canvas, container, filename, basename, sour
 		onWarning: (text) => {
 			notice = text
 		},
+		signal,
 	})
 	const stopSramSync = startSramSync(instance, filename, (settings.saves_folder ?? '') !== '')
 	const stopPlayTime = recordRecent(filename)
