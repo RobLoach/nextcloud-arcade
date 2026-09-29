@@ -32,6 +32,16 @@ export function disableSramSync(romPath) {
 }
 
 /**
+ * Take that back, for a delete that did not happen after all: the server
+ * still holds the save, so the game should go on keeping it up to date.
+ *
+ * @param {string} romPath path identifying the game
+ */
+export function enableSramSync(romPath) {
+	sramSyncStopped.delete(romPath)
+}
+
+/**
  * @param {string} path path of the file, relative to the user folder or,
  *                      on public share pages, the share root
  * @return {string} the WebDAV URL of the file

@@ -1,6 +1,6 @@
 import { translate as t } from '@nextcloud/l10n'
 import { AUTO_SLOT, api, stateUrl } from '../api.js'
-import { disableSramSync } from '../player.js'
+import { disableSramSync, enableSramSync } from '../player.js'
 import { createPanel } from './panel.js'
 
 /**
@@ -116,15 +116,20 @@ export function createStatesPanel({ instance, romPath, flash, onDone }) {
 
 	const removeSram = async () => {
 		try {
-			await api(stateUrl('/sram', romPath), { method: 'DELETE' })
+			// Before the delete, not after: an upload started a moment ago
+			// is already past its own check and still reading the save out
+			// of the core, and would land on top of the deleted file.
+			//
 			// The emulator still holds the old save in memory, and the next
 			// automatic upload would write it right back, so uploads stop
 			// until the game is opened anew — which then starts clean.
 			disableSramSync(romPath)
+			await api(stateUrl('/sram', romPath), { method: 'DELETE' })
 			flash(t('arcade', 'Battery save deleted — reopen the game to start over'))
 			await refresh()
 		} catch (error) {
 			console.error('Could not delete the battery save', error)
+			enableSramSync(romPath)
 			flash(t('arcade', 'Could not delete the battery save'))
 		}
 	}
