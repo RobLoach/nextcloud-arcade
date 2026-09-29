@@ -35,6 +35,21 @@ final class Folders {
 	}
 
 	/**
+	 * Whether a user has anything at a path in their files. Asked before
+	 * acting on a path a request named: a path that leads nowhere is a
+	 * game the user does not have. A storage that cannot be reached
+	 * answers the same way -- there is nothing to act on either way, and
+	 * the caller has a plain "no" to turn the request away with.
+	 */
+	public static function has(IRootFolder $rootFolder, string $userId, string $path): bool {
+		try {
+			return $rootFolder->getUserFolder($userId)->nodeExists($path);
+		} catch (\Throwable) {
+			return false;
+		}
+	}
+
+	/**
 	 * Whether a file still exists anywhere in a user's storage -- the trash
 	 * included, which is the whole point of asking by id rather than by
 	 * path. Right after a deletion, a yes only says the trash caught it.

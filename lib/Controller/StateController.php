@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace OCA\Arcade\Controller;
 
 use OCA\Arcade\Activity\ActivityPublisher;
+use OCA\Arcade\Service\Folders;
 use OCA\Arcade\Service\SettingsService;
 use OCA\Arcade\Service\StateService;
 use OCP\AppFramework\Http;
@@ -195,7 +196,8 @@ class StateController extends ArcadeController {
 	 * @psalm-assert-if-true string $this->userId
 	 */
 	private function isValidRequest(string $file, int $slot): bool {
-		return $this->isPlausibleRequest($file, $slot) && $this->gameExists($this->userId, $file);
+		return $this->isPlausibleRequest($file, $slot)
+			&& Folders::has($this->rootFolder, $this->userId, $file);
 	}
 
 	/**
@@ -221,15 +223,6 @@ class StateController extends ArcadeController {
 			// Slot 0 is the one written when a game is closed.
 			&& $slot >= StateService::AUTO_SLOT
 			&& $slot <= StateService::HIGHEST_SLOT;
-	}
-
-	/** Only ever asked once the plausibility check has vouched for the user. */
-	private function gameExists(string $userId, string $file): bool {
-		try {
-			return $this->rootFolder->getUserFolder($userId)->nodeExists($file);
-		} catch (\Throwable) {
-			return false;
-		}
 	}
 
 	/**
