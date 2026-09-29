@@ -109,8 +109,15 @@ function render(game, file, mime, fileId) {
 			const when = document.createElement('span')
 			when.textContent = new Date(state.mtime * 1000).toLocaleString()
 			item.append(name, when)
+			// A stale state was marked by colour and a tooltip alone, which
+			// is nothing at all to anybody not pointing at it. Said in
+			// words, the way the player's own states panel says it.
 			if (state.stale === true) {
-				item.title = t('arcade', 'The ROM has changed since this state was saved')
+				const warning = document.createElement('span')
+				warning.className = 'arcade-sidebar-stale-warning'
+				warning.textContent = t('arcade', 'made from another copy of this game')
+				warning.title = t('arcade', 'The ROM has changed since this state was saved, so loading it may go wrong.')
+				item.appendChild(warning)
 				item.classList.add('arcade-sidebar-stale')
 			}
 			slots.appendChild(item)
@@ -145,15 +152,32 @@ async function show(fileInfo) {
 		mountPoint.textContent = ''
 		mountPoint.appendChild(render(game, file, fileInfo?.mimetype ?? '', fileInfo?.id ?? 0))
 	} catch (error) {
-		console.debug('Arcade could not describe the game', error)
 		if (mine !== generation || mountPoint === null) {
 			return
 		}
-		const message = document.createElement('p')
-		message.className = 'arcade-sidebar-empty'
-		message.textContent = t('arcade', 'Nothing is known about this game yet')
 		mountPoint.textContent = ''
-		mountPoint.appendChild(message)
+		// A 404 is the endpoint saying it has nothing filed for this file,
+		// which is an answer. Anything else -- a rate limit, a server
+		// having a bad day, a connection that went away -- is the asking
+		// itself failing, and calling that "nothing is known" would be a
+		// lie that hides a problem the user can do something about.
+		if (String(error?.message ?? '').startsWith('404')) {
+			console.debug('Arcade has nothing filed for this game', error)
+			const message = document.createElement('p')
+			message.className = 'arcade-sidebar-empty'
+			message.textContent = t('arcade', 'Nothing is known about this game yet')
+			mountPoint.appendChild(message)
+			return
+		}
+		console.error('Arcade could not describe the game', error)
+		const message = document.createElement('p')
+		message.className = 'arcade-sidebar-error'
+		message.textContent = t('arcade', 'Could not ask the server about this game.')
+		const retry = document.createElement('button')
+		retry.type = 'button'
+		retry.textContent = t('arcade', 'Try again')
+		retry.addEventListener('click', () => show(fileInfo))
+		mountPoint.append(message, retry)
 	}
 }
 

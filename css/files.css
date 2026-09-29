@@ -45,6 +45,7 @@
 
 .arcade-sidebar .arcade-sidebar-slots li {
 	display: flex;
+	flex-wrap: wrap;
 	justify-content: space-between;
 	gap: calc(var(--default-grid-baseline, 4px) * 2);
 }
@@ -53,10 +54,17 @@
 	color: var(--color-text-maxcontrast);
 }
 
-.arcade-sidebar .arcade-sidebar-slots li.arcade-sidebar-stale span {
+/* The warning is words now, not a colour: it takes a line of its own
+   under the slot it belongs to. */
+.arcade-sidebar .arcade-sidebar-slots li .arcade-sidebar-stale-warning {
+	flex-basis: 100%;
 	color: var(--color-warning-text, var(--color-text-maxcontrast));
 }
 
 .arcade-sidebar .arcade-sidebar-empty {
 	color: var(--color-text-maxcontrast);
+}
+
+.arcade-sidebar .arcade-sidebar-error {
+	color: var(--color-error-text, var(--color-main-text));
 }
