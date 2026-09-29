@@ -47,13 +47,22 @@ $systemFolder = $_['systemFolder'];
 			<?php if ($system['bios'] === []) { continue; } ?>
 			<div class="arcade-bios-system">
 				<h3><?php p($system['label']); ?></h3>
+				<?php /* Every row offers the same two controls, so the file
+				        they belong to has to be part of what they are called;
+				        a column of identical "Remove" buttons says nothing.
+				        The state of the row is what both controls are for,
+				        so it is their description. */ ?>
 				<?php foreach ($system['bios'] as $name): ?>
+					<?php $stateId = 'arcade-bios-state-' . preg_replace('/[^A-Za-z0-9_-]/', '-', $name); ?>
 					<p class="arcade-bios-file" data-name="<?php p($name); ?>">
 						<code><?php p($name); ?></code>
-						<em class="arcade-bios-state"><?php p($l->t('Checking …')); ?></em>
+						<em class="arcade-bios-state" id="<?php p($stateId); ?>"><?php p($l->t('Checking …')); ?></em>
 						<input type="file" class="arcade-bios-input hidden"
-							aria-label="<?php p($l->t('Upload %s', [$name])); ?>">
-						<button type="button" class="arcade-bios-remove hidden"><?php p($l->t('Remove')); ?></button>
+							aria-label="<?php p($l->t('Upload %s', [$name])); ?>"
+							aria-describedby="<?php p($stateId); ?>">
+						<button type="button" class="arcade-bios-remove hidden"
+							aria-label="<?php p($l->t('Remove %s', [$name])); ?>"
+							aria-describedby="<?php p($stateId); ?>"><?php p($l->t('Remove')); ?></button>
 					</p>
 				<?php endforeach; ?>
 			</div>
