@@ -77,10 +77,14 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 		element.classList.toggle('active', paused)
 	})
 
-	// A game left in a background tab keeps the processor busy for nothing.
+	// A game left in a background tab keeps the processor busy for nothing,
+	// but a game that goes quiet on its own is a surprise, so it is asked
+	// for. The server merges its defaults into every settings payload, so
+	// the flag is only ever absent when there is no payload at all -- and
+	// off is what the default says then too.
 	let pausedByTab = false
 	const onVisibilityChange = () => {
-		if (settings.pause_when_hidden === false) {
+		if (settings.pause_when_hidden !== true) {
 			return
 		}
 		if (document.hidden && !paused) {
@@ -288,7 +292,7 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 				? 'OCA'
 				: window.OCA.Files === undefined ? 'OCA.Files' : 'OCA.Files.Sidebar'
 			console.warn(`arcade: cannot open the Files sidebar, window.${missing} is undefined; opening the Files app instead`)
-			if (settings.autosave_on_close !== false && statesPanel !== null) {
+			if (settings.autosave_on_close === true && statesPanel !== null) {
 				flash(t('arcade', 'Saving the game …'))
 				await statesPanel.save(AUTO_SLOT)
 			}
@@ -386,7 +390,7 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 		closeButton = button(ICONS.close, t('arcade', 'Close'), async (element) => {
 			element.disabled = true
 			// Leave the game where it was, so it can be picked up again.
-			if (settings.autosave_on_close !== false && statesPanel !== null) {
+			if (settings.autosave_on_close === true && statesPanel !== null) {
 				flash(t('arcade', 'Saving the game …'))
 				await statesPanel.save(AUTO_SLOT)
 			}
