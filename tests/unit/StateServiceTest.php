@@ -508,6 +508,33 @@ class StateServiceTest extends TestCase {
 		$this->assertFalse($service->deleteSram(self::USER, self::GAME), 'and once is enough');
 	}
 
+	public function testABatterySaveWrittenBeforeTheSavesFolderIsStillFound(): void {
+		// Played before a saves folder was configured, so the battery save
+		// went to the app data -- where the save states of the same session
+		// are still read from once the folder is set.
+		$this->service()->saveSram(self::USER, self::GAME, 'a battery save');
+
+		$service = $this->service('/Saves');
+		$this->assertTrue($service->hasSram(self::USER, self::GAME));
+		$this->assertSame('a battery save', $service->loadSram(self::USER, self::GAME));
+	}
+
+	public function testDeletingTheBatterySaveClearsTheAppDataToo(): void {
+		// One in each place: the app data from before the saves folder was
+		// configured, the folder's own from a session since.
+		$this->service()->saveSram(self::USER, self::GAME, 'an older battery save');
+		$this->files['Saves/Nintendo/Mario/Mario.srm'] = 'a battery save';
+
+		$service = $this->service('/Saves');
+		$this->assertTrue($service->deleteSram(self::USER, self::GAME));
+
+		$this->assertArrayNotHasKey('Saves/Nintendo/Mario/Mario.srm', $this->files);
+		$this->assertFalse($service->hasSram(self::USER, self::GAME));
+		// A delete is final: emptying or unsetting the saves folder later on
+		// must not hand the app-data battery save back.
+		$this->assertNull($this->service()->loadSram(self::USER, self::GAME));
+	}
+
 	public function testABatterySaveUnderTheOldNameOfTheGameIsStillDeleted(): void {
 		$service = $this->service('/Saves');
 		// As a rename leaves it: the folder followed the game, the battery

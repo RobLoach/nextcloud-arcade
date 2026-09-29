@@ -123,13 +123,17 @@ class StateService {
 		$this->writeAppData($userId, self::sramFileName($this->key($userId, $romPath)), $data, $romPath);
 	}
 
+	/**
+	 * The battery save, from the game's folder when there is one and from
+	 * the app data otherwise -- the same order the save states are read in.
+	 * A user who played before configuring a saves folder has their battery
+	 * save in the app data, and it stays reachable until the folder that
+	 * replaces it holds one.
+	 */
 	public function loadSram(string $userId, string $romPath): ?string {
 		$folder = $this->getGameFolder($userId, $romPath, false);
 		if ($folder !== null) {
 			return $this->findSram($folder, $romPath)?->getContent();
-		}
-		if ($this->savesFolderPath($userId) !== '') {
-			return null;
 		}
 		return $this->readAppData($userId, self::sramFileName($this->key($userId, $romPath)));
 	}
@@ -143,32 +147,27 @@ class StateService {
 		if ($folder !== null) {
 			return $this->findSram($folder, $romPath) !== null;
 		}
-		if ($this->savesFolderPath($userId) !== '') {
-			return false;
-		}
 		$states = $this->userStates($userId, false);
 		return $states !== null && $states->fileExists(self::sramFileName($this->key($userId, $romPath)));
 	}
 
 	/**
-	 * Remove the battery save, wherever loadSram would have found it, so a
-	 * game with an in-game save file can be started over. Says whether there
-	 * was one to remove.
+	 * Remove the battery save of a game, so one with an in-game save file
+	 * can be started over. Says whether there was one to remove.
+	 *
+	 * Both places are cleared, not only the one loadSram would read from:
+	 * a delete has to be final, and leaving an app-data battery save behind
+	 * would hand it back the day the saves folder is emptied or unset.
 	 */
 	public function deleteSram(string $userId, string $romPath): bool {
+		$removed = $this->deleteAppData($userId, self::sramFileName($this->key($userId, $romPath)));
 		$folder = $this->getGameFolder($userId, $romPath, false);
-		if ($folder !== null) {
-			$sram = $this->findSram($folder, $romPath);
-			if ($sram === null) {
-				return false;
-			}
+		$sram = $folder === null ? null : $this->findSram($folder, $romPath);
+		if ($sram !== null) {
 			$sram->delete();
-			return true;
+			$removed = true;
 		}
-		if ($this->savesFolderPath($userId) !== '') {
-			return false;
-		}
-		return $this->deleteAppData($userId, self::sramFileName($this->key($userId, $romPath)));
+		return $removed;
 	}
 
 	public function delete(string $userId, string $romPath, int $slot): bool {
