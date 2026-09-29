@@ -8,7 +8,7 @@ import { offerResume } from './panels/resume.js'
 import { createStatesPanel } from './panels/states.js'
 import { davUrl, fileIdOf } from './player.js'
 import { shortNameForPath } from './systems.js'
-import { attachTouchControls, isTouchDevice } from './touch.js'
+import { attachTouchControls, isTouchDevice, isTouchPrimary } from './touch.js'
 import { waitAtMost } from './wait.js'
 
 // How long the save on the way out is given before the player leaves
@@ -240,15 +240,24 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 		return await statesPanel.save(AUTO_SLOT)
 	}
 
-	// Virtual gamepad for touch play.
+	// Virtual gamepad for touch play. It is offered wherever a finger
+	// could work it, but only put over the picture where a finger is how
+	// the device is pointed at in the first place.
 	let touchControls = null
 	if (isTouchDevice()) {
 		touchControls = attachTouchControls({ container, instance })
+		const showTouch = isTouchPrimary()
+		touchControls.element.classList.toggle('hidden', !showTouch)
 		const touchButton = button(ICONS.gamepad, t('arcade', 'Touch controls'), (element) => {
 			const hidden = touchControls.element.classList.toggle('hidden')
+			if (hidden) {
+				// Hiding it mid-press would leave that button down for the
+				// rest of the game, with nothing left on screen to lift it.
+				touchControls.release()
+			}
 			setPressed(element, !hidden)
 		})
-		setPressed(touchButton, true)
+		setPressed(touchButton, showTouch)
 	}
 
 	const muteButton = button(ICONS.mute, t('arcade', 'Mute'), (element) => {
