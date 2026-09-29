@@ -8,7 +8,16 @@ import { offerResume } from './panels/resume.js'
 import { createStatesPanel } from './panels/states.js'
 import { davUrl, fileIdOf } from './player.js'
 import { shortNameForPath } from './systems.js'
-import { attachTouchControls, isTouchDevice } from './touch.js'
+import { attachTouchControls, isTouchDevice, isTouchPrimary } from './touch.js'
+import { waitAtMost } from './wait.js'
+
+// How long the save on the way out is given before the player leaves
+// anyway. Long enough for a healthy core, short enough to stay a door.
+const SAVE_BEFORE_LEAVING_WAIT = 5000
+
+// Everything the player puts on top of the game. Keys pressed inside it
+// belong to whatever has the focus there, not to the emulator.
+const CHROME_SELECTOR = '.arcade-toolbar, .arcade-topbar, .arcade-actions-menu, .arcade-states, .arcade-gallery, .arcade-resume'
 
 /**
  * Attach a control bar for a running emulator.
@@ -26,6 +35,10 @@ import { attachTouchControls, isTouchDevice } from './touch.js'
 export function attachToolbar({ container, instance, romPath, romName, settings = {}, closeUrl = '', onClose = null, notice = '' }) {
 	container.classList.add('arcade-player-container')
 
+	// Fires when the toolbar is taken down, so anything still on its way
+	// knows it has nowhere to arrive.
+	const gone = new AbortController()
+
 	const toolbar = document.createElement('div')
 	toolbar.className = 'arcade-toolbar'
 
@@ -40,6 +53,10 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 
 	const status = document.createElement('span')
 	status.className = 'arcade-toolbar-status'
+	// Everything the player is ever told happens here and nowhere else --
+	// a deleted battery save, a state that would not save, a missing BIOS
+	// -- so it is read out as it arrives rather than only seen.
+	status.setAttribute('role', 'status')
 	let statusTimer = null
 	const flash = (text) => {
 		status.textContent = text
@@ -63,19 +80,38 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 		return element
 	}
 
+	// A button that is either on or off says so, rather than only looking
+	// it: the class is a colour, aria-pressed is the state itself.
+	const setPressed = (element, on) => {
+		element.classList.toggle('active', on)
+		element.setAttribute('aria-pressed', String(on))
+	}
+	// One that opens something says that instead.
+	const setExpanded = (element, open) => {
+		element?.classList.toggle('active', open)
+		element?.setAttribute('aria-expanded', String(open))
+	}
+
 	let paused = false
-	const pauseButton = button(ICONS.pause, t('arcade', 'Pause'), (element) => {
-		paused = !paused
+	const pauseButton = button(ICONS.pause, t('arcade', 'Pause'), () => {
 		if (paused) {
-			instance.pause()
-		} else {
 			instance.resume()
+		} else {
+			instance.pause()
 		}
-		element.innerHTML = icon(paused ? ICONS.play : ICONS.pause)
-		element.title = paused ? t('arcade', 'Resume') : t('arcade', 'Pause')
-		element.setAttribute('aria-label', element.title)
-		element.classList.toggle('active', paused)
+		setPaused(!paused)
 	})
+	// The one place that decides what "paused" looks like, so the flag and
+	// the button cannot drift apart -- as they did when restarting resumed
+	// the core behind the button's back.
+	const setPaused = (value) => {
+		paused = value
+		pauseButton.innerHTML = icon(paused ? ICONS.play : ICONS.pause)
+		pauseButton.title = paused ? t('arcade', 'Resume') : t('arcade', 'Pause')
+		pauseButton.setAttribute('aria-label', pauseButton.title)
+		setPressed(pauseButton, paused)
+	}
+	setPressed(pauseButton, false)
 
 	// A game left in a background tab keeps the processor busy for nothing,
 	// but a game that goes quiet on its own is a surprise, so it is asked
@@ -101,6 +137,10 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 	// own so a hotkey could reach it without a button to click.
 	const restartGame = () => {
 		instance.restart()
+		// restart() brings the core back running, so a button still saying
+		// "Resume" would be a lie -- and one the idle chrome and the
+		// autosave both go on believing for the rest of the session.
+		setPaused(false)
 		flash(t('arcade', 'Restarted'))
 	}
 
@@ -112,24 +152,41 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 	let statesButton = null
 	let galleryPanel = null
 	let galleryButton = null
+	// The screenshots button only earns its place once the game has a
+	// screenshot, which can happen at any moment of the session.
+	const showGalleryButton = (show) => {
+		galleryButton?.classList.toggle('hidden', !show)
+	}
 	// Hiding a panel and letting go of its button always travel together.
-	const hideStates = () => {
-		statesPanel?.element.classList.add('hidden')
-		statesButton?.classList.remove('active')
+	// So does the focus: a panel that goes away while it holds the focus
+	// would drop it on the body, leaving the keyboard nowhere.
+	const hidePanel = (panel, element) => {
+		if (panel === null) {
+			return
+		}
+		const held = panel.element.contains(document.activeElement)
+		panel.element.classList.add('hidden')
+		setExpanded(element, false)
+		if (held) {
+			element?.focus()
+		}
 	}
-	const hideGallery = () => {
-		galleryPanel?.element.classList.add('hidden')
-		galleryButton?.classList.remove('active')
-	}
+	const hideStates = () => hidePanel(statesPanel, statesButton)
+	const hideGallery = () => hidePanel(galleryPanel, galleryButton)
 	const statesOpen = () => statesPanel !== null && !statesPanel.element.classList.contains('hidden')
 	const galleryOpen = () => galleryPanel !== null && !galleryPanel.element.classList.contains('hidden')
 	const togglePanel = (panel, element, onOpen) => {
 		const visible = !panel.element.classList.contains('hidden')
-		panel.element.classList.toggle('hidden', visible)
-		element.classList.toggle('active', !visible)
-		if (!visible) {
-			onOpen()
+		if (visible) {
+			hidePanel(panel, element)
+			return
 		}
+		panel.element.classList.remove('hidden')
+		setExpanded(element, true)
+		onOpen()
+		// Into the panel, so it is read out on opening and its buttons are
+		// the next thing the Tab key reaches.
+		panel.element.focus()
 	}
 	if (canSave) {
 		statesPanel = createStatesPanel({
@@ -148,14 +205,19 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 				statesPanel.refresh()
 			})
 		})
+		statesButton.setAttribute('aria-haspopup', 'dialog')
+		setExpanded(statesButton, false)
 		offerResume({
 			container,
 			romPath,
 			load: statesPanel.load,
 			automatic: settings.autoload_on_start === true,
+			signal: gone.signal,
 		})
 
-		// And keep saving it while it is played, when asked to.
+		// And keep saving it while it is played, when asked to. Two tabs
+		// on the same game write over each other's automatic slot here,
+		// last tick winning; coordinating them is not attempted.
 		const interval = Number(settings.autosave_interval ?? 0)
 		if (interval > 0) {
 			autosaveTimer = setInterval(() => {
@@ -168,34 +230,51 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 
 	// Every way out of the game goes through here first, so the game is
 	// left where it was and can be picked up again. Nothing to save
-	// without a slot to save into, or when it was not asked for.
+	// without a slot to save into, or when it was not asked for -- and
+	// nothing to save is as good as saved.
 	const saveBeforeLeaving = async () => {
 		if (settings.autosave_on_close !== true || statesPanel === null) {
-			return
+			return true
 		}
 		flash(t('arcade', 'Saving the game …'))
-		await statesPanel.save(AUTO_SLOT)
+		// A tick of the autosave may be in the air. Letting it land first
+		// keeps this save from being turned away as a repeat of it, and
+		// so from reporting a failure that never happened.
+		await statesPanel.settled()
+		return await statesPanel.save(AUTO_SLOT)
 	}
 
-	// Virtual gamepad for touch play.
+	// Virtual gamepad for touch play. It is offered wherever a finger
+	// could work it, but only put over the picture where a finger is how
+	// the device is pointed at in the first place.
 	let touchControls = null
 	if (isTouchDevice()) {
 		touchControls = attachTouchControls({ container, instance })
-		button(ICONS.gamepad, t('arcade', 'Touch controls'), (element) => {
+		const showTouch = isTouchPrimary()
+		touchControls.element.classList.toggle('hidden', !showTouch)
+		const touchButton = button(ICONS.gamepad, t('arcade', 'Touch controls'), (element) => {
 			const hidden = touchControls.element.classList.toggle('hidden')
-			element.classList.toggle('active', !hidden)
-		}).classList.add('active')
+			if (hidden) {
+				// Hiding it mid-press would leave that button down for the
+				// rest of the game, with nothing left on screen to lift it.
+				touchControls.release()
+			}
+			setPressed(element, !hidden)
+		})
+		setPressed(touchButton, showTouch)
 	}
 
-	button(ICONS.mute, t('arcade', 'Mute'), (element) => {
+	const muteButton = button(ICONS.mute, t('arcade', 'Mute'), (element) => {
 		instance.sendCommand('MUTE')
-		element.classList.toggle('active')
+		setPressed(element, !element.classList.contains('active'))
 	})
+	setPressed(muteButton, false)
 
 	const fastForwardButton = button(ICONS.fastForward, t('arcade', 'Fast-forward'), (element) => {
 		instance.sendCommand('FAST_FORWARD')
-		element.classList.toggle('active')
+		setPressed(element, !element.classList.contains('active'))
 	})
+	setPressed(fastForwardButton, false)
 
 	// RetroArch's built-in menu, with core options, control remapping, etc.
 	// It sits in the actions menu; the handler stays separate so a hotkey
@@ -212,7 +291,15 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 		button(ICONS.restart, t('arcade', 'Restart'), restartGame)
 	}
 
+	// One shot at a time, for the same reason the state panel takes one
+	// operation at a time: a held hotkey would otherwise fire a burst of
+	// them, each one a file of its own.
+	let shooting = false
 	const screenshotButton = button(ICONS.screenshot, t('arcade', 'Screenshot'), async () => {
+		if (shooting) {
+			return
+		}
+		shooting = true
 		try {
 			const blob = await instance.screenshot()
 			const stem = (romName || 'nostalgist').replace(/\.[^.]+$/, '')
@@ -222,6 +309,11 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 				const system = shortNameForPath(romPath)
 				await saveScreenshot(system === '' ? folder : `${folder}/${system}`, stem, blob)
 				flash(t('arcade', 'Screenshot saved to {folder}', { folder }))
+				// There is one now, so the button that shows them has
+				// something to show -- it used to be asked once at launch
+				// and never again, so a game's first screenshot stayed out
+				// of reach until the page was opened anew.
+				showGalleryButton(true)
 				galleryPanel?.refresh()
 			} else {
 				const url = URL.createObjectURL(blob)
@@ -234,12 +326,20 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 		} catch (error) {
 			console.error('Could not take a screenshot', error)
 			flash(t('arcade', 'Could not take a screenshot'))
+		} finally {
+			shooting = false
 		}
 	})
 
 	// The screenshots of this game, which also live in the user's files.
 	if (getCurrentUser() !== null && romPath && (settings.screenshots_folder ?? '') !== '') {
-		galleryPanel = createGalleryPanel({ romPath, flash })
+		galleryPanel = createGalleryPanel({
+			romPath,
+			flash,
+			// Every listing the panel makes is also an answer to "is there
+			// anything to show", so the button follows it both ways.
+			onCount: (count) => showGalleryButton(count > 0),
+		})
 		galleryButton = button(ICONS.gallery, t('arcade', 'Screenshots'), (element) => {
 			togglePanel(galleryPanel, element, () => {
 				hideStates()
@@ -247,19 +347,29 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 				galleryPanel.refresh()
 			})
 		})
+		galleryButton.setAttribute('aria-haspopup', 'dialog')
+		setExpanded(galleryButton, false)
 		// Nothing to show until there is a screenshot of this game.
-		galleryButton.classList.add('hidden')
-		galleryPanel.count().then((count) => {
-			galleryButton.classList.toggle('hidden', count === 0)
-		})
+		showGalleryButton(false)
+		galleryPanel.count().then((count) => showGalleryButton(count > 0))
 	}
 
 	const fullscreenButton = button(ICONS.fullscreen, t('arcade', 'Fullscreen'), () => {
-		if (document.fullscreenElement !== null) {
-			document.exitFullscreen()
-		} else {
-			container.requestFullscreen?.()
+		// Only this game's own full screen is this button's to leave: in
+		// the Files Viewer the page may be filling the screen for reasons
+		// of its own, and throwing that away is not what was asked.
+		if (document.fullscreenElement === container) {
+			document.exitFullscreen().catch((error) => {
+				console.error('Could not leave fullscreen', error)
+			})
+			return
 		}
+		// Browsers turn the request down -- a permissions policy, a click
+		// they did not count as a gesture -- and say so by rejecting.
+		container.requestFullscreen?.().catch((error) => {
+			console.error('Could not go fullscreen', error)
+			flash(t('arcade', 'Could not go fullscreen'))
+		})
 	})
 
 	// The three-dots actions menu, with what the Files Viewer offers in its
@@ -269,9 +379,17 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 	let actionsButton = null
 	let refreshSidebarItem = null
 	const closeActionsMenu = () => {
-		actionsMenu?.classList.add('hidden')
-		actionsButton?.classList.remove('active')
-		actionsButton?.setAttribute('aria-expanded', 'false')
+		if (actionsMenu === null) {
+			return
+		}
+		// Only when the menu had the focus: an outside click closing it is
+		// on its way somewhere else, and should not be pulled back here.
+		const held = actionsMenu.contains(document.activeElement)
+		actionsMenu.classList.add('hidden')
+		setExpanded(actionsButton, false)
+		if (held) {
+			actionsButton?.focus()
+		}
 	}
 	if (closeUrl !== '') {
 		actionsMenu = document.createElement('div')
@@ -324,7 +442,12 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 				? 'OCA'
 				: window.OCA.Files === undefined ? 'OCA.Files' : 'OCA.Files.Sidebar'
 			console.warn(`arcade: cannot open the Files sidebar, window.${missing} is undefined; opening the Files app instead`)
-			await saveBeforeLeaving()
+			if (!await waitAtMost(saveBeforeLeaving(), SAVE_BEFORE_LEAVING_WAIT, false)) {
+				// Leaving this page ends the game, so a save that did not
+				// happen means staying put and saying so.
+				flash(t('arcade', 'Could not save the game, so the details were not opened.'))
+				return
+			}
 			const absolute = romPath.startsWith('/') ? romPath : `/${romPath}`
 			const dir = absolute.replace(/\/[^/]*$/, '') || '/'
 			let target
@@ -370,17 +493,21 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 		actionsButton = button(ICONS.dots, t('arcade', 'Actions'), (element) => {
 			const visible = !actionsMenu.classList.contains('hidden')
 			actionsMenu.classList.toggle('hidden', visible)
-			element.classList.toggle('active', !visible)
-			element.setAttribute('aria-expanded', String(!visible))
+			setExpanded(element, !visible)
 			if (!visible) {
 				// The menu and the panels cover the same spot.
 				hideStates()
 				hideGallery()
 				refreshSidebarItem?.()
+				actionsMenu.querySelector('.arcade-actions-item')?.focus()
 			}
 		}, topbar)
 		actionsButton.setAttribute('aria-haspopup', 'true')
-		actionsButton.setAttribute('aria-expanded', 'false')
+		setExpanded(actionsButton, false)
+		// Before the close button, not after it: the menu belongs to the
+		// button that opens it, and Tab should walk into it rather than
+		// past it to Close.
+		topbar.appendChild(actionsMenu)
 	}
 
 	// A click anywhere else puts the menu away, the way core menus behave.
@@ -398,15 +525,29 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 
 	let closeButton = null
 	if (closeUrl !== '') {
+		// A save that did not happen is not something to walk away from
+		// quietly, so the first press says so and the button comes back
+		// as what it now really is: leaving without the save.
+		let leaveUnsaved = false
 		closeButton = button(ICONS.close, t('arcade', 'Close'), async (element) => {
 			element.disabled = true
-			await saveBeforeLeaving()
-			onClose?.()
-			try {
-				instance.exit()
-			} catch (error) {
-				console.error('Arcade failed to exit', error)
+			// Bounded: the save polls the core's file system for the file
+			// it wrote, and a core that never writes it would otherwise
+			// hold the page here for a minute with nothing to press.
+			const saved = leaveUnsaved
+				|| await waitAtMost(saveBeforeLeaving(), SAVE_BEFORE_LEAVING_WAIT, false)
+			if (!saved) {
+				leaveUnsaved = true
+				element.disabled = false
+				element.title = t('arcade', 'Close without saving')
+				element.setAttribute('aria-label', element.title)
+				element.focus()
+				flash(t('arcade', 'Could not save the game. Press Close again to leave without saving.'))
+				return
 			}
+			// Closing is the session's to do, not the toolbar's: it waits
+			// for the battery save before it takes the core away.
+			await onClose?.()
 			window.location.href = closeUrl
 		}, topbar)
 	}
@@ -422,7 +563,10 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 		saveState: () => statesPanel?.save(1),
 		loadState: () => statesPanel?.load(1),
 		screenshot: () => screenshotButton.click(),
-		closeGame: () => closeButton?.click(),
+		// Inside the Files Viewer there is nowhere to close to, so the key
+		// is not the player's to take: saying so lets it through to the
+		// Viewer, whose own Escape closes the modal.
+		closeGame: () => (closeButton === null ? false : closeButton.click()),
 	}
 	const bound = {}
 	for (const [action, code] of Object.entries(hotkeys)) {
@@ -430,8 +574,8 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 			bound[code] = actions[action]
 		}
 	}
-	// Closing whatever is open still comes first: while a panel shows,
-	// Escape puts it away, and only then does what it was bound to.
+	// Escape unwinds the player one layer at a time, and an action answers
+	// false when there was no layer of ours left for it to take.
 	const escapeAction = bound.Escape
 	bound.Escape = () => {
 		// The actions menu first: while it shows, Escape means only "put
@@ -439,33 +583,68 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 		// closing the game.
 		if (actionsMenu !== null && !actionsMenu.classList.contains('hidden')) {
 			closeActionsMenu()
-			return
+			return true
 		}
 		const panelOpen = statesOpen() || galleryOpen()
 		if (panelOpen) {
 			hideStates()
 			hideGallery()
-			return
+			return true
 		}
-		escapeAction?.()
+		// Then the full screen, and only the one this game is filling:
+		// leaving it is what Escape means everywhere else on the web, and
+		// closing the game underneath it would be a layer too many.
+		if (document.fullscreenElement === container) {
+			document.exitFullscreen().catch((error) => {
+				console.error('Could not leave fullscreen', error)
+			})
+			return true
+		}
+		if (escapeAction === undefined) {
+			return false
+		}
+		return escapeAction()
 	}
 
 	const onKeyDown = (event) => {
 		if (event.ctrlKey || event.altKey || event.metaKey) {
 			return
 		}
+		// Held keys repeat, and none of what the player binds means
+		// anything more the second time: a held save key would be sixty
+		// saves a second of the same slot.
+		if (event.repeat) {
+			return
+		}
+		// Tab is how a keyboard goes looking for the controls, and hidden
+		// chrome is out of the tab order, so there would be nothing to
+		// find. Bringing it back first puts it back in the way.
+		if (event.code === 'Tab') {
+			wakeChrome()
+		}
 		const target = event.target
 		if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) {
 			return
 		}
-		const action = bound[event.code]
-		if (action !== undefined) {
-			event.preventDefault()
-			event.stopPropagation()
-			// A hotkey is activity too: bring the chrome back for it.
-			wakeChrome()
-			action()
+		// Nor from our own chrome: a button that has the focus owns its
+		// keys -- Space and Enter press it -- and taking Space there would
+		// pause the game instead of working the button under the finger.
+		if (target instanceof Element && target.closest(CHROME_SELECTOR) !== null) {
+			return
 		}
+		const action = bound[event.code]
+		if (action === undefined) {
+			return
+		}
+		// A hotkey is activity too: bring the chrome back for it.
+		wakeChrome()
+		if (action() === false) {
+			// Nothing of ours came of it, so the key is not ours to keep:
+			// the Viewer's own Escape still has a modal to close.
+			return
+		}
+		event.preventDefault()
+		event.stopPropagation()
 	}
 	// Ahead of the emulator, which listens on the window for its own keys.
 	document.addEventListener('keydown', onKeyDown, true)
@@ -484,11 +663,8 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 		container.appendChild(galleryPanel.element)
 	}
 	if (topbar !== null) {
-		// The actions menu hangs from the topbar, so it opens downward and
-		// stays aligned to it however the container is sized.
-		if (actionsMenu !== null) {
-			topbar.appendChild(actionsMenu)
-		}
+		// The actions menu already hangs from the topbar, so it opens
+		// downward and stays aligned to it however the container is sized.
 		container.appendChild(topbar)
 	}
 
@@ -543,12 +719,18 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 		}
 		wakeChrome()
 	}
+	// Focus is the keyboard's version of moving the pointer: it arriving
+	// anywhere in the player brings the chrome back, so a player who never
+	// touches a mouse can still get at it.
+	const onFocusIn = () => wakeChrome()
 	container.addEventListener('pointermove', onPointerMove)
 	container.addEventListener('pointerdown', onPointerDown)
+	container.addEventListener('focusin', onFocusIn)
 	container.addEventListener('touchstart', onTouchReveal, { capture: true, passive: false })
 	scheduleHide()
 
 	return () => {
+		gone.abort()
 		clearTimeout(statusTimer)
 		clearInterval(autosaveTimer)
 		clearTimeout(idleTimer)
@@ -557,6 +739,7 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 		document.removeEventListener('click', onDocumentClick)
 		container.removeEventListener('pointermove', onPointerMove)
 		container.removeEventListener('pointerdown', onPointerDown)
+		container.removeEventListener('focusin', onFocusIn)
 		container.removeEventListener('touchstart', onTouchReveal, true)
 		container.classList.remove('arcade-chrome-hidden')
 		touchControls?.detach()

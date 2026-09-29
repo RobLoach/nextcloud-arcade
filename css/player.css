@@ -33,11 +33,15 @@
 .arcade-topbar:hover,
 .arcade-topbar:focus-within { opacity: 1; }
 /* Idle: after a while without movement the chrome goes away entirely,
-   and takes no clicks, so a hidden button cannot be hit by accident. */
+   and takes no clicks, so a hidden button cannot be hit by accident.
+   visibility also takes it out of the tab order: a dozen invisible tab
+   stops are the keyboard's version of the same accident. Focus arriving
+   anywhere in the player wakes it again, so it can still be reached. */
 .arcade-player-container.arcade-chrome-hidden .arcade-toolbar,
 .arcade-player-container.arcade-chrome-hidden .arcade-topbar {
 	opacity: 0;
 	pointer-events: none;
+	visibility: hidden;
 }
 .arcade-toolbar > button,
 .arcade-topbar > button {
@@ -102,6 +106,7 @@
 	line-height: 1.3;
 }
 .arcade-states-slot button,
+.arcade-gallery-empty button,
 .arcade-resume button {
 	background-color: rgba(255, 255, 255, 0.15);
 	border: none;
@@ -111,15 +116,18 @@
 	min-height: 0;
 	cursor: pointer;
 }
-.arcade-states-slot button {
+.arcade-states-slot button,
+.arcade-gallery-empty button {
 	font-size: 12px;
 	padding: 6px 10px;
 }
+.arcade-gallery-empty button { margin-inline-start: 8px; }
 .arcade-resume button {
 	font-size: 13px;
 	padding: 6px 12px;
 }
 .arcade-states-slot button:hover:not(:disabled),
+.arcade-gallery-empty button:hover,
 .arcade-resume button:hover { background-color: rgba(255, 255, 255, 0.3); }
 .arcade-states-slot button:disabled { opacity: 0.4; cursor: default; }
 .arcade-states-sram {

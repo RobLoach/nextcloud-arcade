@@ -7,8 +7,13 @@ import { generateFilePath, generateUrl } from '@nextcloud/router'
 import { api } from './api.js'
 import { inputConfig, retroarchKey } from './keys.js'
 import { biosForSystem, coreForSystem, systemForFile, systemFromBytes, systemLabel } from './systems.js'
+import { waitAtMost } from './wait.js'
 
 const SRAM_SYNC_INTERVAL = 60 * 1000
+// How long the last upload of a closing game is given. Nostalgist polls
+// the core's file system for the written save, so even a healthy one
+// takes a moment; a wedged one must not keep the player here.
+const SRAM_FINAL_WAIT = 5000
 
 // The games whose battery save was just deleted. The emulator still holds
 // the old save in memory, and the next sync would write it right back, so
@@ -24,6 +29,16 @@ const sramSyncStopped = new Set()
  */
 export function disableSramSync(romPath) {
 	sramSyncStopped.add(romPath)
+}
+
+/**
+ * Take that back, for a delete that did not happen after all: the server
+ * still holds the save, so the game should go on keeping it up to date.
+ *
+ * @param {string} romPath path identifying the game
+ */
+export function enableSramSync(romPath) {
+	sramSyncStopped.delete(romPath)
 }
 
 /**
@@ -123,20 +138,23 @@ async function resolveRom(blob, romName, systemHint) {
  * @param {string} [options.romPath] path identifying the game, enables SRAM restore
  * @param {?Function} [options.onWarning] told, in words for the player, about
  *                                        anything the launch went without
+ * @param {?AbortSignal} [options.signal] abandons the launch when it fires
  * @return {Promise<Nostalgist>} the running emulator
  */
-export async function launchRom({ element, romUrl, romName, settings = {}, systemHint = null, romPath = '', onWarning = null }) {
+export async function launchRom({ element, romUrl, romName, settings = {}, systemHint = null, romPath = '', onWarning = null, signal = null }) {
 	const canSave = (settings.saves_folder ?? '') !== ''
 	// The core is a few megabytes of its own. Warming it in the browser
 	// cache now means it is there when Nostalgist asks, instead of being
 	// fetched after the ROM.
 	const core = coreForSystem(systemForFile(romName)?.id ?? systemHint?.id ?? '')
 	if (core !== null) {
-		prefetchCore(core)
+		prefetchCore(core, signal)
 	}
 
 	// Fetch the ROM here so the request carries the Nextcloud session.
-	const response = await fetch(romUrl, { credentials: 'same-origin' })
+	// Every fetch of the launch takes the signal: a game closed while it
+	// is still loading should stop downloading, not finish in the dark.
+	const response = await fetch(romUrl, { credentials: 'same-origin', signal })
 	if (!response.ok) {
 		throw new Error(`Could not fetch the ROM: ${response.status} ${response.statusText}`)
 	}
@@ -144,8 +162,8 @@ export async function launchRom({ element, romUrl, romName, settings = {}, syste
 	if (system === null) {
 		throw new Error(t('arcade', 'Unsupported ROM type: {file}', { file: romName }))
 	}
-	const sram = canSave ? await fetchSram(romPath) : null
-	const bios = await fetchBios(system.id)
+	const sram = canSave ? await fetchSram(romPath, signal) : null
+	const bios = await fetchBios(system.id, signal)
 	if (bios.length === 0 && biosForSystem(system.id).length > 0 && typeof onWarning === 'function') {
 		// The game starts anyway, just poorer for it -- most cores run
 		// without their BIOS, only worse (the PS1 much worse). Worth a
@@ -153,6 +171,11 @@ export async function launchRom({ element, romUrl, romName, settings = {}, syste
 		onWarning(t('arcade', 'No BIOS files found for {system}. Games may run worse without them.', {
 			system: systemLabel(system.id),
 		}))
+	}
+	if (signal?.aborted === true) {
+		// Closed while the files were still coming in: no core is started
+		// for a game nobody is waiting for any more.
+		throw new DOMException('The launch was abandoned', 'AbortError')
 	}
 	const runahead = Number(settings.runahead_frames ?? 0)
 
@@ -224,9 +247,10 @@ function rewindConfig(settings) {
  * missing is quietly left out.
  *
  * @param {string} systemId the system being played
+ * @param {?AbortSignal} [signal] abandons the requests when it fires
  * @return {Promise<File[]>} the files that were there
  */
-async function fetchBios(systemId) {
+async function fetchBios(systemId, signal = null) {
 	const names = biosForSystem(systemId)
 	if (names.length === 0 || getCurrentUser() === null) {
 		return []
@@ -234,7 +258,7 @@ async function fetchBios(systemId) {
 	const files = await Promise.all(names.map(async (name) => {
 		try {
 			const url = generateUrl('/apps/arcade/arcade/bios?name={name}', { name })
-			const response = await fetch(url, { credentials: 'same-origin' })
+			const response = await fetch(url, { credentials: 'same-origin', signal })
 			if (response.ok) {
 				return new File([await response.blob()], name)
 			}
@@ -250,10 +274,11 @@ async function fetchBios(systemId) {
  * Ask for the files of a core without waiting for them.
  *
  * @param {string} core name of the libretro core
+ * @param {?AbortSignal} [signal] abandons the requests when it fires
  */
-function prefetchCore(core) {
+function prefetchCore(core, signal = null) {
 	for (const file of [`${core}_libretro.js`, `${core}_libretro.wasm`]) {
-		fetch(coreUrl(file), { credentials: 'same-origin', priority: 'high' })
+		fetch(coreUrl(file), { credentials: 'same-origin', priority: 'high', signal })
 			.catch(() => {
 				// Only a warm cache was at stake.
 			})
@@ -331,15 +356,17 @@ function sramUrl(romPath) {
  * Fetch the stored in-game battery save, if any.
  *
  * @param {string} romPath path identifying the game
+ * @param {?AbortSignal} [signal] abandons the request when it fires
  * @return {Promise<?Blob>} the SRAM, or null
  */
-async function fetchSram(romPath) {
+async function fetchSram(romPath, signal = null) {
 	if (!romPath || getCurrentUser() === null) {
 		return null
 	}
 	try {
 		const response = await fetch(sramUrl(romPath), {
 			headers: { requesttoken: getRequestToken() ?? '' },
+			signal,
 		})
 		if (!response.ok) {
 			return null
@@ -358,11 +385,12 @@ async function fetchSram(romPath) {
  *
  * @param {Nostalgist} instance the running emulator
  * @param {string} romPath path identifying the game
- * @return {Function} stops the synchronization
+ * @return {Function} stops the synchronization, answering once the last
+ *                    upload is through or has been given up on
  */
 export function startSramSync(instance, romPath, canSave = true) {
 	if (!romPath || !canSave || getCurrentUser() === null) {
-		return () => {}
+		return async () => {}
 	}
 	// A fresh launch starts from what the server holds, so it syncs again
 	// even when the battery save was deleted in an earlier session.
@@ -376,6 +404,12 @@ export function startSramSync(instance, romPath, canSave = true) {
 			if (sram === undefined || sram.size === 0) {
 				return
 			}
+			// Asked again, because reading the save out of the core takes
+			// long enough for it to have been deleted meanwhile: the check
+			// above the read is not the one that decides.
+			if (sramSyncStopped.has(romPath)) {
+				return
+			}
 			await api(sramUrl(romPath), {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/octet-stream' },
@@ -387,14 +421,20 @@ export function startSramSync(instance, romPath, canSave = true) {
 			console.error('Could not save the SRAM', error)
 		}
 	}
+	// Two tabs on the same game still write over one another: each holds
+	// its own copy of the save and uploads it on this timer, so the last
+	// tick wins. Coordinating them is not attempted here.
 	const timer = setInterval(upload, SRAM_SYNC_INTERVAL)
 	const onPageHide = () => {
 		upload()
 	}
 	window.addEventListener('pagehide', onPageHide)
-	return () => {
+	return async () => {
 		clearInterval(timer)
 		window.removeEventListener('pagehide', onPageHide)
-		upload()
+		// Everything played since the last tick lives only in this upload,
+		// so the caller waits for it before tearing the emulator down --
+		// an exit takes the core, and with it the save, away mid-read.
+		await waitAtMost(upload(), SRAM_FINAL_WAIT, undefined)
 	}
 }

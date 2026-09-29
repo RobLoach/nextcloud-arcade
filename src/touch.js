@@ -76,11 +76,28 @@ const STYLE = `
 `
 
 /**
- * @return {boolean} whether this looks like a touch device
+ * Whether the overlay is worth offering at all.
+ *
+ * @return {boolean} whether this device can be played by touch
  */
 export function isTouchDevice() {
-	return window.matchMedia?.('(pointer: coarse)').matches
+	return window.matchMedia?.('(pointer: coarse)').matches === true
 		|| navigator.maxTouchPoints > 0
+}
+
+/**
+ * Whether it is worth putting over the picture to begin with.
+ *
+ * A laptop with a touchscreen answers yes to the question above, and is
+ * played with a keyboard all the same. Covering a quarter of its screen
+ * with thumb buttons nobody asked for is the wrong guess there, so the
+ * overlay waits behind its button until touch is the way the device is
+ * actually pointed at.
+ *
+ * @return {boolean} whether touch is this device's pointer
+ */
+export function isTouchPrimary() {
+	return window.matchMedia?.('(pointer: coarse)').matches === true
 }
 
 function ensureStyle() {
@@ -99,13 +116,17 @@ function ensureStyle() {
  * @param {object} options options
  * @param {HTMLElement} options.container element to attach the overlay to
  * @param {import('nostalgist').Nostalgist} options.instance the running emulator
- * @return {{element: HTMLElement, detach: Function}} the overlay
+ * @return {{element: HTMLElement, release: Function, detach: Function}} the overlay
  */
 export function attachTouchControls({ container, instance }) {
 	ensureStyle()
 
 	const overlay = document.createElement('div')
 	overlay.className = 'arcade-touch'
+	// It answers to nothing but a finger on the glass -- there is no
+	// keyboard or reader path through it, and the keys and the gamepad
+	// already are those paths -- so it is not offered as one.
+	overlay.setAttribute('aria-hidden', 'true')
 
 	// The D-pad is a single zone: the touch position relative to the center
 	// decides the pressed directions, so diagonals work with one thumb.
@@ -164,19 +185,43 @@ export function attachTouchControls({ container, instance }) {
 	dpad.addEventListener('touchcancel', releaseDirections)
 	overlay.appendChild(dpad)
 
+	// Which buttons are down, so every one of them can be let go at once
+	// -- when the pad is hidden mid-press, when the game is closed, or
+	// when a touch ends somewhere the button never hears about. A button
+	// left down is held down for the rest of the session.
+	const held = new Map()
+	const releaseButton = (name) => {
+		const element = held.get(name)
+		if (element === undefined) {
+			return
+		}
+		held.delete(name)
+		element.classList.remove('pressed')
+		instance.pressUp(name)
+	}
+	const releaseAll = () => {
+		for (const name of [...held.keys()]) {
+			releaseButton(name)
+		}
+		releaseDirections()
+	}
+
 	const button = (label, name, className) => {
 		const element = document.createElement('div')
 		element.className = `arcade-touch-button ${className}`
 		element.textContent = label
 		element.addEventListener('touchstart', (event) => {
 			event.preventDefault()
+			if (held.has(name)) {
+				return
+			}
+			held.set(name, element)
 			element.classList.add('pressed')
 			instance.pressDown(name)
 		})
 		const release = (event) => {
 			event.preventDefault()
-			element.classList.remove('pressed')
-			instance.pressUp(name)
+			releaseButton(name)
 		}
 		element.addEventListener('touchend', release)
 		element.addEventListener('touchcancel', release)
@@ -198,10 +243,28 @@ export function attachTouchControls({ container, instance }) {
 
 	container.appendChild(overlay)
 
+	// The safety net, above the buttons themselves: a touch that ends off
+	// the element -- dragged away, taken by the system, ended while the
+	// pad was being hidden -- never reaches the handler that would let it
+	// go. With no finger left on the glass, nothing can still be pressed.
+	const onTouchEnd = (event) => {
+		if (event.touches.length === 0) {
+			releaseAll()
+		}
+	}
+	const onCancel = () => releaseAll()
+	window.addEventListener('touchend', onTouchEnd)
+	window.addEventListener('touchcancel', onCancel)
+	window.addEventListener('pointercancel', onCancel)
+
 	return {
 		element: overlay,
+		release: releaseAll,
 		detach() {
-			releaseDirections()
+			window.removeEventListener('touchend', onTouchEnd)
+			window.removeEventListener('touchcancel', onCancel)
+			window.removeEventListener('pointercancel', onCancel)
+			releaseAll()
 			overlay.remove()
 		},
 	}

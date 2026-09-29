@@ -11,9 +11,11 @@ import { createPanel } from './panel.js'
  * @param {object} options options
  * @param {string} options.romPath path identifying the game
  * @param {Function} options.flash shows a status message
- * @return {{element: HTMLElement, refresh: Function}} the panel
+ * @param {?Function} [options.onCount] told how many there are, each time
+ *                                      the list comes back
+ * @return {{element: HTMLElement, refresh: Function, count: Function}} the panel
  */
-export function createGalleryPanel({ romPath, flash }) {
+export function createGalleryPanel({ romPath, flash, onCount = null }) {
 	const element = createPanel('arcade-gallery', t('arcade', 'Screenshots'))
 
 	const grid = document.createElement('div')
@@ -23,6 +25,21 @@ export function createGalleryPanel({ romPath, flash }) {
 	const empty = document.createElement('p')
 	empty.className = 'arcade-gallery-empty hidden'
 	element.appendChild(empty)
+
+	// A listing that did not come back says so and offers another go,
+	// rather than leaving an empty dialog with nothing to press.
+	const failure = document.createElement('p')
+	failure.className = 'arcade-gallery-empty hidden'
+	failure.appendChild(document.createTextNode(t('arcade', 'Could not read the screenshots.')))
+	const retryButton = document.createElement('button')
+	retryButton.type = 'button'
+	retryButton.textContent = t('arcade', 'Retry')
+	retryButton.addEventListener('click', (event) => {
+		event.stopPropagation()
+		refresh()
+	})
+	failure.appendChild(retryButton)
+	element.appendChild(failure)
 
 	const remove = async (fileId) => {
 		try {
@@ -36,10 +53,6 @@ export function createGalleryPanel({ romPath, flash }) {
 		}
 	}
 
-	// What count() fetched for the button, kept for the first refresh, so
-	// the launch does not ask for the same list twice.
-	let counted = null
-
 	const list = async () => {
 		const response = await api(generateUrl(
 			'/apps/arcade/arcade/screenshots?file={file}',
@@ -48,27 +61,21 @@ export function createGalleryPanel({ romPath, flash }) {
 		return await response.json()
 	}
 
-	const refresh = async () => {
-		let data
-		try {
-			data = counted ?? await list()
-			counted = null
-		} catch (error) {
-			console.error('Could not list the screenshots', error)
-			return
-		}
+	const render = (data) => {
+		const screenshots = Array.isArray(data?.screenshots) ? data.screenshots : []
+		failure.classList.add('hidden')
 
 		grid.innerHTML = ''
-		if (data.folder === '') {
+		if (data?.folder === '') {
 			empty.textContent = t('arcade', 'Set a screenshots folder in the Arcade settings to keep your screenshots.')
-		} else if (data.screenshots.length === 0) {
+		} else if (screenshots.length === 0) {
 			empty.textContent = t('arcade', 'No screenshots of this game yet.')
 		} else {
 			empty.textContent = ''
 		}
 		empty.classList.toggle('hidden', empty.textContent === '')
 
-		for (const screenshot of data.screenshots) {
+		for (const screenshot of screenshots) {
 			const item = document.createElement('figure')
 			item.className = 'arcade-gallery-item'
 
@@ -92,7 +99,9 @@ export function createGalleryPanel({ romPath, flash }) {
 			const deleteButton = document.createElement('button')
 			deleteButton.type = 'button'
 			deleteButton.title = t('arcade', 'Delete')
-			deleteButton.setAttribute('aria-label', t('arcade', 'Delete'))
+			// A grid of buttons all called "Delete" is a grid of one
+			// button, read out; the file name is what tells them apart.
+			deleteButton.setAttribute('aria-label', t('arcade', 'Delete {name}', { name: screenshot.basename }))
 			deleteButton.innerHTML = icon(ICONS.trash)
 			deleteButton.addEventListener('click', (event) => {
 				event.stopPropagation()
@@ -102,6 +111,21 @@ export function createGalleryPanel({ romPath, flash }) {
 
 			grid.appendChild(item)
 		}
+		onCount?.(screenshots.length)
+	}
+
+	const refresh = async () => {
+		try {
+			// Always asked afresh: the launch's answer is stale the moment
+			// the first screenshot of the game is taken, and it was that
+			// stale answer the panel used to open with.
+			render(await list())
+		} catch (error) {
+			console.error('Could not list the screenshots', error)
+			grid.innerHTML = ''
+			empty.classList.add('hidden')
+			failure.classList.remove('hidden')
+		}
 	}
 
 	/**
@@ -109,8 +133,7 @@ export function createGalleryPanel({ romPath, flash }) {
 	 */
 	const count = async () => {
 		try {
-			counted = await list()
-			return counted.screenshots.length
+			return (await list()).screenshots.length
 		} catch (error) {
 			return 0
 		}
