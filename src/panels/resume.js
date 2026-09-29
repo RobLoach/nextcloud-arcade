@@ -19,7 +19,10 @@ export async function offerResume({ container, romPath, load, automatic = false,
 		const data = await response.json()
 		latest = data.states.reduce((a, b) => (a === null || b.mtime > a.mtime ? b : a), null)
 	} catch (error) {
-		console.error('Could not list the states', error)
+		// A game closed mid-request is not a fault worth reporting.
+		if (signal?.aborted !== true) {
+			console.error('Could not list the states', error)
+		}
 	}
 	// The list takes a moment, and the game can be closed inside it: a
 	// prompt put up now would outlive the player it belongs to.

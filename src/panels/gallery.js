@@ -61,33 +61,21 @@ export function createGalleryPanel({ romPath, flash, onCount = null }) {
 		return await response.json()
 	}
 
-	const refresh = async () => {
-		let data
-		try {
-			// Always asked afresh: the launch's answer is stale the moment
-			// the first screenshot of the game is taken, and it was that
-			// stale answer the panel used to open with.
-			data = await list()
-		} catch (error) {
-			console.error('Could not list the screenshots', error)
-			grid.innerHTML = ''
-			empty.classList.add('hidden')
-			failure.classList.remove('hidden')
-			return
-		}
+	const render = (data) => {
+		const screenshots = Array.isArray(data?.screenshots) ? data.screenshots : []
 		failure.classList.add('hidden')
 
 		grid.innerHTML = ''
-		if (data.folder === '') {
+		if (data?.folder === '') {
 			empty.textContent = t('arcade', 'Set a screenshots folder in the Arcade settings to keep your screenshots.')
-		} else if (data.screenshots.length === 0) {
+		} else if (screenshots.length === 0) {
 			empty.textContent = t('arcade', 'No screenshots of this game yet.')
 		} else {
 			empty.textContent = ''
 		}
 		empty.classList.toggle('hidden', empty.textContent === '')
 
-		for (const screenshot of data.screenshots) {
+		for (const screenshot of screenshots) {
 			const item = document.createElement('figure')
 			item.className = 'arcade-gallery-item'
 
@@ -123,7 +111,21 @@ export function createGalleryPanel({ romPath, flash, onCount = null }) {
 
 			grid.appendChild(item)
 		}
-		onCount?.(data.screenshots.length)
+		onCount?.(screenshots.length)
+	}
+
+	const refresh = async () => {
+		try {
+			// Always asked afresh: the launch's answer is stale the moment
+			// the first screenshot of the game is taken, and it was that
+			// stale answer the panel used to open with.
+			render(await list())
+		} catch (error) {
+			console.error('Could not list the screenshots', error)
+			grid.innerHTML = ''
+			empty.classList.add('hidden')
+			failure.classList.remove('hidden')
+		}
 	}
 
 	/**
