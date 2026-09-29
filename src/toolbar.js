@@ -15,6 +15,10 @@ import { waitAtMost } from './wait.js'
 // anyway. Long enough for a healthy core, short enough to stay a door.
 const SAVE_BEFORE_LEAVING_WAIT = 5000
 
+// Everything the player puts on top of the game. Keys pressed inside it
+// belong to whatever has the focus there, not to the emulator.
+const CHROME_SELECTOR = '.arcade-toolbar, .arcade-topbar, .arcade-actions-menu, .arcade-states, .arcade-gallery, .arcade-resume'
+
 /**
  * Attach a control bar for a running emulator.
  *
@@ -439,7 +443,10 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 		saveState: () => statesPanel?.save(1),
 		loadState: () => statesPanel?.load(1),
 		screenshot: () => screenshotButton.click(),
-		closeGame: () => closeButton?.click(),
+		// Inside the Files Viewer there is nowhere to close to, so the key
+		// is not the player's to take: saying so lets it through to the
+		// Viewer, whose own Escape closes the modal.
+		closeGame: () => (closeButton === null ? false : closeButton.click()),
 	}
 	const bound = {}
 	for (const [action, code] of Object.entries(hotkeys)) {
@@ -447,8 +454,8 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 			bound[code] = actions[action]
 		}
 	}
-	// Closing whatever is open still comes first: while a panel shows,
-	// Escape puts it away, and only then does what it was bound to.
+	// Escape unwinds the player one layer at a time, and an action answers
+	// false when there was no layer of ours left for it to take.
 	const escapeAction = bound.Escape
 	bound.Escape = () => {
 		// The actions menu first: while it shows, Escape means only "put
@@ -456,15 +463,27 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 		// closing the game.
 		if (actionsMenu !== null && !actionsMenu.classList.contains('hidden')) {
 			closeActionsMenu()
-			return
+			return true
 		}
 		const panelOpen = statesOpen() || galleryOpen()
 		if (panelOpen) {
 			hideStates()
 			hideGallery()
-			return
+			return true
 		}
-		escapeAction?.()
+		// Then the full screen, and only the one this game is filling:
+		// leaving it is what Escape means everywhere else on the web, and
+		// closing the game underneath it would be a layer too many.
+		if (document.fullscreenElement === container) {
+			document.exitFullscreen().catch((error) => {
+				console.error('Could not leave fullscreen', error)
+			})
+			return true
+		}
+		if (escapeAction === undefined) {
+			return false
+		}
+		return escapeAction()
 	}
 
 	const onKeyDown = (event) => {
@@ -481,14 +500,25 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 		if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) {
 			return
 		}
-		const action = bound[event.code]
-		if (action !== undefined) {
-			event.preventDefault()
-			event.stopPropagation()
-			// A hotkey is activity too: bring the chrome back for it.
-			wakeChrome()
-			action()
+		// Nor from our own chrome: a button that has the focus owns its
+		// keys -- Space and Enter press it -- and taking Space there would
+		// pause the game instead of working the button under the finger.
+		if (target instanceof Element && target.closest(CHROME_SELECTOR) !== null) {
+			return
 		}
+		const action = bound[event.code]
+		if (action === undefined) {
+			return
+		}
+		// A hotkey is activity too: bring the chrome back for it.
+		wakeChrome()
+		if (action() === false) {
+			// Nothing of ours came of it, so the key is not ours to keep:
+			// the Viewer's own Escape still has a modal to close.
+			return
+		}
+		event.preventDefault()
+		event.stopPropagation()
 	}
 	// Ahead of the emulator, which listens on the window for its own keys.
 	document.addEventListener('keydown', onKeyDown, true)
