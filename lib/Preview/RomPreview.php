@@ -136,7 +136,7 @@ class RomPreview implements IProviderV2 {
 	 * @param array<string, mixed> $settings
 	 */
 	private function pictureId(string $userId, Folder $userFolder, File $file, array $settings): int {
-		$cache = Caches::create($this->cacheFactory, Application::APP_ID . '_preview');
+		$cache = Caches::create($this->cacheFactory, Application::CACHE_PREVIEW);
 		$key = $userId . '|' . $settings['thumbnails_folder'] . '|' . $file->getId();
 		$cached = $cache->get($key);
 		if (is_int($cached)) {
@@ -165,7 +165,7 @@ class RomPreview implements IProviderV2 {
 	 * @return array<string, mixed>
 	 */
 	private function index(string $userId, Folder $userFolder, string $thumbnailsPath): array {
-		$cache = Caches::create($this->cacheFactory, Application::APP_ID . '_preview');
+		$cache = Caches::create($this->cacheFactory, Application::CACHE_PREVIEW);
 		$key = 'index|' . $userId . '|' . $thumbnailsPath;
 		$cached = CachePacker::unpack($cache->get($key));
 		if ($cached !== null) {

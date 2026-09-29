@@ -55,10 +55,7 @@ class UninstallCleanupTest extends TestCase {
 
 	public function testEveryCacheTheAppFillsIsCleared(): void {
 		$this->runStep();
-		$this->assertSame(
-			array_map(static fn (string $cache): string => Application::APP_ID . $cache, Application::CACHES),
-			$this->clearedCaches,
-		);
+		$this->assertSame(Application::CACHES, $this->clearedCaches);
 	}
 
 	public function testTheStepIsGivenNothingItCouldDeleteUserDataWith(): void {

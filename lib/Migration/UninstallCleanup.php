@@ -54,7 +54,7 @@ class UninstallCleanup implements IRepairStep {
 		foreach (Application::CACHES as $cache) {
 			// The same cache the app wrote to: distributed when the instance
 			// has one, local when only that is configured.
-			Caches::create($this->cacheFactory, Application::APP_ID . $cache)->clear();
+			Caches::create($this->cacheFactory, $cache)->clear();
 		}
 	}
 }

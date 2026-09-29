@@ -193,7 +193,7 @@ class LibraryService {
 	 * @return array<string, array{type: string, fileId?: int, slot?: int}>
 	 */
 	private function fallbacksFor(string $userId, Folder $userFolder, array $settings, array $missing): array {
-		$cache = Caches::create($this->cacheFactory, Application::APP_ID . '_library');
+		$cache = Caches::create($this->cacheFactory, Application::CACHE_LIBRARY);
 		$key = implode('|', [
 			'fallbacks',
 			self::FALLBACKS_CACHE_VERSION,
@@ -279,7 +279,7 @@ class LibraryService {
 	 * @return list<array<string, mixed>>
 	 */
 	public function getGames(string $userId, Folder $folder, Folder $userFolder, string $folderPath, array $settings, bool $refresh): array {
-		$cache = Caches::create($this->cacheFactory, Application::APP_ID . '_library');
+		$cache = Caches::create($this->cacheFactory, Application::CACHE_LIBRARY);
 		// Nextcloud propagates etags up the tree, so the library folder's
 		// etag changes whenever anything inside it does.
 		$key = implode('|', [
