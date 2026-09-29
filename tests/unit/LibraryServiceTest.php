@@ -610,20 +610,6 @@ class LibraryServiceTest extends TestCase {
 		$this->assertSame('mario.nes', $games[0]['basename']);
 	}
 
-	public function testAnEntryCachedAsRawGzipStillCounts(): void {
-		// What a version that stored the bytes unwrapped left behind.
-		$cache = $this->createStub(ICache::class);
-		$cache->method('get')->willReturn(gzcompress(json_encode([
-			['id' => 1, 'path' => '/Games/mario.nes', 'system' => 'nes', 'size' => 100, 'mtime' => 10],
-		]), 6));
-		$library = $this->createMock(Folder::class);
-		$library->method('getEtag')->willReturn('etag-library');
-		$library->expects($this->never())->method('search');
-
-		$games = $this->scan($this->buildService($this->cacheFactory($cache)), $library);
-		$this->assertSame('mario.nes', $games[0]['basename']);
-	}
-
 	public function testAnUnreadableCacheEntryMeansAFreshScan(): void {
 		$cache = $this->createStub(ICache::class);
 		$cache->method('get')->willReturn('not gzip, not json');

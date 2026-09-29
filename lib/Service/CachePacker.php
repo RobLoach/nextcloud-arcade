@@ -30,23 +30,20 @@ final class CachePacker {
 	}
 
 	/**
-	 * A cached entry back into an array, whichever way it was stored:
-	 * gzipped JSON from pack(), raw gzip from before the bytes were
-	 * wrapped, or a plain array from a pack() that could not compress.
+	 * A cached entry back into an array, either way pack() stored it:
+	 * gzipped JSON behind the wrapper, or a plain array from a pack()
+	 * that could not compress. Anything else is no entry.
 	 *
 	 * @return array<array-key, mixed>|null null when there is no usable entry
 	 */
 	public static function unpack(mixed $cached): ?array {
 		if (is_string($cached)) {
-			if (str_starts_with($cached, 'gz:')) {
-				$binary = base64_decode(substr($cached, 3), true);
-				$encoded = $binary === false ? false : @gzuncompress($binary);
-			} else {
-				// Cached before the bytes were wrapped for the caches that
-				// json_encode what they hold.
-				$encoded = @gzuncompress($cached);
+			if (!str_starts_with($cached, 'gz:')) {
+				return null;
 			}
-			$cached = json_decode($encoded === false ? $cached : $encoded, true);
+			$binary = base64_decode(substr($cached, 3), true);
+			$encoded = $binary === false ? false : @gzuncompress($binary);
+			$cached = $encoded === false ? null : json_decode($encoded, true);
 		}
 		return is_array($cached) ? $cached : null;
 	}
