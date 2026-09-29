@@ -66,6 +66,7 @@ async function pickFolder(input) {
  * Save all the settings, saying so next to the section that changed.
  *
  * @param {Element} [source] the control the change came from
+ * @return {Promise<boolean>} whether the settings reached the server
  */
 async function save(source) {
 	const status = statusFor(source)
@@ -98,6 +99,9 @@ async function save(source) {
 	})
 
 	status.textContent = t('arcade', 'Saving …')
+	// Whether it worked is the caller's business too: anything that acts
+	// on the settings it has just saved needs to know they were saved.
+	let saved = true
 	try {
 		const url = container.dataset.scope === 'admin'
 			? '/apps/arcade/arcade/settings/admin'
@@ -111,8 +115,10 @@ async function save(source) {
 	} catch (error) {
 		console.error('Could not save Arcade settings', error)
 		status.textContent = t('arcade', 'Could not save the settings')
+		saved = false
 	}
 	flashStatus(status)
+	return saved
 }
 
 /**
@@ -318,9 +324,15 @@ async function fetchThumbnails() {
 	const status = document.getElementById('arcade-fetch-status')
 	button.disabled = true
 	status.textContent = t('arcade', 'Starting …')
+	// Saving first, so a folder just typed in is the one used. A save that
+	// did not land would leave the job looking in the folder from before
+	// while this page reported that all was well, so it stops here.
+	if (!await save(button)) {
+		status.textContent = t('arcade', 'The settings could not be saved, so nothing was started.')
+		button.disabled = false
+		return
+	}
 	try {
-		// Saving first, so a folder just typed in is the one used.
-		await save(button)
 		await api(generateUrl('/apps/arcade/arcade/thumbnails/fetch'), { method: 'POST' })
 		status.textContent = t('arcade', 'Looking for box art in the background. It carries on without this page.')
 	} catch (error) {
