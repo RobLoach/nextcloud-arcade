@@ -7,6 +7,7 @@ namespace OCA\Arcade\AppInfo;
 use OCA\Arcade\BackgroundJob\CleanupSweep;
 use OCA\Arcade\BackgroundJob\FetchThumbnails;
 use OCA\Arcade\BackgroundJob\RefreshMetadata;
+use OCA\Arcade\Capabilities;
 use OCA\Arcade\CoreMap;
 use OCA\Arcade\Listener\CleanupListener;
 use OCA\Arcade\Listener\CSPListener;
@@ -78,6 +79,12 @@ class Application extends App implements IBootstrap {
 		// The instance-only scalars are a form the server itself renders
 		// and saves; the app only says what they are.
 		$context->registerDeclarativeSettings(DeclarativeAdmin::class);
+		// What a client can learn about the app without asking it for
+		// anything. Registered here rather than in info.xml so that it
+		// goes when the app does: the server only calls register() for
+		// apps that are enabled, so a disabled Arcade is simply absent
+		// from /ocs/v2.php/cloud/capabilities, with nothing to clean up.
+		$context->registerCapability(Capabilities::class);
 	}
 
 	public function boot(IBootContext $context): void {

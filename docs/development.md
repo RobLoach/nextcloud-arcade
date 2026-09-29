@@ -120,6 +120,33 @@ runs the command still cleans up after the trash. States written by versions bef
 0.14 live in one flat folder instead of one per user; they are still read,
 and are cleaned up when their game is deleted.
 
+### Capabilities
+
+A client that wants to know whether an instance has Arcade, and what it
+will do, asks the server rather than the app:
+
+```
+GET /ocs/v2.php/cloud/capabilities
+```
+
+The answer carries an `arcade` key when the app is enabled, and nothing
+at all when it is not — the capability is registered in
+`Application::register()`, which the server only runs for enabled apps,
+so there is no state to clean up on disable:
+
+| Key | What |
+| --- | --- |
+| `version` | The installed version, as the app manager reports it |
+| `systems` | Every system played: `id`, `name`, `extensions`, `core`, and `bios` — whether the system wants one, not whether the instance holds it |
+| `features` | `saveStates`, `battery`, `screenshots`, `rewind`, `runAhead`, `gamepad`, `tags`, `activity`, as booleans |
+| `limits` | `maxGames` and `maxDepth`, as the administrator has them |
+
+It is a plain `ICapability`, so only a session gets it: every endpoint
+above needs one, and a caller without a session has nothing to do with
+the answer. It is also built from class constants and the two instance
+bounds, which the server has already loaded, so it stays cheap enough
+to be embedded in the initial state of every page.
+
 ## What the app stores
 
 Outside of the files of a user, the app writes:
