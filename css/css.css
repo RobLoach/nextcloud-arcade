@@ -399,3 +399,12 @@
 .arcade .arcade-library-notice {
 	color: var(--color-error-text, var(--color-main-text));
 }
+
+/* The card lifting and the star fading in are decoration: both say the
+   same thing standing still. */
+@media (prefers-reduced-motion: reduce) {
+	.arcade .arcade-library-game,
+	.arcade .arcade-library-favorite {
+		transition: none;
+	}
+}

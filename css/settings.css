@@ -147,3 +147,26 @@
 	outline: 2px solid var(--color-main-text);
 	outline-offset: 2px;
 }
+
+/* The knob is drawn with a background image and the track with a
+   background colour; forced colours drops the one and overrides the
+   other, so on and off would look exactly alike for all seven switches.
+   A ring that is only there when checked survives, being a border. */
+@media (forced-colors: active) {
+	#arcade-settings .checkbox-radio-switch label::before {
+		border: 2px solid currentcolor;
+	}
+
+	#arcade-settings .checkbox-radio-switch__input:checked + label::before {
+		outline: 3px solid currentcolor;
+		outline-offset: -7px;
+	}
+}
+
+/* The knob sliding across is decoration; the switch says the same thing
+   standing still. */
+@media (prefers-reduced-motion: reduce) {
+	#arcade-settings .checkbox-radio-switch label::before {
+		transition: none;
+	}
+}
