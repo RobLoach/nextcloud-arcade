@@ -292,6 +292,27 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 			return element
 		}
 
+		// The same entry for what leads somewhere rather than doing
+		// something: an anchor, so it can be opened in a tab or copied the
+		// way any other link can. Closing the menu is all the click does;
+		// the browser follows the link itself.
+		const linkItem = (iconPath, label, href, attributes = {}) => {
+			const element = document.createElement('a')
+			element.className = 'arcade-actions-item'
+			element.href = href
+			for (const [name, value] of Object.entries(attributes)) {
+				element.setAttribute(name, value)
+			}
+			element.innerHTML = icon(iconPath)
+			element.appendChild(document.createTextNode(label))
+			element.addEventListener('click', (event) => {
+				event.stopPropagation()
+				closeActionsMenu()
+			})
+			actionsMenu.appendChild(element)
+			return element
+		}
+
 		item(ICONS.fullscreen, t('arcade', 'Full screen'), () => fullscreenButton.click())
 		item(ICONS.menu, t('arcade', 'RetroArch menu'), toggleRetroArchMenu)
 		item(ICONS.restart, t('arcade', 'Restart'), restartGame)
@@ -338,30 +359,12 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 		// The personal Arcade settings, in a tab of their own: leaving this
 		// page would tear the running game down, so the game stays put and
 		// no autosave dance is needed.
-		const settingsLink = document.createElement('a')
-		settingsLink.className = 'arcade-actions-item'
-		settingsLink.href = generateUrl('/settings/user/arcade')
-		settingsLink.target = '_blank'
-		settingsLink.rel = 'noopener noreferrer'
-		settingsLink.innerHTML = icon(ICONS.cog)
-		settingsLink.appendChild(document.createTextNode(t('arcade', 'Settings')))
-		settingsLink.addEventListener('click', (event) => {
-			event.stopPropagation()
-			closeActionsMenu()
+		linkItem(ICONS.cog, t('arcade', 'Settings'), generateUrl('/settings/user/arcade'), {
+			target: '_blank',
+			rel: 'noopener noreferrer',
 		})
-		actionsMenu.appendChild(settingsLink)
 		if (romPath) {
-			const link = document.createElement('a')
-			link.className = 'arcade-actions-item'
-			link.href = davUrl(romPath)
-			link.setAttribute('download', romName || '')
-			link.innerHTML = icon(ICONS.download)
-			link.appendChild(document.createTextNode(t('arcade', 'Download')))
-			link.addEventListener('click', (event) => {
-				event.stopPropagation()
-				closeActionsMenu()
-			})
-			actionsMenu.appendChild(link)
+			linkItem(ICONS.download, t('arcade', 'Download'), davUrl(romPath), { download: romName || '' })
 		}
 
 		actionsButton = button(ICONS.dots, t('arcade', 'Actions'), (element) => {
