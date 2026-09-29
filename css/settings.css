@@ -42,9 +42,22 @@
 
 #arcade-settings .arcade-key {
 	display: flex;
+	flex-wrap: wrap;
 	align-items: center;
 	justify-content: space-between;
 	gap: calc(var(--default-grid-baseline, 4px) * 2);
+}
+
+/* What is wrong with a binding, said in the page rather than only in a
+   tooltip. It takes a line of its own under the pair it belongs to. */
+#arcade-settings .arcade-key-hint {
+	flex-basis: 100%;
+	color: var(--color-warning-text, var(--color-text-maxcontrast));
+	font-size: 0.9em;
+}
+
+#arcade-settings .arcade-key-hint:empty {
+	display: none;
 }
 
 #arcade-settings .arcade-key-binding {
@@ -133,4 +146,27 @@
 #arcade-settings .checkbox-radio-switch__input:focus-visible + label::before {
 	outline: 2px solid var(--color-main-text);
 	outline-offset: 2px;
+}
+
+/* The knob is drawn with a background image and the track with a
+   background colour; forced colours drops the one and overrides the
+   other, so on and off would look exactly alike for all seven switches.
+   A ring that is only there when checked survives, being a border. */
+@media (forced-colors: active) {
+	#arcade-settings .checkbox-radio-switch label::before {
+		border: 2px solid currentcolor;
+	}
+
+	#arcade-settings .checkbox-radio-switch__input:checked + label::before {
+		outline: 3px solid currentcolor;
+		outline-offset: -7px;
+	}
+}
+
+/* The knob sliding across is decoration; the switch says the same thing
+   standing still. */
+@media (prefers-reduced-motion: reduce) {
+	#arcade-settings .checkbox-radio-switch label::before {
+		transition: none;
+	}
 }

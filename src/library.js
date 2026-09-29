@@ -45,6 +45,28 @@ const state = {
 	tag: '',
 }
 
+// Every state change redraws the whole library, which throws the focus
+// out with the old DOM. Each control the page draws is named here, so the
+// one that had the focus before a render can be found again after it --
+// the keyboard keeps its place in the tab order, and the gamepad, which
+// drives real DOM focus, keeps the game it was resting on.
+const FOCUS = 'data-focus'
+
+// Typing fires one request per pause, not one per letter. The timer lives
+// out here so a render mid-typing, which builds a new search field, does
+// not leave the old field's timer running as well.
+let searchTimer = null
+
+/**
+ * @param {HTMLElement} element the control to name
+ * @param {string} name a name for it that survives a render
+ * @return {HTMLElement} the same control
+ */
+function focusable(element, name) {
+	element.setAttribute(FOCUS, name)
+	return element
+}
+
 /**
  * @param {string} url the endpoint
  * @param {object} params the query to send
@@ -158,13 +180,17 @@ function thumbnailFor(game, size) {
 /**
  * @param {object} game the game
  * @param {Function} reload reloads the library
+ * @param {Function} notify says something went wrong, in the library's own line
+ * @param {string} scope which shelf the card sits on, so the focus names
+ *   of a game shown twice -- in the favorites row and in the page -- do
+ *   not collide
  * @return {HTMLElement} a card for the game
  */
-function renderCard(game, reload) {
-	const card = document.createElement('div')
+function renderCard(game, reload, notify, scope) {
+	const card = document.createElement('li')
 	card.className = 'arcade-library-game'
 
-	const link = document.createElement('a')
+	const link = focusable(document.createElement('a'), `${scope}/game/${game.path}`)
 	link.className = 'arcade-library-game-link'
 	link.href = playUrl(game.path, game.id)
 	link.appendChild(thumbnailFor(game, 256))
@@ -182,7 +208,7 @@ function renderCard(game, reload) {
 	link.appendChild(system)
 	card.appendChild(link)
 
-	const favorite = document.createElement('button')
+	const favorite = focusable(document.createElement('button'), `${scope}/star/${game.path}`)
 	favorite.type = 'button'
 	favorite.className = game.favorite ? 'arcade-library-favorite active' : 'arcade-library-favorite'
 	favorite.title = game.favorite
@@ -195,9 +221,15 @@ function renderCard(game, reload) {
 		event.preventDefault()
 		try {
 			await post('/apps/arcade/arcade/favorite', { file: game.path })
+			notify('')
 			reload(true)
 		} catch (error) {
+			// The star does not move on its own, so without a word here the
+			// only thing a refused request looks like is a dead button.
 			console.error('Could not change the favorites', error)
+			notify(t('arcade', 'Could not change the favorites for {game}. Try again in a moment.', {
+				game: gameName(game),
+			}))
 		}
 	})
 	card.appendChild(favorite)
@@ -208,13 +240,14 @@ function renderCard(game, reload) {
 /**
  * @param {object[]} games the games of the current page
  * @param {Function} reload reloads the library
+ * @param {Function} notify says something went wrong
  * @return {HTMLElement} the grid of game cards
  */
-function renderGrid(games, reload) {
-	const grid = document.createElement('div')
+function renderGrid(games, reload, notify) {
+	const grid = document.createElement('ul')
 	grid.className = 'arcade-library-grid'
 	for (const game of games) {
-		grid.appendChild(renderCard(game, reload))
+		grid.appendChild(renderCard(game, reload, notify, 'page'))
 	}
 	return grid
 }
@@ -224,9 +257,11 @@ function renderGrid(games, reload) {
  * @param {string} className a class for the row
  * @param {object[]} games the games in it
  * @param {Function} reload reloads the library
+ * @param {Function} notify says something went wrong
+ * @param {string} scope the focus scope of the shelf
  * @return {HTMLElement} a scrollable row of games
  */
-function renderRow(title, className, games, reload) {
+function renderRow(title, className, games, reload, notify, scope) {
 	const section = document.createElement('div')
 	section.className = `arcade-library-row-section ${className}`
 
@@ -234,10 +269,10 @@ function renderRow(title, className, games, reload) {
 	heading.textContent = title
 	section.appendChild(heading)
 
-	const row = document.createElement('div')
+	const row = document.createElement('ul')
 	row.className = 'arcade-library-recent-row'
 	for (const game of games) {
-		row.appendChild(renderCard(game, reload))
+		row.appendChild(renderCard(game, reload, notify, scope))
 	}
 	section.appendChild(row)
 	return section
@@ -248,10 +283,11 @@ function renderRow(title, className, games, reload) {
  * @return {HTMLElement} the list of games
  */
 function renderList(games) {
-	const list = document.createElement('div')
+	const list = document.createElement('ul')
 	list.className = 'arcade-library-rows'
 	for (const game of games) {
-		const row = document.createElement('a')
+		const item = document.createElement('li')
+		const row = focusable(document.createElement('a'), `page/game/${game.path}`)
 		row.className = 'arcade-library-row'
 		row.href = playUrl(game.path, game.id)
 		row.appendChild(thumbnailFor(game, 64))
@@ -268,7 +304,8 @@ function renderList(games) {
 		system.textContent = played === '' ? gameSystem(game) : `${gameSystem(game)} · ${played}`
 		row.appendChild(system)
 
-		list.appendChild(row)
+		item.appendChild(row)
+		list.appendChild(item)
 	}
 	return list
 }
@@ -293,7 +330,13 @@ function renderTable(games, reload) {
 	]
 	for (const column of columns) {
 		const cell = document.createElement('th')
-		const button = document.createElement('button')
+		cell.setAttribute('scope', 'col')
+		// The arrow is the glance; aria-sort is the same thing said out
+		// loud, and it belongs on the header, not on the button inside it.
+		cell.setAttribute('aria-sort', state.sort !== column.key
+			? 'none'
+			: (state.order === 'asc' ? 'ascending' : 'descending'))
+		const button = focusable(document.createElement('button'), `sort/${column.key}`)
 		button.type = 'button'
 		button.textContent = state.sort === column.key
 			? `${column.label} ${state.order === 'asc' ? '▲' : '▼'}`
@@ -315,7 +358,7 @@ function renderTable(games, reload) {
 		const row = document.createElement('tr')
 
 		const nameCell = document.createElement('td')
-		const link = document.createElement('a')
+		const link = focusable(document.createElement('a'), `page/game/${game.path}`)
 		link.href = playUrl(game.path, game.id)
 		link.textContent = gameName(game)
 		link.title = game.basename
@@ -352,17 +395,35 @@ function renderTable(games, reload) {
 /**
  * @param {object} data the library response
  * @param {Function} reload reloads the library with new parameters
+ * @param {?HTMLElement} status the page's live region, to say the count in,
+ *   or null when the page has already said its piece there
  * @return {HTMLElement} the pagination controls
  */
-function renderPagination(data, reload) {
+function renderPagination(data, reload, status) {
 	const pagination = document.createElement('div')
 	pagination.className = 'arcade-library-pagination'
 
 	const first = data.total === 0 ? 0 : data.offset + 1
 	const last = Math.min(data.offset + data.limit, data.total)
 
-	const pageButton = (label, targetOffset, disabled) => {
-		const button = document.createElement('button')
+	// The count is worth saying even when one page holds everything, so it
+	// is always here; only the walking about needs the buttons.
+	if (status !== null) {
+		status.textContent = t('arcade', '{first}–{last} of {total}', {
+			first,
+			last,
+			total: data.total,
+		})
+	}
+	if (data.total <= data.limit) {
+		if (status !== null) {
+			pagination.appendChild(status)
+		}
+		return pagination
+	}
+
+	const pageButton = (label, name, targetOffset, disabled) => {
+		const button = focusable(document.createElement('button'), name)
 		button.type = 'button'
 		button.textContent = label
 		button.disabled = disabled
@@ -375,26 +436,23 @@ function renderPagination(data, reload) {
 
 	pagination.appendChild(pageButton(
 		t('arcade', 'Previous'),
+		'page/previous',
 		Math.max(0, data.offset - data.limit),
 		data.offset === 0,
 	))
 
-	const count = document.createElement('span')
-	count.className = 'arcade-library-count'
-	count.textContent = t('arcade', '{first}–{last} of {total}', {
-		first,
-		last,
-		total: data.total,
-	})
-	pagination.appendChild(count)
+	if (status !== null) {
+		pagination.appendChild(status)
+	}
 
 	pagination.appendChild(pageButton(
 		t('arcade', 'Next'),
+		'page/next',
 		data.offset + data.limit,
 		last >= data.total,
 	))
 
-	const pageSize = document.createElement('select')
+	const pageSize = focusable(document.createElement('select'), 'page/size')
 	pageSize.className = 'arcade-library-page-size'
 	pageSize.setAttribute('aria-label', t('arcade', 'Games per page'))
 	for (const size of PAGE_SIZES) {
@@ -425,24 +483,27 @@ function renderFilters(systems, tags, reload) {
 	const filters = document.createElement('div')
 	filters.className = 'arcade-library-filters'
 
-	const search = document.createElement('input')
+	const search = focusable(document.createElement('input'), 'filters/search')
 	search.type = 'search'
 	search.className = 'arcade-library-search'
 	search.placeholder = t('arcade', 'Search games …')
 	search.setAttribute('aria-label', t('arcade', 'Search games'))
 	search.value = state.search
-	let searchTimer = null
 	search.addEventListener('input', () => {
+		// The state takes every letter at once, so a response landing
+		// mid-typing rebuilds the field with what is in it rather than with
+		// the text of three hundred milliseconds ago. Only the request
+		// waits for the typing to stop.
+		state.search = search.value
 		clearTimeout(searchTimer)
 		searchTimer = setTimeout(() => {
-			state.search = search.value
 			state.offset = 0
 			reload()
 		}, 300)
 	})
 	filters.appendChild(search)
 
-	const systemFilter = document.createElement('select')
+	const systemFilter = focusable(document.createElement('select'), 'filters/system')
 	systemFilter.className = 'arcade-library-system-filter'
 	systemFilter.setAttribute('aria-label', t('arcade', 'Filter by system'))
 	const all = document.createElement('option')
@@ -469,7 +530,7 @@ function renderFilters(systems, tags, reload) {
 		? tags
 		: [...tags, state.tag].sort((a, b) => a.localeCompare(b))
 	if (tagOptions.length > 0) {
-		const tagFilter = document.createElement('select')
+		const tagFilter = focusable(document.createElement('select'), 'filters/tag')
 		tagFilter.className = 'arcade-library-tag-filter'
 		tagFilter.setAttribute('aria-label', t('arcade', 'Filter by tag'))
 		const allTags = document.createElement('option')
@@ -491,7 +552,7 @@ function renderFilters(systems, tags, reload) {
 		filters.appendChild(tagFilter)
 	}
 
-	return { element: filters, search }
+	return filters
 }
 
 /**
@@ -516,17 +577,20 @@ function renderHeader(reload, setView) {
 		table: t('arcade', 'Table view'),
 	}
 	for (const view of VIEWS) {
-		const button = document.createElement('button')
+		const button = focusable(document.createElement('button'), `view/${view}`)
 		button.type = 'button'
 		button.className = view === state.view ? 'active' : ''
 		button.title = labels[view]
 		button.setAttribute('aria-label', labels[view])
+		// Which view is on shows as a filled button; aria-pressed is the
+		// same fact for anything that cannot see the fill.
+		button.setAttribute('aria-pressed', view === state.view ? 'true' : 'false')
 		button.innerHTML = icon(ICONS[view])
 		button.addEventListener('click', () => setView(view))
 		controls.appendChild(button)
 	}
 
-	const refresh = document.createElement('button')
+	const refresh = focusable(document.createElement('button'), 'view/refresh')
 	refresh.type = 'button'
 	refresh.title = t('arcade', 'Rescan the library folder')
 	refresh.setAttribute('aria-label', refresh.title)
@@ -556,7 +620,7 @@ function renderSuggestion(suggestion, reload) {
 	text.textContent = systems === '' ? games : `${games} (${systems})`
 	item.appendChild(text)
 
-	const use = document.createElement('button')
+	const use = focusable(document.createElement('button'), `suggestion/${suggestion.path}`)
 	use.type = 'button'
 	use.className = 'primary'
 	use.textContent = t('arcade', 'Use this folder')
@@ -615,18 +679,19 @@ async function loadSuggestions(status, reload) {
  *
  * @param {object} data the library response
  * @param {Function} reload reloads the library
+ * @param {HTMLElement} status the page's live region, used for the looking
  * @return {HTMLElement} the onboarding panel
  */
-function renderOnboarding(data, reload) {
+function renderOnboarding(data, reload, status) {
 	const panel = document.createElement('div')
 	panel.className = 'arcade-library-onboarding'
 
-	const status = document.createElement('p')
-	status.className = 'arcade-library-hint'
-	status.textContent = data.exists
+	const where = document.createElement('p')
+	where.className = 'arcade-library-hint'
+	where.textContent = data.exists
 		? t('arcade', 'The games library folder {folder} exists, but no games were found in it.', { folder: data.folder })
 		: t('arcade', 'The games library folder {folder} does not exist yet.', { folder: data.folder })
-	panel.appendChild(status)
+	panel.appendChild(where)
 
 	const explain = document.createElement('p')
 	explain.textContent = t(
@@ -635,11 +700,11 @@ function renderOnboarding(data, reload) {
 	)
 	panel.appendChild(explain)
 
-	const looking = document.createElement('p')
-	looking.className = 'arcade-library-hint'
-	looking.textContent = t('arcade', 'Looking for ROMs in your files …')
-	panel.appendChild(looking)
-	loadSuggestions(looking, reload)
+	// The looking goes on in the background and rewrites this line when it
+	// is done, so it is the page's live region that carries it.
+	status.textContent = t('arcade', 'Looking for ROMs in your files …')
+	panel.appendChild(status)
+	loadSuggestions(status, reload)
 
 	const manual = document.createElement('p')
 	manual.className = 'arcade-library-hint'
@@ -667,6 +732,13 @@ export async function renderLibrary(container, onError) {
 	attachLibraryGamepad(container)
 
 	const load = async (refresh = false) => {
+		// Typing in the search field fires several loads; only the last one
+		// is of interest. The one before it is dropped before anything is
+		// painted, so a page cached under the old filter cannot land on
+		// screen after the new filter has already been asked for.
+		pending?.abort()
+		pending = new AbortController()
+
 		const key = cacheKey()
 		if (!refresh) {
 			const cached = readCache(key)
@@ -674,11 +746,6 @@ export async function renderLibrary(container, onError) {
 				render(cached)
 			}
 		}
-
-		// Typing in the search field fires several loads; only the last one
-		// is of interest.
-		pending?.abort()
-		pending = new AbortController()
 
 		let data
 		try {
@@ -707,6 +774,20 @@ export async function renderLibrary(container, onError) {
 			}
 			return
 		}
+		// A page past the end of the list -- the page size grew, or games
+		// went away under a filter -- would draw an empty grid under a line
+		// reading "121–150 of 40". Step back to the last page that has
+		// games on it and ask again.
+		const limit = data.limit > 0 ? data.limit : state.pageSize
+		const lastOffset = data.total > 0
+			? Math.floor((data.total - 1) / limit) * limit
+			: 0
+		if (state.offset > lastOffset) {
+			state.offset = lastOffset
+			await load(refresh)
+			return
+		}
+
 		writeCache(key, data)
 		render(data)
 	}
@@ -745,15 +826,76 @@ export async function renderLibrary(container, onError) {
 		}
 		shown = data
 
-		// Typing in the search field re-renders, so put the caret back.
-		const searchWasFocused = container.querySelector('.arcade-library-search') === document.activeElement
+		// The whole page is thrown away and drawn again, so whatever held
+		// the focus has to be found again by name afterwards -- and a text
+		// field also wants the caret where it was left.
+		const active = document.activeElement
+		const focused = container.contains(active) ? active.getAttribute(FOCUS) : null
+		const caret = active instanceof HTMLInputElement ? active.selectionStart : null
 
 		container.innerHTML = ''
+		const status = paint(data)
+
+		// A live region only announces what arrives after it is in the
+		// document, never what it was inserted already holding -- and the
+		// whole page is inserted at once here. So the line is emptied and
+		// filled again a frame later, which is a change the region can see.
+		const said = status.textContent
+		status.textContent = ''
+		requestAnimationFrame(() => {
+			if (status.isConnected && status.textContent === '') {
+				status.textContent = said
+			}
+		})
+
+		if (focused !== null) {
+			const again = container.querySelector(`[${FOCUS}="${CSS.escape(focused)}"]`)
+			if (again !== null) {
+				again.focus()
+				if (caret !== null && again instanceof HTMLInputElement) {
+					again.setSelectionRange(caret, caret)
+				}
+			}
+		}
+	}
+
+	/**
+	 * @param {string} message what went wrong, or an empty string to clear
+	 */
+	const notify = (message) => {
+		const notice = container.querySelector('.arcade-library-notice')
+		if (notice !== null) {
+			notice.textContent = message
+			notice.classList.toggle('hidden', message === '')
+		}
+	}
+
+	/**
+	 * Draw the page into the emptied container. The focus is put back by
+	 * render() around this, so nothing here has to think about it.
+	 *
+	 * @param {object} data the library response
+	 * @return {HTMLElement} the page's live region, wherever it ended up
+	 */
+	const paint = (data) => {
 		container.appendChild(renderHeader(load, setView))
 
+		// Where a failure that moves nothing on screen gets to be heard.
+		const notice = document.createElement('p')
+		notice.className = 'arcade-library-hint arcade-library-notice hidden'
+		notice.setAttribute('role', 'alert')
+		container.appendChild(notice)
+
+		// One live region for the page: the count of what matched, the
+		// reason there was nothing to count, or what the looking for ROM
+		// folders turned up. It is put wherever the path at hand needs it.
+		const status = document.createElement('p')
+		status.className = 'arcade-library-hint arcade-library-count'
+		status.setAttribute('role', 'status')
+
 		if (!data.exists || data.libraryTotal === 0) {
-			container.appendChild(renderOnboarding(data, load))
-			return
+			container.appendChild(renderOnboarding(data, load, status))
+			return status
 		}
 
 		// Only on the plain first page: these are shortcuts, not results.
@@ -764,6 +906,8 @@ export async function renderLibrary(container, onError) {
 				'arcade-library-favorites',
 				data.favorites,
 				load,
+				notify,
+				'favorites',
 			))
 		}
 		if (plainPage && (data.recent ?? []).length > 0) {
@@ -772,35 +916,34 @@ export async function renderLibrary(container, onError) {
 				'arcade-library-recent',
 				data.recent,
 				load,
+				notify,
+				'recent',
 			))
 		}
 
-		const filters = renderFilters(data.systems, data.tags ?? [], load)
-		container.appendChild(filters.element)
-		if (searchWasFocused) {
-			filters.search.focus()
-			const end = filters.search.value.length
-			filters.search.setSelectionRange(end, end)
-		}
+		container.appendChild(renderFilters(data.systems, data.tags ?? [], load))
 
-		if (data.total === 0) {
-			const hint = document.createElement('p')
-			hint.className = 'arcade-library-hint'
-			hint.textContent = t('arcade', 'No games match the filters.')
-			container.appendChild(hint)
-			return
+		if ((data.games ?? []).length === 0) {
+			status.textContent = data.total === 0
+				? t('arcade', 'No games match the filters.')
+				: t('arcade', 'No games on this page. Go back to see the rest.')
+			container.appendChild(status)
+			if (data.total > 0) {
+				// Somewhere to go back to, rather than a dead end. The count
+				// is already spoken for by the line above it.
+				container.appendChild(renderPagination(data, () => load(), null))
+			}
+			return status
 		}
 
 		const views = {
-			grid: () => renderGrid(data.games, load),
+			grid: () => renderGrid(data.games, load, notify),
 			list: () => renderList(data.games),
 			table: () => renderTable(data.games, () => load()),
 		}
 		container.appendChild((views[state.view] ?? views.grid)())
 
-		if (data.total > data.limit) {
-			container.appendChild(renderPagination(data, () => load()))
-		}
+		container.appendChild(renderPagination(data, () => load(), status))
 		if (data.truncated) {
 			const truncated = document.createElement('p')
 			truncated.className = 'arcade-library-hint'
@@ -809,6 +952,7 @@ export async function renderLibrary(container, onError) {
 			})
 			container.appendChild(truncated)
 		}
+		return status
 	}
 
 	await load()

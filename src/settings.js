@@ -66,6 +66,7 @@ async function pickFolder(input) {
  * Save all the settings, saying so next to the section that changed.
  *
  * @param {Element} [source] the control the change came from
+ * @return {Promise<boolean>} whether the settings reached the server
  */
 async function save(source) {
 	const status = statusFor(source)
@@ -98,6 +99,9 @@ async function save(source) {
 	})
 
 	status.textContent = t('arcade', 'Saving …')
+	// Whether it worked is the caller's business too: anything that acts
+	// on the settings it has just saved needs to know they were saved.
+	let saved = true
 	try {
 		const url = container.dataset.scope === 'admin'
 			? '/apps/arcade/arcade/settings/admin'
@@ -111,8 +115,10 @@ async function save(source) {
 	} catch (error) {
 		console.error('Could not save Arcade settings', error)
 		status.textContent = t('arcade', 'Could not save the settings')
+		saved = false
 	}
 	flashStatus(status)
+	return saved
 }
 
 /**
@@ -140,24 +146,89 @@ function showRangeValue(range) {
 	}
 }
 
+// A key held with one of these never reaches the player: its own handler
+// steps aside for Control, Alt and Meta so the browser's shortcuts keep
+// working, which leaves a hotkey bound to one of them dead on arrival.
+// Shift is not among them, so a shift key is a fair binding.
+const MODIFIER_ONLY = new Set([
+	'ControlLeft', 'ControlRight', 'AltLeft', 'AltRight', 'MetaLeft', 'MetaRight', 'AltGraph',
+])
+
+// A capture swallows every key of the page while it waits, so it gives up
+// on its own rather than leaving the keyboard locked for good.
+const CAPTURE_TIMEOUT = 15000
+
+// Only one binding waits for a key at a time. Without this, a second click
+// on a button already waiting stacked a second document listener, and
+// every keypress was then taken twice -- and saved twice.
+let capturing = null
+
+/**
+ * Say what is wrong with the key a binding carries, where it can be seen
+ * as well as heard.
+ *
+ * @param {HTMLElement} element the button of the binding
+ * @param {string} message what is wrong, or an empty string when nothing is
+ */
+function showHint(element, message) {
+	element.title = message
+	const hint = document.getElementById(
+		`arcade-key-hint-${element.dataset.kind}-${element.dataset.binding}`,
+	)
+	if (hint === null) {
+		return
+	}
+	hint.textContent = message
+	if (message === '') {
+		element.removeAttribute('aria-describedby')
+	} else {
+		element.setAttribute('aria-describedby', hint.id)
+	}
+}
+
 /**
  * Wait for a key, and give it to a binding.
  *
  * @param {HTMLElement} element the button of the binding
  */
 function captureKey(element) {
+	if (capturing !== null) {
+		// The same button again means "never mind"; another one means "that
+		// one instead". Either way the capture already open ends first.
+		const same = capturing.element === element
+		capturing.cancel()
+		if (same) {
+			return
+		}
+	}
+
 	const previous = element.dataset.code
 	element.classList.add('capturing')
-	element.textContent = t('arcade', 'Press a key …')
+	// The way out is part of what the button is called while it waits, so
+	// it is read out with it rather than only being there to be guessed.
+	element.textContent = t('arcade', 'Press a key, or Escape to leave it be')
+	showHint(element, '')
 
-	const done = (code) => {
+	let timer = null
+
+	const done = (code, message = '') => {
+		if (capturing === null || capturing.element !== element) {
+			return
+		}
+		capturing = null
+		clearTimeout(timer)
 		document.removeEventListener('keydown', onKey, true)
+		document.removeEventListener('pointerdown', onPointerDown, true)
+		element.removeEventListener('blur', onBlur)
 		element.classList.remove('capturing')
 		if (code !== null) {
 			element.dataset.code = code
 		}
 		showBinding(element)
 		showShadowedHotkeys()
+		if (message !== '') {
+			showHint(element, message)
+		}
 		if (element.dataset.code !== previous) {
 			save(element)
 		}
@@ -173,14 +244,33 @@ function captureKey(element) {
 		// The controller is bound through RetroArch, which has to have a
 		// name for the key; the player itself can take any of them.
 		if (element.dataset.kind === 'buttons' && retroarchKey(event.code) === null) {
-			done(previous)
-			element.title = t('arcade', 'The emulator has no name for that key, try another one')
+			done(previous, t('arcade', 'The emulator has no name for that key, try another one'))
 			return
 		}
-		element.title = ''
+		if (element.dataset.kind === 'hotkeys' && MODIFIER_ONLY.has(event.code)) {
+			done(previous, t('arcade', 'The player leaves Control, Alt and Meta to the browser, try another one'))
+			return
+		}
 		done(event.code)
 	}
+
+	// Walking away from the button, by keyboard or by mouse, is as good an
+	// answer as Escape: the page gets its keyboard back either way.
+	const onBlur = () => done(previous)
+	const onPointerDown = (event) => {
+		if (!element.contains(event.target)) {
+			done(previous)
+		}
+	}
+
+	capturing = { element, cancel: () => done(previous) }
+	timer = setTimeout(
+		() => done(previous, t('arcade', 'No key was pressed, so this one was left as it was')),
+		CAPTURE_TIMEOUT,
+	)
 	document.addEventListener('keydown', onKey, true)
+	document.addEventListener('pointerdown', onPointerDown, true)
+	element.addEventListener('blur', onBlur)
 }
 
 /**
@@ -191,21 +281,38 @@ function showBinding(element) {
 }
 
 /**
- * Say so where a key of the player is also a key of the controller: the
- * game gets it, and the player is left waiting for a key that never comes.
+ * Say so where a key is bound more than once. A key of the player that is
+ * also a key of the controller goes to the game, and the player is left
+ * waiting for a key that never comes; two bindings of one kind on one key
+ * are worse, with one hotkey of the pair silently dead, or two buttons of
+ * the controller pressed at once.
  */
 function showShadowedHotkeys() {
 	const taken = new Set(
 		[...container.querySelectorAll('.arcade-key-binding[data-kind="buttons"]')]
 			.map((element) => element.dataset.code),
 	)
-	container.querySelectorAll('.arcade-key-binding[data-kind="hotkeys"]').forEach((element) => {
-		const shadowed = taken.has(element.dataset.code)
-		element.classList.toggle('shadowed', shadowed)
-		element.title = shadowed
-			? t('arcade', 'This key works a button of the controller, so the game gets it instead')
-			: ''
-	})
+	for (const kind of ['buttons', 'hotkeys']) {
+		const elements = [...container.querySelectorAll(`.arcade-key-binding[data-kind="${kind}"]`)]
+		const counts = new Map()
+		for (const element of elements) {
+			const code = element.dataset.code
+			counts.set(code, (counts.get(code) ?? 0) + 1)
+		}
+		for (const element of elements) {
+			const code = element.dataset.code
+			let message = ''
+			if (code && counts.get(code) > 1) {
+				message = kind === 'buttons'
+					? t('arcade', 'Another button of the controller has this key too, so both are pressed at once')
+					: t('arcade', 'Another hotkey has this key too, so only one of the two ever runs')
+			} else if (kind === 'hotkeys' && taken.has(code)) {
+				message = t('arcade', 'This key works a button of the controller, so the game gets it instead')
+			}
+			element.classList.toggle('shadowed', message !== '')
+			showHint(element, message)
+		}
+	}
 }
 
 /**
@@ -217,9 +324,15 @@ async function fetchThumbnails() {
 	const status = document.getElementById('arcade-fetch-status')
 	button.disabled = true
 	status.textContent = t('arcade', 'Starting …')
+	// Saving first, so a folder just typed in is the one used. A save that
+	// did not land would leave the job looking in the folder from before
+	// while this page reported that all was well, so it stops here.
+	if (!await save(button)) {
+		status.textContent = t('arcade', 'The settings could not be saved, so nothing was started.')
+		button.disabled = false
+		return
+	}
 	try {
-		// Saving first, so a folder just typed in is the one used.
-		await save(button)
 		await api(generateUrl('/apps/arcade/arcade/thumbnails/fetch'), { method: 'POST' })
 		status.textContent = t('arcade', 'Looking for box art in the background. It carries on without this page.')
 	} catch (error) {

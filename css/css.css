@@ -91,6 +91,9 @@
 }
 
 .arcade .arcade-library-recent-row {
+	list-style: none;
+	margin: 0;
+	padding: 0;
 	display: flex;
 	gap: calc(var(--default-grid-baseline, 4px) * 4);
 	overflow-x: auto;
@@ -171,6 +174,9 @@
 /* Grid view */
 
 .arcade .arcade-library-grid {
+	list-style: none;
+	margin: 0;
+	padding: 0;
 	display: grid;
 	grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
 	gap: calc(var(--default-grid-baseline, 4px) * 4);
@@ -192,8 +198,11 @@
 		box-shadow var(--animation-quick, 100ms);
 }
 
+/* The card is the list item; what takes the focus is the link inside it,
+   so the card lifts for whatever is focused within it -- the keyboard gets
+   the same affordance as the mouse. */
 .arcade .arcade-library-game:hover,
-.arcade .arcade-library-game:focus-visible {
+.arcade .arcade-library-game:focus-within {
 	background-color: var(--color-background-hover);
 	border-color: var(--color-primary-element);
 	box-shadow: 0 2px 8px var(--color-box-shadow);
@@ -272,6 +281,9 @@
 /* List view */
 
 .arcade .arcade-library-rows {
+	list-style: none;
+	margin: 0;
+	padding: 0;
 	display: flex;
 	flex-direction: column;
 }
@@ -375,4 +387,24 @@
 .arcade .arcade-library-count {
 	color: var(--color-text-maxcontrast);
 	font-size: 0.9em;
+}
+
+/* The same line carries the count, the empty state and the onboarding's
+   "looking …", so it has to sit right in a row of buttons as well as on
+   its own under the filters. */
+.arcade .arcade-library-pagination .arcade-library-count {
+	margin: 0;
+}
+
+.arcade .arcade-library-notice {
+	color: var(--color-error-text, var(--color-main-text));
+}
+
+/* The card lifting and the star fading in are decoration: both say the
+   same thing standing still. */
+@media (prefers-reduced-motion: reduce) {
+	.arcade .arcade-library-game,
+	.arcade .arcade-library-favorite {
+		transition: none;
+	}
 }
