@@ -35,6 +35,23 @@ final class Folders {
 	}
 
 	/**
+	 * Whether a file still exists anywhere in a user's storage -- the trash
+	 * included, which is the whole point of asking by id rather than by
+	 * path. Right after a deletion, a yes only says the trash caught it.
+	 *
+	 * When in doubt the answer is yes: what hangs on it is whether the
+	 * saves of a game are dropped, and the benefit of any doubt goes to
+	 * the saves.
+	 */
+	public static function stillAround(IRootFolder $rootFolder, string $userId, int $fileId): bool {
+		try {
+			return $rootFolder->getUserFolder($userId)->getParent()->getFirstNodeById($fileId) !== null;
+		} catch (\Throwable) {
+			return true;
+		}
+	}
+
+	/**
 	 * The id Nextcloud gave the file at a path in a user's files, null
 	 * when nothing can be found there.
 	 */
