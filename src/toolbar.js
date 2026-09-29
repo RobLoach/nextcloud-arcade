@@ -149,23 +149,35 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 	let galleryPanel = null
 	let galleryButton = null
 	// Hiding a panel and letting go of its button always travel together.
-	const hideStates = () => {
-		statesPanel?.element.classList.add('hidden')
-		setExpanded(statesButton, false)
+	// So does the focus: a panel that goes away while it holds the focus
+	// would drop it on the body, leaving the keyboard nowhere.
+	const hidePanel = (panel, element) => {
+		if (panel === null) {
+			return
+		}
+		const held = panel.element.contains(document.activeElement)
+		panel.element.classList.add('hidden')
+		setExpanded(element, false)
+		if (held) {
+			element?.focus()
+		}
 	}
-	const hideGallery = () => {
-		galleryPanel?.element.classList.add('hidden')
-		setExpanded(galleryButton, false)
-	}
+	const hideStates = () => hidePanel(statesPanel, statesButton)
+	const hideGallery = () => hidePanel(galleryPanel, galleryButton)
 	const statesOpen = () => statesPanel !== null && !statesPanel.element.classList.contains('hidden')
 	const galleryOpen = () => galleryPanel !== null && !galleryPanel.element.classList.contains('hidden')
 	const togglePanel = (panel, element, onOpen) => {
 		const visible = !panel.element.classList.contains('hidden')
-		panel.element.classList.toggle('hidden', visible)
-		setExpanded(element, !visible)
-		if (!visible) {
-			onOpen()
+		if (visible) {
+			hidePanel(panel, element)
+			return
 		}
+		panel.element.classList.remove('hidden')
+		setExpanded(element, true)
+		onOpen()
+		// Into the panel, so it is read out on opening and its buttons are
+		// the next thing the Tab key reaches.
+		panel.element.focus()
 	}
 	if (canSave) {
 		statesPanel = createStatesPanel({
@@ -324,8 +336,17 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 	let actionsButton = null
 	let refreshSidebarItem = null
 	const closeActionsMenu = () => {
-		actionsMenu?.classList.add('hidden')
+		if (actionsMenu === null) {
+			return
+		}
+		// Only when the menu had the focus: an outside click closing it is
+		// on its way somewhere else, and should not be pulled back here.
+		const held = actionsMenu.contains(document.activeElement)
+		actionsMenu.classList.add('hidden')
 		setExpanded(actionsButton, false)
+		if (held) {
+			actionsButton?.focus()
+		}
 	}
 	if (closeUrl !== '') {
 		actionsMenu = document.createElement('div')
@@ -430,10 +451,15 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 				hideStates()
 				hideGallery()
 				refreshSidebarItem?.()
+				actionsMenu.querySelector('.arcade-actions-item')?.focus()
 			}
 		}, topbar)
 		actionsButton.setAttribute('aria-haspopup', 'true')
 		setExpanded(actionsButton, false)
+		// Before the close button, not after it: the menu belongs to the
+		// button that opens it, and Tab should walk into it rather than
+		// past it to Close.
+		topbar.appendChild(actionsMenu)
 	}
 
 	// A click anywhere else puts the menu away, the way core menus behave.
@@ -569,11 +595,8 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 		container.appendChild(galleryPanel.element)
 	}
 	if (topbar !== null) {
-		// The actions menu hangs from the topbar, so it opens downward and
-		// stays aligned to it however the container is sized.
-		if (actionsMenu !== null) {
-			topbar.appendChild(actionsMenu)
-		}
+		// The actions menu already hangs from the topbar, so it opens
+		// downward and stays aligned to it however the container is sized.
 		container.appendChild(topbar)
 	}
 

@@ -92,7 +92,9 @@ export function createGalleryPanel({ romPath, flash }) {
 			const deleteButton = document.createElement('button')
 			deleteButton.type = 'button'
 			deleteButton.title = t('arcade', 'Delete')
-			deleteButton.setAttribute('aria-label', t('arcade', 'Delete'))
+			// A grid of buttons all called "Delete" is a grid of one
+			// button, read out; the file name is what tells them apart.
+			deleteButton.setAttribute('aria-label', t('arcade', 'Delete {name}', { name: screenshot.basename }))
 			deleteButton.innerHTML = icon(ICONS.trash)
 			deleteButton.addEventListener('click', (event) => {
 				event.stopPropagation()

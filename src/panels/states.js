@@ -26,11 +26,17 @@ export function createStatesPanel({ instance, romPath, flash, onDone }) {
 	sramContainer.className = 'arcade-states-sram'
 	element.appendChild(sramContainer)
 
-	const smallButton = (label, onClick, disabled = false) => {
+	// The visible word stays short, because the row it sits in says which
+	// slot it belongs to. Read out of that row it would not, so the label
+	// carries the slot along with it.
+	const smallButton = (label, onClick, disabled = false, ariaLabel = '') => {
 		const buttonElement = document.createElement('button')
 		buttonElement.type = 'button'
 		buttonElement.textContent = label
 		buttonElement.disabled = disabled
+		if (ariaLabel !== '') {
+			buttonElement.setAttribute('aria-label', ariaLabel)
+		}
 		buttonElement.addEventListener('click', (event) => {
 			event.stopPropagation()
 			onClick()
@@ -236,11 +242,30 @@ export function createStatesPanel({ instance, romPath, flash, onDone }) {
 			// The automatic slot is written by the player itself, and slots
 			// beyond the ones offered now are only there to be emptied.
 			if (slot !== AUTO_SLOT && slot <= data.slots) {
-				row.appendChild(smallButton(t('arcade', 'Save'), () => save(slot)))
+				row.appendChild(smallButton(
+					t('arcade', 'Save'),
+					() => save(slot),
+					false,
+					t('arcade', 'Save to slot {slot}', { slot }),
+				))
 			}
-			row.appendChild(smallButton(t('arcade', 'Load'), () => load(slot), state === undefined))
+			row.appendChild(smallButton(
+				t('arcade', 'Load'),
+				() => load(slot),
+				state === undefined,
+				slot === AUTO_SLOT
+					? t('arcade', 'Load the automatic save')
+					: t('arcade', 'Load slot {slot}', { slot }),
+			))
 			if (state !== undefined) {
-				row.appendChild(smallButton(t('arcade', 'Delete'), () => remove(slot)))
+				row.appendChild(smallButton(
+					t('arcade', 'Delete'),
+					() => remove(slot),
+					false,
+					slot === AUTO_SLOT
+						? t('arcade', 'Delete the automatic save')
+						: t('arcade', 'Delete slot {slot}', { slot }),
+				))
 			}
 			slotsContainer.appendChild(row)
 		}
