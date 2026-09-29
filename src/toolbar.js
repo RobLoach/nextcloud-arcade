@@ -616,6 +616,12 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 		if (event.repeat) {
 			return
 		}
+		// Tab is how a keyboard goes looking for the controls, and hidden
+		// chrome is out of the tab order, so there would be nothing to
+		// find. Bringing it back first puts it back in the way.
+		if (event.code === 'Tab') {
+			wakeChrome()
+		}
 		const target = event.target
 		if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) {
 			return
