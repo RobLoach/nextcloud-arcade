@@ -7,6 +7,10 @@ import { keyLabel, retroarchKey } from './keys.js'
 const container = document.getElementById('arcade-settings')
 
 /**
+ * Not the Nextcloud toasts the library uses: a word right beside the
+ * setting it belongs to is the settings convention across Nextcloud, and
+ * the .msg spans in the templates are already aria-live regions.
+ *
  * @param {Element} [source] the control a change came from
  * @return {Element} the status line of its section, or the page's own
  */

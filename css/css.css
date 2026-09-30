@@ -396,12 +396,6 @@
 	margin: 0;
 }
 
-/* The same line carries a failure and a word about something under way;
-   only the failure is worth the error colour. */
-.arcade .arcade-library-notice-failed {
-	color: var(--color-error-text, var(--color-main-text));
-}
-
 /* The card lifting and the star fading in are decoration: both say the
    same thing standing still. */
 @media (prefers-reduced-motion: reduce) {

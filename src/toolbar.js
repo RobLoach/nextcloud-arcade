@@ -57,6 +57,10 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 	// a deleted battery save, a state that would not save, a missing BIOS
 	// -- so it is read out as it arrives rather than only seen.
 	status.setAttribute('role', 'status')
+	// Not the Nextcloud toasts the library uses: those are appended to
+	// document.body, and in fullscreen only the fullscreen element's
+	// subtree is painted -- they would be invisible exactly when the
+	// player needs them most. This line rides inside the chrome.
 	let statusTimer = null
 	const flash = (text) => {
 		status.textContent = text

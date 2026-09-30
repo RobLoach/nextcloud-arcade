@@ -8,6 +8,26 @@ import { attachLibraryGamepad } from './librarypad.js'
 import { playUrl, previewUrl } from './play.js'
 import { systemLabel } from './systems.js'
 
+// The toasts are behind a chunk of their own -- see src/toast.js for why
+// -- and the fetch is kicked off here at module load without being
+// waited on, so it comes down beside the page rather than after the
+// click that needs it. By the time there is anything to say it is here.
+const toasts = import('./toast.js')
+
+/**
+ * @param {string} kind which of the toast wrapper's helpers to call
+ * @param {string} message what to say
+ */
+function toast(kind, message) {
+	toasts.then((module) => module[kind](message)).catch((error) => {
+		// Nothing left to say it with; the console keeps the trail.
+		console.error('Could not show a toast', error)
+	})
+}
+
+const showError = (message) => toast('showError', message)
+const showInfo = (message) => toast('showInfo', message)
+
 const VIEWS = ['grid', 'list', 'table']
 const PAGE_SIZES = [24, 60, 120, 240]
 const VIEW_KEY = 'arcade-library-view'
@@ -180,13 +200,12 @@ function thumbnailFor(game, size) {
 /**
  * @param {object} game the game
  * @param {Function} reload reloads the library
- * @param {Function} notify says something went wrong, in the library's own line
  * @param {string} scope which shelf the card sits on, so the focus names
  *   of a game shown twice -- in the favorites row and in the page -- do
  *   not collide
  * @return {HTMLElement} a card for the game
  */
-function renderCard(game, reload, notify, scope) {
+function renderCard(game, reload, scope) {
 	const card = document.createElement('li')
 	card.className = 'arcade-library-game'
 
@@ -221,13 +240,12 @@ function renderCard(game, reload, notify, scope) {
 		event.preventDefault()
 		try {
 			await post('/apps/arcade/arcade/favorite', { file: game.path })
-			notify('')
 			reload(true)
 		} catch (error) {
 			// The star does not move on its own, so without a word here the
 			// only thing a refused request looks like is a dead button.
 			console.error('Could not change the favorites', error)
-			notify(t('arcade', 'Could not change the favorites for {game}. Try again in a moment.', {
+			showError(t('arcade', 'Could not change the favorites for {game}. Try again in a moment.', {
 				game: gameName(game),
 			}))
 		}
@@ -240,14 +258,13 @@ function renderCard(game, reload, notify, scope) {
 /**
  * @param {object[]} games the games of the current page
  * @param {Function} reload reloads the library
- * @param {Function} notify says something went wrong
  * @return {HTMLElement} the grid of game cards
  */
-function renderGrid(games, reload, notify) {
+function renderGrid(games, reload) {
 	const grid = document.createElement('ul')
 	grid.className = 'arcade-library-grid'
 	for (const game of games) {
-		grid.appendChild(renderCard(game, reload, notify, 'page'))
+		grid.appendChild(renderCard(game, reload, 'page'))
 	}
 	return grid
 }
@@ -257,11 +274,10 @@ function renderGrid(games, reload, notify) {
  * @param {string} className a class for the row
  * @param {object[]} games the games in it
  * @param {Function} reload reloads the library
- * @param {Function} notify says something went wrong
  * @param {string} scope the focus scope of the shelf
  * @return {HTMLElement} a scrollable row of games
  */
-function renderRow(title, className, games, reload, notify, scope) {
+function renderRow(title, className, games, reload, scope) {
 	const section = document.createElement('div')
 	section.className = `arcade-library-row-section ${className}`
 
@@ -272,7 +288,7 @@ function renderRow(title, className, games, reload, notify, scope) {
 	const row = document.createElement('ul')
 	row.className = 'arcade-library-recent-row'
 	for (const game of games) {
-		row.appendChild(renderCard(game, reload, notify, scope))
+		row.appendChild(renderCard(game, reload, scope))
 	}
 	section.appendChild(row)
 	return section
@@ -558,10 +574,9 @@ function renderFilters(systems, tags, reload) {
 /**
  * @param {Function} reload reloads the library with new parameters
  * @param {Function} setView switches the view without reloading
- * @param {Function} notify says a word in the library's own line
  * @return {HTMLElement} the header, with the view switcher
  */
-function renderHeader(reload, setView, notify) {
+function renderHeader(reload, setView) {
 	const header = document.createElement('div')
 	header.className = 'arcade-library-header'
 
@@ -602,12 +617,11 @@ function renderHeader(reload, setView, notify) {
 		// what keeps the button from looking dead, and the disabling keeps
 		// a second scan from being asked for on top of the first.
 		refresh.disabled = true
-		notify(t('arcade', 'Refreshing the games library in the background. This can take a while.'), false)
+		showInfo(t('arcade', 'Refreshing the games library in the background. This can take a while.'))
 		try {
 			await reload(true)
 		} finally {
 			refresh.disabled = false
-			notify('')
 		}
 	})
 	controls.appendChild(refresh)
@@ -784,7 +798,14 @@ export async function renderLibrary(container, onError) {
 			}
 			console.error('Could not load the games library', error)
 			if (shown === null) {
+				// Nothing on screen yet for a toast to sit beside: the page
+				// itself has to carry the failure.
 				onError(t('arcade', 'Could not load the games library.'))
+			} else if (refresh) {
+				// A reload that was asked for -- the refresh button, or a
+				// favorite that just moved. The background revalidation stays
+				// quiet: it fails over a page that is still good.
+				showError(t('arcade', 'Could not load the games library.'))
 			}
 			return
 		}
@@ -874,20 +895,6 @@ export async function renderLibrary(container, onError) {
 	}
 
 	/**
-	 * @param {string} message what happened, or an empty string to clear
-	 * @param {boolean} failed whether it is a failure, said in the error
-	 *   colour, rather than a word about something under way
-	 */
-	const notify = (message, failed = true) => {
-		const notice = container.querySelector('.arcade-library-notice')
-		if (notice !== null) {
-			notice.textContent = message
-			notice.classList.toggle('hidden', message === '')
-			notice.classList.toggle('arcade-library-notice-failed', failed)
-		}
-	}
-
-	/**
 	 * Draw the page into the emptied container. The focus is put back by
 	 * render() around this, so nothing here has to think about it.
 	 *
@@ -895,14 +902,7 @@ export async function renderLibrary(container, onError) {
 	 * @return {HTMLElement} the page's live region, wherever it ended up
 	 */
 	const paint = (data) => {
-		container.appendChild(renderHeader(load, setView, notify))
-
-		// Where a failure, or a rescan that moves nothing on screen while
-		// it runs, gets to be heard.
-		const notice = document.createElement('p')
-		notice.className = 'arcade-library-hint arcade-library-notice hidden'
-		notice.setAttribute('role', 'alert')
-		container.appendChild(notice)
+		container.appendChild(renderHeader(load, setView))
 
 		// One live region for the page: the count of what matched, the
 		// reason there was nothing to count, or what the looking for ROM
@@ -924,7 +924,6 @@ export async function renderLibrary(container, onError) {
 				'arcade-library-favorites',
 				data.favorites,
 				load,
-				notify,
 				'favorites',
 			))
 		}
@@ -934,7 +933,6 @@ export async function renderLibrary(container, onError) {
 				'arcade-library-recent',
 				data.recent,
 				load,
-				notify,
 				'recent',
 			))
 		}
@@ -955,7 +953,7 @@ export async function renderLibrary(container, onError) {
 		}
 
 		const views = {
-			grid: () => renderGrid(data.games, load, notify),
+			grid: () => renderGrid(data.games, load),
 			list: () => renderList(data.games),
 			table: () => renderTable(data.games, () => load()),
 		}
