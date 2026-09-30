@@ -8,7 +8,7 @@ import { offerResume } from './panels/resume.js'
 import { createStatesPanel } from './panels/states.js'
 import { davUrl, fileIdOf } from './player.js'
 import { shortNameForPath } from './systems.js'
-import { UNTIL_DISMISSED, toastsIn } from './toast.js'
+import { UNTIL_DISMISSED, createFlash } from './toast.js'
 import { attachTouchControls, isTouchDevice, isTouchPrimary } from './touch.js'
 import { waitAtMost } from './wait.js'
 
@@ -61,22 +61,10 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 	// notification system here and not two.
 	//
 	// Hung inside the player's own container rather than on document.body,
-	// and always, not only in fullscreen -- see toastsIn() for why.
-	const toasts = toastsIn(container)
-	// One at a time, as the single line this replaced was: the newest
-	// message is the one that matters, and a toast hung inside the player
-	// brings a container of its own, which the next one would otherwise
-	// sit on.
-	let currentToast = null
-	/**
-	 * @param {string} text what to say
-	 * @param {string} [type] how it reads: success, info, warning or error
-	 * @param {object} [options] the rest of the toast's options
-	 */
-	const flash = (text, type = 'info', options = {}) => {
-		currentToast?.hideToast?.()
-		currentToast = toasts[type](text, options)
-	}
+	// and always, not only in fullscreen -- see toastsIn() for why. The
+	// top-right chrome steps aside while a message is up; createFlash()
+	// keeps both halves of that together.
+	const { flash, stop: stopMessages } = createFlash(container)
 
 	const button = (iconPath, label, onClick, parent = toolbar) => {
 		const element = document.createElement('button')
@@ -759,9 +747,9 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 		gone.abort()
 		// A message about a game that is no longer there has nobody left
 		// to be for -- and the one that waits to be dismissed would wait
-		// forever.
-		currentToast?.hideToast?.()
-		currentToast = null
+		// forever. This also gives the chrome back, so the container is
+		// handed on in the state it was found in.
+		stopMessages()
 		clearInterval(autosaveTimer)
 		clearTimeout(idleTimer)
 		document.removeEventListener('visibilitychange', onVisibilityChange)

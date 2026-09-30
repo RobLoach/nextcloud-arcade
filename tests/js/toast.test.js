@@ -1,5 +1,19 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
-import { showError, showInfo, showSuccess, showWarning, toastsIn } from '../../src/toast.js'
+import { MESSAGE_UP, UNTIL_DISMISSED, createFlash, showError, showInfo, showSuccess, showWarning, toastsIn } from '../../src/toast.js'
+
+/** Just enough of an element for the class the chrome watches. */
+const element = () => {
+	const classes = new Set()
+	return {
+		classes,
+		classList: {
+			add: (name) => classes.add(name),
+			remove: (name) => classes.delete(name),
+			toggle: (name, on) => (on ? classes.add(name) : classes.delete(name)),
+			contains: (name) => classes.has(name),
+		},
+	}
+}
 
 /** A stand-in for the toaster the server exposes as OCP.Toast. */
 const toaster = () => ({
@@ -105,5 +119,120 @@ describe('toastsIn', () => {
 
 		expect(toastsIn(container).error('broke')).toBeNull()
 		expect(logged).toHaveBeenCalledWith('broke')
+	})
+})
+
+describe('createFlash', () => {
+	let toast
+	let player
+
+	/** The removal the toaster reports once a toast has gone. */
+	const remove = (call) => call[1].onRemove()
+
+	beforeEach(() => {
+		vi.useFakeTimers()
+		toast = toaster()
+		vi.stubGlobal('window', { OCP: { Toast: toast } })
+		player = element()
+	})
+	afterEach(() => {
+		vi.useRealTimers()
+		vi.unstubAllGlobals()
+		vi.restoreAllMocks()
+	})
+
+	test('takes the chrome out of the corner while a message is up', () => {
+		const { flash } = createFlash(player)
+
+		flash('Game saved', 'success')
+
+		expect(player.classes.has(MESSAGE_UP)).toBe(true)
+	})
+
+	test('gives it back the moment the message goes', () => {
+		const { flash } = createFlash(player)
+		flash('Game saved', 'success')
+
+		remove(toast.success.mock.calls[0])
+
+		expect(player.classes.has(MESSAGE_UP)).toBe(false)
+	})
+
+	test('leaves the chrome alone for a message that waits to be dismissed', () => {
+		// That message asks the player to press Close, which is in the
+		// chrome: hiding it would hide the button the words name, for as
+		// long as the words are up.
+		const { flash } = createFlash(player)
+
+		flash('Press Close again', 'error', { timeout: UNTIL_DISMISSED })
+
+		expect(player.classes.has(MESSAGE_UP)).toBe(false)
+	})
+
+	test('an older message going does not uncover the newer one', () => {
+		// A toast reports its removal a few hundred milliseconds late, by
+		// which time the next message is already on screen.
+		const { flash } = createFlash(player)
+		flash('Game saved', 'success')
+		flash('Could not load the state', 'error')
+
+		remove(toast.success.mock.calls[0])
+
+		expect(player.classes.has(MESSAGE_UP)).toBe(true)
+	})
+
+	test('gives the chrome back even if the toaster never says the toast went', () => {
+		// An older toaster, or one that drops the option: a button that
+		// cannot be reached is worse than a word in front of it.
+		const { flash } = createFlash(player)
+		flash('Game saved', 'success')
+
+		vi.advanceTimersByTime(60000)
+
+		expect(player.classes.has(MESSAGE_UP)).toBe(false)
+	})
+
+	test('waits out a message that asked to stay longer', () => {
+		const { flash } = createFlash(player)
+		flash('Game saved', 'success', { timeout: 30000 })
+
+		vi.advanceTimersByTime(20000)
+		expect(player.classes.has(MESSAGE_UP)).toBe(true)
+
+		vi.advanceTimersByTime(20000)
+		expect(player.classes.has(MESSAGE_UP)).toBe(false)
+	})
+
+	test('keeps the chrome where it is on a server with no toaster', () => {
+		vi.stubGlobal('window', {})
+		vi.spyOn(console, 'info').mockImplementation(() => {})
+		const { flash } = createFlash(player)
+
+		flash('Game saved', 'success')
+
+		expect(player.classes.has(MESSAGE_UP)).toBe(false)
+	})
+
+	test('says one thing at a time', () => {
+		const { flash } = createFlash(player)
+		const first = { hideToast: vi.fn() }
+		toast.success.mockReturnValueOnce(first)
+
+		flash('Game saved', 'success')
+		flash('Restarted', 'info')
+
+		expect(first.hideToast).toHaveBeenCalled()
+	})
+
+	test('stopping puts the message away and gives the chrome back', () => {
+		const { flash, stop } = createFlash(player)
+		const showing = { hideToast: vi.fn() }
+		toast.error.mockReturnValueOnce(showing)
+		flash('Press Close again', 'error')
+
+		stop()
+
+		expect(showing.hideToast).toHaveBeenCalled()
+		expect(player.classes.has(MESSAGE_UP)).toBe(false)
 	})
 })

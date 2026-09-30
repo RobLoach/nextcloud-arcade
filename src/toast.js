@@ -111,6 +111,86 @@ export function toastsIn(element) {
 }
 
 /**
+ * The class the player's container wears while a message is on screen,
+ * which the stylesheet uses to take the top-right chrome out of the way:
+ * the toast lands in that corner, and the chrome, at z-index 20100
+ * against a toast's 9000, would paint over the words.
+ */
+export const MESSAGE_UP = 'arcade-message-up'
+
+// What the toaster gives a message that does not ask for a length. Kept
+// here only to know when a message should be gone by; the toaster still
+// decides how long it actually stays.
+const DEFAULT_TIMEOUT = 7000
+
+/**
+ * The one way the player says things: a toast hung inside the player,
+ * with the chrome stepping aside while it is up.
+ *
+ * @param {HTMLElement} element the player's container
+ * @return {{flash: Function, stop: Function}} flash takes the message,
+ *         how it reads (success, info, warning or error) and the rest of
+ *         the toast's options; stop puts away whatever is showing
+ */
+export function createFlash(element) {
+	const toasts = toastsIn(element)
+	// One message at a time: the newest is the one that matters. Each is
+	// numbered, so that the one going away cannot bring the chrome back
+	// over the top of the one that replaced it -- the old toast's removal
+	// arrives a few hundred milliseconds late, by which time the new one
+	// is already up.
+	let current = null
+	let latest = 0
+	let expected = null
+
+	const done = (id) => {
+		if (id === latest) {
+			element.classList.remove(MESSAGE_UP)
+		}
+	}
+
+	const flash = (text, type = 'info', options = {}) => {
+		current?.hideToast?.()
+		clearTimeout(expected)
+		const id = ++latest
+		// A message that waits to be dismissed leaves the chrome alone.
+		// The one the player has that never expires asks them to press
+		// Close, and Close is in the chrome -- hiding it would hide the
+		// button the words name, for as long as the words are up.
+		const stays = options.timeout === UNTIL_DISMISSED
+		element.classList.toggle(MESSAGE_UP, !stays)
+		current = toasts[type](text, {
+			...options,
+			onRemove: () => {
+				done(id)
+				options.onRemove?.()
+			},
+		})
+		if (current === null) {
+			// No toaster: the message went to the console, and nothing
+			// is ever going to call onRemove.
+			done(id)
+		} else if (!stays) {
+			// The chrome comes back even if that call never arrives --
+			// an older toaster, a helper that drops the option. A button
+			// that cannot be reached is worse than a word in front of it.
+			const timeout = options.timeout > 0 ? options.timeout : DEFAULT_TIMEOUT
+			expected = setTimeout(() => done(id), timeout + 1000)
+		}
+		return current
+	}
+
+	const stop = () => {
+		clearTimeout(expected)
+		current?.hideToast?.()
+		current = null
+		element.classList.remove(MESSAGE_UP)
+	}
+
+	return { flash, stop }
+}
+
+/**
  * Say that something went wrong.
  *
  * Assertively, which is what the in-page line this replaced had with its
