@@ -59,6 +59,7 @@ class PageControllerTest extends TestCase {
 		?IEventDispatcher $eventDispatcher = null,
 		?IInitialState $initialState = null,
 		?Node $fileNode = null,
+		?IJobList $jobList = null,
 	): PageController {
 		$request = $this->createStub(IRequest::class);
 		$request->method('getHeader')->willReturnCallback(
@@ -102,7 +103,7 @@ class PageControllerTest extends TestCase {
 			$libraryService,
 			$recentService,
 			$rootFolder,
-			$this->createStub(IJobList::class),
+			$jobList ?? $this->createStub(IJobList::class),
 			$eventDispatcher ?? $this->createStub(IEventDispatcher::class),
 			'alice',
 		);
@@ -212,6 +213,33 @@ class PageControllerTest extends TestCase {
 			$response->getData()['stats'],
 			'the stats of a game that is not in the library are left out',
 		);
+	}
+
+	public function testTheListingSaysWhenARescanIsAlreadyGoing(): void {
+		$jobList = $this->createStub(IJobList::class);
+		$jobList->method('has')->willReturn(true);
+
+		$response = $this->controller(jobList: $jobList)->library();
+
+		$this->assertTrue(
+			$response->getData()['rescanning'],
+			'the page is told so it can leave the Refresh button alone',
+		);
+	}
+
+	public function testTheListingSaysWhenNoRescanIsGoing(): void {
+		$jobList = $this->createStub(IJobList::class);
+		$jobList->method('has')->willReturn(false);
+
+		$this->assertFalse($this->controller(jobList: $jobList)->library()->getData()['rescanning']);
+	}
+
+	public function testARescanIsOnlyQueuedWhenNoneIsGoing(): void {
+		$jobList = $this->createMock(IJobList::class);
+		$jobList->method('has')->willReturn(true);
+		$jobList->expects($this->never())->method('add');
+
+		$this->controller(jobList: $jobList)->library(refresh: true);
 	}
 
 	public function testTheThumbnailsVersionRidesAlongWithTheListing(): void {

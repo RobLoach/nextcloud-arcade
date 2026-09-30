@@ -1,0 +1,2 @@
+const c=-1;function u(){return window.OCP?.Toast??null}function r(o,n,t,s,i){const e=u();return e===null?(s(n),null):e[o](n,{ariaLive:t,...i})}function a(o,n={}){return r("error",o,"assertive",console.error,n)}function l(o,n={}){return r("warning",o,"polite",console.warn,n)}function f(o,n={}){return r("info",o,"polite",console.info,n)}function p(o,n={}){return r("success",o,"polite",console.info,n)}export{c as U,a,p as b,l as c,f as s};
+//# sourceMappingURL=toast-CDB-nqtj.chunk.mjs.map

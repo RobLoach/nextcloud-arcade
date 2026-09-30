@@ -9,7 +9,9 @@ import { createPanel } from './panel.js'
  * @param {object} options options
  * @param {import('nostalgist').Nostalgist} options.instance the running emulator
  * @param {string} options.romPath path identifying the game
- * @param {Function} options.flash shows a status message
+ * @param {Function} options.flash says something to the player, taking
+ *                                 the message and how it reads: success,
+ *                                 info, warning or error
  * @param {Function} options.onDone called after a slot was saved or loaded
  * @return {{element: HTMLElement, refresh: Function, load: Function, save: Function, settled: Function}}
  *         the panel; load and save answer whether they got through, and
@@ -112,12 +114,12 @@ export function createStatesPanel({ instance, romPath, flash, onDone }) {
 			}
 			flash(slot === AUTO_SLOT
 				? t('arcade', 'Game saved')
-				: t('arcade', 'State saved to slot {slot}', { slot }))
+				: t('arcade', 'State saved to slot {slot}', { slot }), 'success')
 			onDone()
 			return true
 		} catch (error) {
 			console.error('Could not save the state', error)
-			flash(t('arcade', 'Could not save the state'))
+			flash(t('arcade', 'Could not save the state'), 'error')
 			return false
 		}
 	})
@@ -130,18 +132,18 @@ export function createStatesPanel({ instance, romPath, flash, onDone }) {
 				// Handed an empty file, RetroArch waits for a state that
 				// will never come -- a minute of nothing, and then a
 				// message about loading rather than about the file.
-				flash(t('arcade', 'That save state is empty, so there is nothing to load'))
+				flash(t('arcade', 'That save state is empty, so there is nothing to load'), 'warning')
 				return false
 			}
 			await instance.loadState(state)
 			flash(slot === AUTO_SLOT
 				? t('arcade', 'Game restored')
-				: t('arcade', 'State loaded from slot {slot}', { slot }))
+				: t('arcade', 'State loaded from slot {slot}', { slot }), 'success')
 			onDone()
 			return true
 		} catch (error) {
 			console.error('Could not load the state', error)
-			flash(t('arcade', 'Could not load the state'))
+			flash(t('arcade', 'Could not load the state'), 'error')
 			return false
 		}
 	})
@@ -152,7 +154,7 @@ export function createStatesPanel({ instance, romPath, flash, onDone }) {
 			await refresh()
 		} catch (error) {
 			console.error('Could not delete the state', error)
-			flash(t('arcade', 'Could not delete the state'))
+			flash(t('arcade', 'Could not delete the state'), 'error')
 		}
 	}
 
@@ -167,12 +169,12 @@ export function createStatesPanel({ instance, romPath, flash, onDone }) {
 			// until the game is opened anew — which then starts clean.
 			disableSramSync(romPath)
 			await api(stateUrl('/sram', romPath), { method: 'DELETE' })
-			flash(t('arcade', 'Battery save deleted — reopen the game to start over'))
+			flash(t('arcade', 'Battery save deleted — reopen the game to start over'), 'success')
 			await refresh()
 		} catch (error) {
 			console.error('Could not delete the battery save', error)
 			enableSramSync(romPath)
-			flash(t('arcade', 'Could not delete the battery save'))
+			flash(t('arcade', 'Could not delete the battery save'), 'error')
 		}
 	}
 
