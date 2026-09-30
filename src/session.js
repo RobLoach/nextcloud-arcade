@@ -25,9 +25,8 @@ const settings = loadState('arcade', 'settings', {})
  */
 export async function startSession({ canvas, container, filename, basename, source, closeUrl = '', signal = null }) {
 	// The launch learns of anything it went without -- a missing BIOS --
-	// before the toolbar and its status line exist, so the word is held
-	// here and handed over below, for the toolbar to flash once it is on
-	// screen.
+	// before there is a toolbar to say it, so the word is held here and
+	// handed over below, for the toolbar to flash once it is up.
 	let notice = ''
 	const instance = await launchRom({
 		element: canvas,

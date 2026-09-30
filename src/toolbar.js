@@ -8,6 +8,7 @@ import { offerResume } from './panels/resume.js'
 import { createStatesPanel } from './panels/states.js'
 import { davUrl, fileIdOf } from './player.js'
 import { shortNameForPath } from './systems.js'
+import { UNTIL_DISMISSED, showError, showInfo, showSuccess, showWarning } from './toast.js'
 import { attachTouchControls, isTouchDevice, isTouchPrimary } from './touch.js'
 import { waitAtMost } from './wait.js'
 
@@ -51,23 +52,39 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 		topbar.className = 'arcade-topbar'
 	}
 
-	const status = document.createElement('span')
-	status.className = 'arcade-toolbar-status'
-	// Everything the player is ever told happens here and nowhere else --
-	// a deleted battery save, a state that would not save, a missing BIOS
-	// -- so it is read out as it arrives rather than only seen.
-	status.setAttribute('role', 'status')
-	// Not the Nextcloud toasts the library uses: those are appended to
-	// document.body, and in fullscreen only the fullscreen element's
-	// subtree is painted -- they would be invisible exactly when the
-	// player needs them most. This line rides inside the chrome.
-	let statusTimer = null
-	const flash = (text) => {
-		status.textContent = text
-		clearTimeout(statusTimer)
-		statusTimer = setTimeout(() => {
-			status.textContent = ''
-		}, 3000)
+	// Everything the player is ever told -- a slot saved, a battery save
+	// deleted, a state that would not load, a missing BIOS -- is said with
+	// the same toast the rest of the app says things with, so there is one
+	// notification system here and not two.
+	//
+	// Hung inside the player container rather than on document.body, and
+	// always, not only in fullscreen: the browser paints only the
+	// fullscreen element's subtree, and the element that goes fullscreen
+	// is this container, so a toast on the body would be invisible exactly
+	// when the player is most likely to be looking at one. The toaster's
+	// container is fixed-positioned, so from in here a toast still lands
+	// where the app's toasts always land. One path, with nothing to ask
+	// about the fullscreen state.
+	//
+	// The docblock of that `selector` option calls it "(for testing)". It
+	// is used here on purpose, and a @nextcloud/dialogs that dropped it
+	// would not throw: the helper falls back to its container on the body,
+	// and toasts in fullscreen go back to being unseen, which is where
+	// they were before.
+	const TOAST_SELECTOR = '.arcade-player-container'
+	const toasts = { error: showError, warning: showWarning, info: showInfo, success: showSuccess }
+	// One at a time, as the single line this replaced was: the newest
+	// message is the one that matters, and a toast hung by selector brings
+	// a container of its own, which the next one would otherwise sit on.
+	let currentToast = null
+	/**
+	 * @param {string} text what to say
+	 * @param {string} [type] how it reads: success, info, warning or error
+	 * @param {object} [options] the rest of the toast's options
+	 */
+	const flash = (text, type = 'info', options = {}) => {
+		currentToast?.hideToast?.()
+		currentToast = toasts[type](text, { selector: TOAST_SELECTOR, ...options })
 	}
 
 	const button = (iconPath, label, onClick, parent = toolbar) => {
@@ -145,7 +162,7 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 		// "Resume" would be a lie -- and one the idle chrome and the
 		// autosave both go on believing for the rest of the session.
 		setPaused(false)
-		flash(t('arcade', 'Restarted'))
+		flash(t('arcade', 'Restarted'), 'info')
 	}
 
 	// Saving needs a logged-in user and somewhere of their own to put it,
@@ -240,7 +257,7 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 		if (settings.autosave_on_close !== true || statesPanel === null) {
 			return true
 		}
-		flash(t('arcade', 'Saving the game …'))
+		flash(t('arcade', 'Saving the game …'), 'info')
 		// A tick of the autosave may be in the air. Letting it land first
 		// keeps this save from being turned away as a repeat of it, and
 		// so from reporting a failure that never happened.
@@ -312,7 +329,7 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 				// Under the system, so two games of the same name keep apart.
 				const system = shortNameForPath(romPath)
 				await saveScreenshot(system === '' ? folder : `${folder}/${system}`, stem, blob)
-				flash(t('arcade', 'Screenshot saved to {folder}', { folder }))
+				flash(t('arcade', 'Screenshot saved to {folder}', { folder }), 'success')
 				// There is one now, so the button that shows them has
 				// something to show -- it used to be asked once at launch
 				// and never again, so a game's first screenshot stayed out
@@ -329,7 +346,7 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 			}
 		} catch (error) {
 			console.error('Could not take a screenshot', error)
-			flash(t('arcade', 'Could not take a screenshot'))
+			flash(t('arcade', 'Could not take a screenshot'), 'error')
 		} finally {
 			shooting = false
 		}
@@ -372,7 +389,7 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 		// they did not count as a gesture -- and say so by rejecting.
 		container.requestFullscreen?.().catch((error) => {
 			console.error('Could not go fullscreen', error)
-			flash(t('arcade', 'Could not go fullscreen'))
+			flash(t('arcade', 'Could not go fullscreen'), 'error')
 		})
 	})
 
@@ -449,7 +466,7 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 			if (!await waitAtMost(saveBeforeLeaving(), SAVE_BEFORE_LEAVING_WAIT, false)) {
 				// Leaving this page ends the game, so a save that did not
 				// happen means staying put and saying so.
-				flash(t('arcade', 'Could not save the game, so the details were not opened.'))
+				flash(t('arcade', 'Could not save the game, so the details were not opened.'), 'error')
 				return
 			}
 			const absolute = romPath.startsWith('/') ? romPath : `/${romPath}`
@@ -546,7 +563,19 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 				element.title = t('arcade', 'Close without saving')
 				element.setAttribute('aria-label', element.title)
 				element.focus()
-				flash(t('arcade', 'Could not save the game. Press Close again to leave without saving.'))
+				// This one stays until it is dismissed. It is not news, it
+				// is the question the button is now asking, and that question
+				// has no deadline: a message that timed out would leave a
+				// button relabelled "Close without saving" with nothing on
+				// screen to say why. The toast comes with a close button of
+				// its own, and the next message replaces it, so nothing is
+				// left sitting on the game -- and pressing Close again leaves
+				// the page, which takes it away regardless.
+				flash(
+					t('arcade', 'Could not save the game. Press Close again to leave without saving.'),
+					'error',
+					{ timeout: UNTIL_DISMISSED },
+				)
 				return
 			}
 			// Closing is the session's to do, not the toolbar's: it waits
@@ -653,12 +682,13 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 	// Ahead of the emulator, which listens on the window for its own keys.
 	document.addEventListener('keydown', onKeyDown, true)
 
-	toolbar.appendChild(status)
 	container.appendChild(toolbar)
 	if (notice !== '') {
 		// Known since before the toolbar existed -- the launch found out,
-		// but had no status line yet to say it on. Said now, once.
-		flash(notice)
+		// but there was nothing up yet to say it with. Said now, once, as
+		// a warning: the game did start, only without something it wanted,
+		// such as its BIOS.
+		flash(notice, 'warning')
 	}
 	if (statesPanel !== null) {
 		container.appendChild(statesPanel.element)
@@ -735,7 +765,11 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 
 	return () => {
 		gone.abort()
-		clearTimeout(statusTimer)
+		// A message about a game that is no longer there has nobody left
+		// to be for -- and the one that waits to be dismissed would wait
+		// forever.
+		currentToast?.hideToast?.()
+		currentToast = null
 		clearInterval(autosaveTimer)
 		clearTimeout(idleTimer)
 		document.removeEventListener('visibilitychange', onVisibilityChange)
