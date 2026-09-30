@@ -10,9 +10,7 @@ import { createPanel } from './panel.js'
  *
  * @param {object} options options
  * @param {string} options.romPath path identifying the game
- * @param {Function} options.flash says something to the player, taking
- *                                 the message and how it reads: success,
- *                                 info, warning or error
+ * @param {Function} options.flash shows a status message
  * @param {?Function} [options.onCount] told how many there are, each time
  *                                      the list comes back
  * @return {{element: HTMLElement, refresh: Function, count: Function}} the panel
@@ -51,7 +49,7 @@ export function createGalleryPanel({ romPath, flash, onCount = null }) {
 			await refresh()
 		} catch (error) {
 			console.error('Could not delete the screenshot', error)
-			flash(t('arcade', 'Could not delete the screenshot'), 'error')
+			flash(t('arcade', 'Could not delete the screenshot'))
 		}
 	}
 

@@ -63,6 +63,7 @@
 .arcade-topbar > button.active { background-color: rgba(255, 255, 255, 0.35); }
 .arcade-toolbar > button svg,
 .arcade-topbar > button svg { width: 20px; height: 20px; fill: #fff; }
+.arcade-toolbar-status { color: #fff; font-size: 12px; margin-inline-start: 6px; white-space: nowrap; }
 /* The two panels above the toolbar -- save states and screenshots --
    share one dress; the gallery only adds a width cap for its grid. */
 .arcade-states,
