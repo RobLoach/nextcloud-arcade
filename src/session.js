@@ -24,11 +24,19 @@ const settings = loadState('arcade', 'settings', {})
  *                             answering once the save data is safe
  */
 export async function startSession({ canvas, container, filename, basename, source, closeUrl = '', signal = null }) {
-	// The launch learns of anything it went without -- a missing BIOS --
-	// before the toolbar and its status line exist, so the word is held
-	// here and handed over below, for the toolbar to flash once it is on
-	// screen.
-	let notice = ''
+	// The launch learns of anything it went without -- a missing BIOS, a
+	// complaint from the core itself -- before there is a toolbar to say
+	// it with, so what is said early waits in here and is handed over
+	// once the bar is up. After that, words go straight to it.
+	const notices = []
+	let flash = null
+	const say = (text, type) => {
+		if (flash === null) {
+			notices.push([text, type])
+			return
+		}
+		flash(text, type)
+	}
 	const instance = await launchRom({
 		element: canvas,
 		romUrl: source ?? davUrl(filename),
@@ -37,8 +45,9 @@ export async function startSession({ canvas, container, filename, basename, sour
 		systemHint: systemForFolderPath(filename),
 		romPath: filename,
 		onWarning: (text) => {
-			notice = text
+			say(text, 'warning')
 		},
+		onCoreMessage: say,
 		signal,
 	})
 	const stopSramSync = startSramSync(instance, filename, (settings.saves_folder ?? '') !== '')
@@ -57,6 +66,9 @@ export async function startSession({ canvas, container, filename, basename, sour
 		stopped = true
 		stopPlayTime()
 		await stopSramSync()
+		// Nothing to say it on any more, and a core on its way out is
+		// often at its most talkative.
+		flash = null
 		detachToolbar?.()
 		try {
 			instance.exit()
@@ -73,7 +85,10 @@ export async function startSession({ canvas, container, filename, basename, sour
 		settings,
 		closeUrl,
 		onClose: stop,
-		notice,
+		notices,
+		onFlash: (toolbarFlash) => {
+			flash = toolbarFlash
+		},
 	})
 
 	return stop

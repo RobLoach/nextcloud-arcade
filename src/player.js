@@ -5,6 +5,7 @@ import { defaultRemoteURL, defaultRootPath } from '@nextcloud/files/dav'
 import { translate as t } from '@nextcloud/l10n'
 import { generateFilePath, generateUrl } from '@nextcloud/router'
 import { api } from './api.js'
+import { createCoreLog } from './corelog.js'
 import { inputConfig, retroarchKey } from './keys.js'
 import { biosForSystem, coreForSystem, systemForFile, systemFromBytes, systemLabel } from './systems.js'
 import { waitAtMost } from './wait.js'
@@ -138,10 +139,12 @@ async function resolveRom(blob, romName, systemHint) {
  * @param {string} [options.romPath] path identifying the game, enables SRAM restore
  * @param {?Function} [options.onWarning] told, in words for the player, about
  *                                        anything the launch went without
+ * @param {?Function} [options.onCoreMessage] told what the core itself has
+ *                                            to say, with how it reads
  * @param {?AbortSignal} [options.signal] abandons the launch when it fires
  * @return {Promise<Nostalgist>} the running emulator
  */
-export async function launchRom({ element, romUrl, romName, settings = {}, systemHint = null, romPath = '', onWarning = null, signal = null }) {
+export async function launchRom({ element, romUrl, romName, settings = {}, systemHint = null, romPath = '', onWarning = null, onCoreMessage = null, signal = null }) {
 	const canSave = (settings.saves_folder ?? '') !== ''
 	// The core is a few megabytes of its own. Warming it in the browser
 	// cache now means it is there when Nostalgist asks, instead of being
@@ -209,7 +212,41 @@ export async function launchRom({ element, romUrl, romName, settings = {}, syste
 		resolveCoreWasm(coreName) {
 			return coreUrl(`${coreName}_libretro.wasm`)
 		},
+		emscriptenModule: coreOutput(onCoreMessage),
 	})
+}
+
+/**
+ * Listen in on what the core prints.
+ *
+ * RetroArch writes its log through Emscripten's print hooks, and
+ * Nostalgist's own send it to the console. That stays: everything
+ * printed still lands there exactly as before, and only the lines a
+ * player could act on are passed on to be said out loud as well.
+ *
+ * @param {?Function} onCoreMessage told what is worth saying, or null to
+ *                                  leave the output to the console alone
+ * @return {object} the Emscripten module options for the launch
+ */
+function coreOutput(onCoreMessage) {
+	if (typeof onCoreMessage !== 'function') {
+		return {}
+	}
+	const log = createCoreLog(onCoreMessage)
+	// A hook that threw would take the core's logging down with it, so
+	// whatever happens in here stops in here.
+	const watch = (write) => (...args) => {
+		write(...args)
+		try {
+			log(args.join(' '))
+		} catch (error) {
+			console.error('Arcade could not read the core output', error)
+		}
+	}
+	return {
+		print: watch((...args) => console.info(...args)),
+		printErr: watch((...args) => console.error(...args)),
+	}
 }
 
 /**
