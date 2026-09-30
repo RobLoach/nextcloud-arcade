@@ -210,6 +210,21 @@ class BiosServiceTest extends TestCase {
 		$this->assertSame('mine', $this->service()->readFor('player', 'gb_bios.bin'));
 	}
 
+	public function testReadForIsAskedWhateverTheCase(): void {
+		// The casing of the request counted too, so a core asking for
+		// SCPH5501.BIN was turned away at the door while the file it
+		// wanted sat right there.
+		$this->userFiles['gb_bios.bin'] = 'mine';
+
+		$this->assertSame('mine', $this->service()->readFor('player', 'GB_BIOS.BIN'));
+	}
+
+	public function testReadForReachesTheStoreWhateverTheCase(): void {
+		$this->files['gb_bios.bin'] = 'everybody\'s';
+
+		$this->assertSame('everybody\'s', $this->service()->readFor('player', 'Gb_Bios.Bin'));
+	}
+
 	public function testReadForFallsBackToTheStore(): void {
 		$this->files['gb_bios.bin'] = 'everybody\'s';
 

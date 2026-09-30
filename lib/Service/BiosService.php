@@ -89,7 +89,12 @@ class BiosService {
 	 * looked at.
 	 */
 	public function readFor(?string $userId, string $name): ?string {
-		if (!self::isKnown($name)) {
+		// Without regard to case on the way in as well, not only in the
+		// folder: a core asking for scph5501.BIN wants the same file as
+		// one asking for scph5501.bin, and the spelling the cores are
+		// listed under is the one everything below here looks for.
+		$name = self::canonicalName($name) ?? '';
+		if ($name === '') {
 			return null;
 		}
 		if ($userId !== null) {

@@ -175,6 +175,7 @@ docker exec -u www-data "$CONTAINER" sh -c '
 	mkdir -p "$d/Super Nintendo"
 	printf "not a real Game Boy ROM"           > "$d/Tetris.gb"
 	printf "not a real Super Nintendo ROM"     > "$d/Super Nintendo/Chrono.sfc"
+	mkdir -p /var/www/html/data/admin/files/Saves
 '
 occ files:scan "$ADMIN_USER" || die 'files:scan failed'
 
@@ -230,6 +231,123 @@ system = data.get("system") or {}
 if not system.get("id"):
     raise SystemExit(f"no system.id in: {data}")
 '
+fi
+
+step 'Reading the capabilities'
+# What other apps and clients read this app through. The version is taken
+# from the app manager, so a capabilities payload that still answers proves
+# the app is loaded, not merely installed.
+if assert_status 'capabilities' "$BASE/ocs/v2.php/cloud/capabilities?format=json"; then
+	VERSION_NOW=$(sed -n 's/.*<version>\(.*\)<\/version>.*/\1/p' "$REPO_ROOT/appinfo/info.xml" | head -1)
+	assert_json 'capabilities carry the app' "
+arcade = data['ocs']['data']['capabilities'].get('arcade')
+if arcade is None:
+    raise SystemExit('no arcade key in the capabilities')
+if arcade.get('version') != '$VERSION_NOW':
+    raise SystemExit(f\"version {arcade.get('version')!r}, expected '$VERSION_NOW'\")
+systems = {s['id'] for s in arcade.get('systems', [])}
+if 'gb' not in systems:
+    raise SystemExit(f'gb missing from the advertised systems: {sorted(systems)}')
+if not isinstance(arcade.get('features'), dict) or not arcade['features']:
+    raise SystemExit(f\"features missing: {arcade.get('features')!r}\")
+if arcade.get('limits', {}).get('maxGames', 0) <= 0:
+    raise SystemExit(f\"limits look wrong: {arcade.get('limits')!r}\")
+"
+fi
+
+# --- save states outlive the game only until it is really gone ---------------
+
+step 'Saving a state and throwing the game away'
+GAME=/Games/Tetris.gb
+# Saves need somewhere of the user's own to live, and there is no default
+# for that: pointing the setting at a folder is what a player does first,
+# so the settings endpoint is exercised on the way.
+CODE=$(curl -sS -o "$BODY" -w '%{http_code}' -X POST \
+	-b "$COOKIES" -H "requesttoken: $TOKEN" \
+	--data-urlencode 'saves_folder=/Saves' \
+	"$BASE/index.php/apps/arcade/arcade/settings")
+if [ "$CODE" != '200' ]; then
+	fail "setting the saves folder: expected HTTP 200, got $CODE (body: $(head -c 300 "$BODY"))"
+else
+	assert_json 'the saves folder was kept' '
+kept = data.get("saves_folder")
+if kept != "/Saves":
+    raise SystemExit(f"saves_folder came back as {kept!r}")
+'
+fi
+STATE_URL="$BASE/index.php/apps/arcade/arcade/state?file=$GAME&slot=1"
+CODE=$(curl -sS -o "$BODY" -w '%{http_code}' -X POST \
+	-b "$COOKIES" -H "requesttoken: $TOKEN" \
+	-H 'Content-Type: application/octet-stream' \
+	--data-binary 'not a real save state' "$STATE_URL")
+if [ "$CODE" != '200' ]; then
+	fail "saving a state: expected HTTP 200, got $CODE (body: $(head -c 300 "$BODY"))"
+else
+	echo 'ok: state saved (200)'
+fi
+
+if assert_status 'states are listed' "$BASE/index.php/apps/arcade/arcade/states?file=$GAME"; then
+	assert_json 'the saved state is there' '
+slots = [s.get("slot") for s in data.get("states", [])]
+if 1 not in slots:
+    raise SystemExit(f"slot 1 missing from: {slots}")
+'
+fi
+
+# From here the game itself goes away, and the endpoint that lists states
+# turns away a request naming a game the user does not have -- so the save
+# is watched where it actually lives: in the user's own files.
+SAVES_DIR=/var/www/html/data/admin/files/Saves
+SAVE_FILE=$(docker exec "$CONTAINER" find "$SAVES_DIR" -name '*.state' | head -1)
+if [ -z "$SAVE_FILE" ]; then
+	die "nothing was written under $SAVES_DIR ($(docker exec "$CONTAINER" find "$SAVES_DIR" | head -5 | tr '\n' ' '))"
+fi
+echo "ok: the save was written to ${SAVE_FILE#"$SAVES_DIR"/}"
+save_is() {
+	local want=$1 when=$2
+	if docker exec "$CONTAINER" test -f "$SAVE_FILE"; then
+		local have=present
+	else
+		local have=gone
+	fi
+	if [ "$have" != "$want" ]; then
+		fail "the save is $have $when, expected $want"
+	else
+		echo "ok: the save is $have $when"
+	fi
+}
+
+# Into the trash first, where the save is meant to survive: a game brought
+# back out of the trash keeps what was saved of it.
+DAV="$BASE/remote.php/dav/files/$ADMIN_USER"
+curl -sSf -o /dev/null -X DELETE -b "$COOKIES" -H "requesttoken: $TOKEN" "$DAV$GAME" \
+	|| die 'could not move the game to the trash'
+save_is present 'while the game sits in the trash'
+
+step 'Expunging the game from the trash'
+# NodeDeletedEvent never fires for a path inside the trash, so saves used
+# to be left behind for ever. The legacy preDelete hook is what finally
+# collects them, and only a real expunge exercises it.
+TRASH="$BASE/remote.php/dav/trashbin/$ADMIN_USER/trash"
+curl -sS -o "$BODY" -X PROPFIND -b "$COOKIES" -H "requesttoken: $TOKEN" \
+	-H 'Depth: 1' "$TRASH" || die 'could not list the trash'
+TRASH_ITEM=$(grep -o '<d:href>[^<]*Tetris[^<]*</d:href>' "$BODY" | head -1 \
+	| sed 's|<d:href>||;s|</d:href>||')
+[ -n "$TRASH_ITEM" ] || die "the game is not in the trash (body: $(head -c 300 "$BODY"))"
+curl -sSf -o /dev/null -X DELETE -b "$COOKIES" -H "requesttoken: $TOKEN" \
+	"$BASE$TRASH_ITEM" || die 'could not expunge the game from the trash'
+save_is gone 'once the game is expunged'
+
+step 'Running occ arcade:cleanup --dry-run'
+# The sweep that collects what the events missed. A dry run touches
+# nothing, so it is safe to run here, and it is the only place the sweep
+# is exercised against a real database.
+if occ arcade:cleanup --dry-run > "$BODY" 2>&1; then
+	grep -q 'Dry run' "$BODY" || fail "arcade:cleanup --dry-run said nothing about being a dry run: $(head -c 300 "$BODY")"
+	grep -q 'Removed the states of' "$BODY" || fail "arcade:cleanup --dry-run reported no counts: $(head -c 300 "$BODY")"
+	echo 'ok: arcade:cleanup --dry-run'
+else
+	fail "occ arcade:cleanup --dry-run exited non-zero: $(head -c 300 "$BODY")"
 fi
 
 step 'Fetching the JavaScript bundles'

@@ -19,6 +19,7 @@ use OCP\Security\CSP\AddContentSecurityPolicyEvent;
 use OCP\Share\Exceptions\ShareNotFound;
 use OCP\Share\IManager as IShareManager;
 use OCP\Share\IShare;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 
@@ -45,6 +46,28 @@ class CSPListenerTest extends TestCase {
 	/** The event's constructor wants OC internals, so it is mocked whole. */
 	private function event(): AddContentSecurityPolicyEvent&MockObject {
 		return $this->createMock(AddContentSecurityPolicyEvent::class);
+	}
+
+	/**
+	 * The header the listener would actually send, for a user who has the
+	 * app. Asserting on the built policy rather than on the call: a policy
+	 * with a directive missing is still an EmptyContentSecurityPolicy, and
+	 * the emulator would stop running with every test still passing.
+	 */
+	private function policy(): string {
+		$user = $this->user();
+		$this->userSession->method('getUser')->willReturn($user);
+		$this->appManager->method('isEnabledForUser')->willReturn(true);
+
+		$built = '';
+		$event = $this->event();
+		$event->method('addPolicy')->willReturnCallback(
+			function (EmptyContentSecurityPolicy $csp) use (&$built): void {
+				$built = $csp->buildPolicy();
+			},
+		);
+		$this->listener->handle($event);
+		return $built;
 	}
 
 	private function user(): IUser {
@@ -90,6 +113,47 @@ class CSPListenerTest extends TestCase {
 			->with($this->isInstanceOf(EmptyContentSecurityPolicy::class));
 
 		$this->listener->handle($event);
+	}
+
+	/**
+	 * Every directive the emulator needs, with what it is needed for. Each
+	 * one of these going missing breaks the player in a way no other test
+	 * in this file would notice.
+	 *
+	 * @return array<string, array{string, string}>
+	 */
+	public static function directives(): array {
+		return [
+			'the cores are WebAssembly' => ["script-src blob: 'wasm-unsafe-eval'", 'wasm-unsafe-eval'],
+			'Nostalgist runs the core off a blob URL' => ['script-src blob:', 'script-src'],
+			// Nextcloud 34 dropped child-src, so nothing falls back to it.
+			'RetroArch threads are blob workers' => ['worker-src blob:', 'worker-src'],
+			'the core, ROM and saves are fetched as blobs' => ['connect-src blob: data:', 'connect-src'],
+			'box art and screenshots are data URLs' => ['img-src blob: data:', 'img-src'],
+			'the core plays its audio from a blob' => ['media-src blob: data:', 'media-src'],
+			'the core renders into a blob frame' => ['frame-src blob:', 'frame-src'],
+		];
+	}
+
+	#[DataProvider('directives')]
+	public function testThePolicyCarriesWhatTheEmulatorNeeds(string $directive, string $name): void {
+		$this->assertStringContainsString(
+			$directive,
+			$this->policy(),
+			sprintf('The %s directive lost what the player needs from it.', $name),
+		);
+	}
+
+	public function testThePolicyGrantsNothingBeyondThat(): void {
+		// An empty policy adds only what is asked of it, and what is asked
+		// of it stays worth asking: no unsafe-inline, no unsafe-eval, and
+		// no domain beyond the blob: and data: URLs the emulator makes for
+		// itself. A directive added here without a reason fails this.
+		$policy = $this->policy();
+		$this->assertStringNotContainsString("'unsafe-inline'", $policy);
+		$this->assertStringNotContainsString("'unsafe-eval'", $policy);
+		$this->assertStringNotContainsString('http', $policy);
+		$this->assertStringNotContainsString('*', $policy);
 	}
 
 	public function testNobodyLoggedInGetsNoPolicy(): void {
