@@ -599,7 +599,7 @@ function renderHeader(reload, setView, rescanning) {
 		refresh.setAttribute('aria-disabled', String(running))
 		refresh.classList.toggle('arcade-library-refreshing', running)
 		refresh.title = running
-			? t('arcade', 'The games library is being refreshed. This can take a while; the button comes back when the page is next loaded.')
+			? t('arcade', 'The games library is being refreshed.')
 			: t('arcade', 'Rescan the library folder')
 		refresh.setAttribute('aria-label', refresh.title)
 	}
