@@ -3,7 +3,29 @@
    The overlay sits on the game picture itself, so it keeps a fixed dark
    scrim in every theme; sizes and radii follow the Nextcloud variables. */
 
-.arcade-player-container { position: relative; }
+.arcade-player-container {
+	position: relative;
+	/* Where the top-right cluster ends: its own offset from the top of
+	   the player, plus its height -- a 34px button in 4px of padding. */
+	--arcade-topbar-bottom: calc(var(--default-grid-baseline, 4px) * 2 + env(safe-area-inset-top, 0px) + 42px);
+}
+/* The player's own messages, which are hung inside this container rather
+   than on the body so that fullscreen paints them (see toastsIn).
+   The server dresses a toast `position: fixed; margin-top: 45px`, which
+   measures from the top of the *window*: in fullscreen the player starts
+   there too, so the toast clears the three-dots and close buttons and
+   reads fine, but on the app page the player starts below the Nextcloud
+   header and the toast lands right on top of them -- and behind them,
+   the chrome being z-index 20100 against the toast's 9000.
+   Measuring from the player instead of from the window makes the two
+   views agree: under the buttons in both, which is where fullscreen
+   already put it. */
+.arcade-player-container .toastify.toast {
+	position: absolute;
+	margin-top: 0;
+	top: calc(var(--arcade-topbar-bottom) + var(--default-grid-baseline, 4px) * 2);
+	inset-inline-end: calc(var(--default-grid-baseline, 4px) * 2 + env(safe-area-inset-right, 0px));
+}
 /* The two chrome clusters: the control bar along the bottom and the
    leave-the-game cluster in the top corner share one pill dress. */
 .arcade-toolbar,
