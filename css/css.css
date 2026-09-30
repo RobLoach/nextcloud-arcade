@@ -396,7 +396,9 @@
 	margin: 0;
 }
 
-.arcade .arcade-library-notice {
+/* The same line carries a failure and a word about something under way;
+   only the failure is worth the error colour. */
+.arcade .arcade-library-notice-failed {
 	color: var(--color-error-text, var(--color-main-text));
 }
 

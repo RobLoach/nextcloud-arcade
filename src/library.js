@@ -558,9 +558,10 @@ function renderFilters(systems, tags, reload) {
 /**
  * @param {Function} reload reloads the library with new parameters
  * @param {Function} setView switches the view without reloading
+ * @param {Function} notify says a word in the library's own line
  * @return {HTMLElement} the header, with the view switcher
  */
-function renderHeader(reload, setView) {
+function renderHeader(reload, setView, notify) {
 	const header = document.createElement('div')
 	header.className = 'arcade-library-header'
 
@@ -595,7 +596,20 @@ function renderHeader(reload, setView) {
 	refresh.title = t('arcade', 'Rescan the library folder')
 	refresh.setAttribute('aria-label', refresh.title)
 	refresh.innerHTML = icon(ICONS.refresh)
-	refresh.addEventListener('click', () => reload(true))
+	refresh.addEventListener('click', async () => {
+		// A rescan walks the whole library folder and leaves a metadata job
+		// behind it, so nothing moves on screen for a while. Saying so is
+		// what keeps the button from looking dead, and the disabling keeps
+		// a second scan from being asked for on top of the first.
+		refresh.disabled = true
+		notify(t('arcade', 'Refreshing the games library in the background. This can take a while.'), false)
+		try {
+			await reload(true)
+		} finally {
+			refresh.disabled = false
+			notify('')
+		}
+	})
 	controls.appendChild(refresh)
 
 	header.appendChild(controls)
@@ -860,13 +874,16 @@ export async function renderLibrary(container, onError) {
 	}
 
 	/**
-	 * @param {string} message what went wrong, or an empty string to clear
+	 * @param {string} message what happened, or an empty string to clear
+	 * @param {boolean} failed whether it is a failure, said in the error
+	 *   colour, rather than a word about something under way
 	 */
-	const notify = (message) => {
+	const notify = (message, failed = true) => {
 		const notice = container.querySelector('.arcade-library-notice')
 		if (notice !== null) {
 			notice.textContent = message
 			notice.classList.toggle('hidden', message === '')
+			notice.classList.toggle('arcade-library-notice-failed', failed)
 		}
 	}
 
@@ -878,9 +895,10 @@ export async function renderLibrary(container, onError) {
 	 * @return {HTMLElement} the page's live region, wherever it ended up
 	 */
 	const paint = (data) => {
-		container.appendChild(renderHeader(load, setView))
+		container.appendChild(renderHeader(load, setView, notify))
 
-		// Where a failure that moves nothing on screen gets to be heard.
+		// Where a failure, or a rescan that moves nothing on screen while
+		// it runs, gets to be heard.
 		const notice = document.createElement('p')
 		notice.className = 'arcade-library-hint arcade-library-notice hidden'
 		notice.setAttribute('role', 'alert')
