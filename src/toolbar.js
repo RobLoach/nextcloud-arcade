@@ -8,7 +8,7 @@ import { offerResume } from './panels/resume.js'
 import { createStatesPanel } from './panels/states.js'
 import { davUrl, fileIdOf } from './player.js'
 import { shortNameForPath } from './systems.js'
-import { UNTIL_DISMISSED, showError, showInfo, showSuccess, showWarning } from './toast.js'
+import { UNTIL_DISMISSED, toastsIn } from './toast.js'
 import { attachTouchControls, isTouchDevice, isTouchPrimary } from './touch.js'
 import { waitAtMost } from './wait.js'
 
@@ -60,25 +60,13 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 	// the same toast the rest of the app says things with, so there is one
 	// notification system here and not two.
 	//
-	// Hung inside the player container rather than on document.body, and
-	// always, not only in fullscreen: the browser paints only the
-	// fullscreen element's subtree, and the element that goes fullscreen
-	// is this container, so a toast on the body would be invisible exactly
-	// when the player is most likely to be looking at one. The toaster's
-	// container is fixed-positioned, so from in here a toast still lands
-	// where the app's toasts always land. One path, with nothing to ask
-	// about the fullscreen state.
-	//
-	// The docblock of that `selector` option calls it "(for testing)". It
-	// is used here on purpose, and a @nextcloud/dialogs that dropped it
-	// would not throw: the helper falls back to its container on the body,
-	// and toasts in fullscreen go back to being unseen, which is where
-	// they were before.
-	const TOAST_SELECTOR = '.arcade-player-container'
-	const toasts = { error: showError, warning: showWarning, info: showInfo, success: showSuccess }
+	// Hung inside the player's own container rather than on document.body,
+	// and always, not only in fullscreen -- see toastsIn() for why.
+	const toasts = toastsIn(container)
 	// One at a time, as the single line this replaced was: the newest
-	// message is the one that matters, and a toast hung by selector brings
-	// a container of its own, which the next one would otherwise sit on.
+	// message is the one that matters, and a toast hung inside the player
+	// brings a container of its own, which the next one would otherwise
+	// sit on.
 	let currentToast = null
 	/**
 	 * @param {string} text what to say
@@ -87,7 +75,7 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 	 */
 	const flash = (text, type = 'info', options = {}) => {
 		currentToast?.hideToast?.()
-		currentToast = toasts[type](text, { selector: TOAST_SELECTOR, ...options })
+		currentToast = toasts[type](text, options)
 	}
 
 	const button = (iconPath, label, onClick, parent = toolbar) => {

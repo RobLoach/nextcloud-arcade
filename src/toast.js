@@ -50,7 +50,64 @@ function say(kind, message, ariaLive, log, options) {
 		log(message)
 		return null
 	}
-	return toast[kind](message, { ariaLive, ...options })
+	try {
+		return toast[kind](message, { ariaLive, ...options })
+	} catch (error) {
+		// A message that cannot be shown must not take down whatever was
+		// trying to say it. Hanging a toast somewhere of our own is the
+		// only part of this that can fail, so it is dropped and the toast
+		// goes where toasts go by default -- and if even that fails, the
+		// console still has it.
+		console.error('Arcade could not show a toast', error)
+		try {
+			return toast[kind](message, { ariaLive })
+		} catch {
+			log(message)
+			return null
+		}
+	}
+}
+
+/**
+ * The same helpers, hung inside one element instead of on document.body.
+ *
+ * For the player: the browser paints only the fullscreen element's
+ * subtree, and the element that goes fullscreen is the player's
+ * container, so a toast on the body is invisible exactly when the player
+ * is most likely to be looking at one. The toaster's own container is
+ * fixed-positioned, so from in here a toast still lands where the app's
+ * toasts always land, with nothing to ask about the fullscreen state.
+ *
+ * The element itself is passed, never a selector for it. The toaster the
+ * server ships reads a string as an element **id**:
+ *
+ *   string ? getElementById(selector)
+ *          : selector instanceof HTMLElement ? selector : document.body
+ *   if (!root) throw "Root element is not defined"
+ *
+ * so a CSS selector finds nothing and throws, taking down not just the
+ * message but whatever was saying it -- which is how a whole session's
+ * worth of player messages went missing. A node is taken as it is.
+ *
+ * The newer @nextcloud/dialogs, which a later server will carry, resolves
+ * the same option with querySelector instead and would throw on a node.
+ * Neither value suits both, so the throw is caught below and the message
+ * said the ordinary way: on such a server the player's toasts go back to
+ * the body, seen everywhere except fullscreen, and nothing breaks.
+ *
+ * @param {HTMLElement} element what to hang the toasts inside
+ * @return {{error: Function, warning: Function, info: Function, success: Function}}
+ *         the helpers, each taking the message and returning the toast
+ */
+export function toastsIn(element) {
+	const inside = (show) => (message, options = {}) =>
+		show(message, { selector: element, ...options })
+	return {
+		error: inside(showError),
+		warning: inside(showWarning),
+		info: inside(showInfo),
+		success: inside(showSuccess),
+	}
 }
 
 /**
