@@ -72,6 +72,18 @@
 	background-color: var(--color-primary-element);
 }
 
+/* A rescan already under way: the button stays where it is and keeps its
+   place in the tab order, so it can still be reached and read, but it
+   looks as unavailable as it acts. */
+.arcade .arcade-library-controls button[aria-disabled='true'] {
+	opacity: 0.5;
+	cursor: default;
+}
+
+.arcade .arcade-library-controls button[aria-disabled='true']:hover {
+	background-color: transparent;
+}
+
 .arcade .arcade-library-controls button svg {
 	width: 20px;
 	height: 20px;

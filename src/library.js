@@ -555,9 +555,11 @@ function renderFilters(systems, tags, reload) {
 /**
  * @param {Function} reload reloads the library with new parameters
  * @param {Function} setView switches the view without reloading
+ * @param {boolean} rescanning whether a rescan of the library is already
+ *   going, in which case asking for another one is no use
  * @return {HTMLElement} the header, with the view switcher
  */
-function renderHeader(reload, setView) {
+function renderHeader(reload, setView, rescanning) {
 	const header = document.createElement('div')
 	header.className = 'arcade-library-header'
 
@@ -589,21 +591,33 @@ function renderHeader(reload, setView) {
 
 	const refresh = focusable(document.createElement('button'), 'view/refresh')
 	refresh.type = 'button'
-	refresh.title = t('arcade', 'Rescan the library folder')
-	refresh.setAttribute('aria-label', refresh.title)
 	refresh.innerHTML = icon(ICONS.refresh)
-	refresh.addEventListener('click', async () => {
+	// aria-disabled rather than disabled: the button keeps its place in
+	// the tab order, so somebody on the keyboard can land on it and be
+	// told why it is not to be pressed, instead of finding it missing.
+	const setRescanning = (running) => {
+		refresh.setAttribute('aria-disabled', String(running))
+		refresh.classList.toggle('arcade-library-refreshing', running)
+		refresh.title = running
+			? t('arcade', 'The games library is being refreshed. This can take a while; the button comes back when the page is next loaded.')
+			: t('arcade', 'Rescan the library folder')
+		refresh.setAttribute('aria-label', refresh.title)
+	}
+	setRescanning(rescanning)
+	refresh.addEventListener('click', () => {
+		// Asking again while one is going only queues nothing and confuses
+		// the asker, so the button turns itself off at the press and stays
+		// off; the next load of the page hears from the server whether the
+		// rescan is done and decides afresh.
+		if (refresh.getAttribute('aria-disabled') === 'true') {
+			return
+		}
+		setRescanning(true)
 		// A rescan walks the whole library folder and leaves a metadata job
 		// behind it, so nothing moves on screen for a while. Saying so is
-		// what keeps the button from looking dead, and the disabling keeps
-		// a second scan from being asked for on top of the first.
-		refresh.disabled = true
+		// what keeps the button from looking dead.
 		showInfo(t('arcade', 'Refreshing the games library in the background. This can take a while.'))
-		try {
-			await reload(true)
-		} finally {
-			refresh.disabled = false
-		}
+		reload(true)
 	})
 	controls.appendChild(refresh)
 
@@ -883,7 +897,7 @@ export async function renderLibrary(container, onError) {
 	 * @return {HTMLElement} the page's live region, wherever it ended up
 	 */
 	const paint = (data) => {
-		container.appendChild(renderHeader(load, setView))
+		container.appendChild(renderHeader(load, setView, data.rescanning === true))
 
 		// One live region for the page: the count of what matched, the
 		// reason there was nothing to count, or what the looking for ROM

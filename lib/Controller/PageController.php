@@ -126,6 +126,7 @@ class PageController extends ArcadeController {
 				'stats' => [],
 				'games' => [],
 				'thumbnailsVersion' => '',
+				'rescanning' => false,
 			]);
 		}
 
@@ -191,6 +192,10 @@ class PageController extends ArcadeController {
 			// The one value every thumbnail preview URL is versioned by,
 			// so a replaced image escapes the browser's immutable cache.
 			'thumbnailsVersion' => $this->libraryService->thumbnailsVersion($this->userId, $userFolder, $settings),
+			// Asking for a rescan again while one is still going would do
+			// nothing, so the page is told not to offer it -- however the
+			// running one was started, in whichever tab.
+			'rescanning' => $this->isRescanning(),
 		]);
 	}
 
@@ -286,10 +291,22 @@ class PageController extends ArcadeController {
 	 * happen. The job works out for itself which games are missing it.
 	 */
 	private function queueMetadata(): void {
-		$argument = ['userId' => (string)$this->userId];
-		if (!$this->jobList->has(RefreshMetadata::class, $argument)) {
-			$this->jobList->add(RefreshMetadata::class, $argument);
+		if (!$this->isRescanning()) {
+			$this->jobList->add(RefreshMetadata::class, ['userId' => (string)$this->userId]);
 		}
+	}
+
+	/**
+	 * Whether a rescan of this user's library is waiting or under way.
+	 *
+	 * The job stays in the list while it waits and while it runs, and it
+	 * puts itself back for as long as there are games left to read, so it
+	 * answers for the whole rescan rather than for one batch of it. The
+	 * page asks so it can leave the Refresh button alone until the last
+	 * one has finished.
+	 */
+	private function isRescanning(): bool {
+		return $this->jobList->has(RefreshMetadata::class, ['userId' => (string)$this->userId]);
 	}
 
 	/**
