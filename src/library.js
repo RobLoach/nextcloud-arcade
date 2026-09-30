@@ -7,26 +7,7 @@ import { ICONS, icon } from './icons.js'
 import { attachLibraryGamepad } from './librarypad.js'
 import { playUrl, previewUrl } from './play.js'
 import { systemLabel } from './systems.js'
-
-// The toasts are behind a chunk of their own -- see src/toast.js for why
-// -- and the fetch is kicked off here at module load without being
-// waited on, so it comes down beside the page rather than after the
-// click that needs it. By the time there is anything to say it is here.
-const toasts = import('./toast.js')
-
-/**
- * @param {string} kind which of the toast wrapper's helpers to call
- * @param {string} message what to say
- */
-function toast(kind, message) {
-	toasts.then((module) => module[kind](message)).catch((error) => {
-		// Nothing left to say it with; the console keeps the trail.
-		console.error('Could not show a toast', error)
-	})
-}
-
-const showError = (message) => toast('showError', message)
-const showInfo = (message) => toast('showInfo', message)
+import { showError, showInfo } from './toast.js'
 
 const VIEWS = ['grid', 'list', 'table']
 const PAGE_SIZES = [24, 60, 120, 240]
