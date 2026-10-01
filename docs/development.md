@@ -50,13 +50,16 @@ lib/Command/                The occ commands: cleanup, uninstall, bios, status
 lib/Activity/               What was played and saved, for the Activity stream
 lib/Notification/           The word under the bell when a box art run is done
 lib/BackgroundJob/          Looking for box art and reading ROMs, away from the browser
+lib/Db/                     The games and plays tables, and their mappers
+lib/Search/                 Search operators the library scan hands the server
+lib/SetupChecks/            What the administration overview reports about the app
 lib/Controls.php            What the keyboard does, and what it does by default
 lib/RomHeader.php           The name a cartridge gives itself
 build/translationtool.phar  Collects the strings to translate
 build/smoke-test.sh         The app inside a real Nextcloud container
 l10n/                       Translations, as Nextcloud reads them
 lib/Service/                Settings, library, save states, thumbnails, history
-lib/Settings/               Personal settings section
+lib/Settings/               The personal and administration settings pages
 src/main.js                 The app page: player or games library
 src/library.js              Games library views and pagination
 src/librarypad.js           Browsing the library with a gamepad
@@ -68,14 +71,21 @@ src/player.js               Launcher, ROM fetching, zip extraction, SRAM
 src/toolbar.js              Player control bar
 src/panels/                 Save states, screenshots and resume panels
 src/api.js                  Save state endpoints shared by the panels
+src/toast.js                Everything the app says, said the one way
+src/corelog.js              What the core prints, filtered down to what a player can act on
+src/play.js                 Where a game opens from, shared by the Files entry points
 src/icons.js                The icons of the player
 src/touch.js                Virtual gamepad
 src/settings.js             Personal settings page
+src/picker.js               The file picker, loaded only when a folder is chosen
 src/systems.js              System lookup shared by the frontend
 src/keys.js                 Keys, as the browser and RetroArch each name them
+src/format.js               Play times, worded the one way
+src/wait.js                 Waiting for something, but not past a deadline
 tests/unit/                 Unit tests of the logic that has no dependencies
+tests/js/                   The same for the frontend modules, under vitest
 templates/                  App page and settings markup
-css/player.css              The player overlay, also loaded inside Files
+css/                        The library page, the player overlay, the settings and the Files tab
 img/cores/                  Emulator cores
 ```
 
