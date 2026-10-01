@@ -92,7 +92,11 @@ export function createStatesPanel({ instance, romPath, flash, onDone }) {
 		}
 	}
 
-	const save = (slot) => alone(slot, async () => {
+	// A save the player asked for says so. The one the clock asks for
+	// does not: it arrives in the middle of the game, unbidden, and takes
+	// the top-right chrome with it while it shows. Going wrong is still
+	// worth saying either way.
+	const save = (slot, { quiet = false } = {}) => alone(slot, async () => {
 		try {
 			let { state, thumbnail } = await instance.saveState()
 			if (thumbnail === undefined) {
@@ -112,9 +116,11 @@ export function createStatesPanel({ instance, romPath, flash, onDone }) {
 					body: thumbnail,
 				}).catch(() => {})
 			}
-			flash(slot === AUTO_SLOT
-				? t('arcade', 'Game saved')
-				: t('arcade', 'State saved to slot {slot}', { slot }), 'success')
+			if (!quiet) {
+				flash(slot === AUTO_SLOT
+					? t('arcade', 'Game saved')
+					: t('arcade', 'State saved to slot {slot}', { slot }), 'success')
+			}
 			onDone()
 			return true
 		} catch (error) {

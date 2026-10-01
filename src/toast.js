@@ -118,10 +118,16 @@ export function toastsIn(element) {
  */
 export const MESSAGE_UP = 'arcade-message-up'
 
-// What the toaster gives a message that does not ask for a length. Kept
-// here only to know when a message should be gone by; the toaster still
-// decides how long it actually stays.
+// What the toaster gives a message that does not ask for a length.
 const DEFAULT_TIMEOUT = 7000
+
+// What a confirmation gets instead. "Game saved" and "Restarted" are
+// glances: the player already knows what they pressed, and the message
+// holds the corner -- and with it the chrome -- for as long as it is up.
+// Anything that went wrong keeps the longer default; those are worth
+// reading twice.
+const CONFIRMATION_TIMEOUT = 3000
+const CONFIRMATIONS = ['success', 'info']
 
 /**
  * The one way the player says things: a toast hung inside the player,
@@ -159,8 +165,15 @@ export function createFlash(element) {
 		// button the words name, for as long as the words are up.
 		const stays = options.timeout === UNTIL_DISMISSED
 		element.classList.toggle(MESSAGE_UP, !stays)
+		// Only when the caller did not say: an explicit length wins, and
+		// a key set to undefined would overwrite the toaster's default
+		// rather than leave it alone.
+		const asked = options.timeout === undefined && CONFIRMATIONS.includes(type)
+			? { timeout: CONFIRMATION_TIMEOUT }
+			: {}
 		current = toasts[type](text, {
 			...options,
+			...asked,
 			onRemove: () => {
 				done(id)
 				options.onRemove?.()
@@ -174,7 +187,7 @@ export function createFlash(element) {
 			// The chrome comes back even if that call never arrives --
 			// an older toaster, a helper that drops the option. A button
 			// that cannot be reached is worse than a word in front of it.
-			const timeout = options.timeout > 0 ? options.timeout : DEFAULT_TIMEOUT
+			const timeout = options.timeout ?? asked.timeout ?? DEFAULT_TIMEOUT
 			expected = setTimeout(() => done(id), timeout + 1000)
 		}
 		return current

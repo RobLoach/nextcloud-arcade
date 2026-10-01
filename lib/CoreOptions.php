@@ -42,6 +42,18 @@ class CoreOptions {
 				'label' => 'Remove sprite limit',
 				'values' => ['disabled' => 'No', 'enabled' => 'Yes'],
 			],
+			// Runs the processor twice per frame, which is what the games
+			// that slow down when the screen fills up were short of. Which
+			// half of the frame gets the extra cycles decides what breaks:
+			// games disagree, so both are offered rather than guessed at.
+			'fceumm_overclocking' => [
+				'label' => 'Overclock',
+				'values' => [
+					'disabled' => 'Off',
+					'2x-Postrender' => '2x Postrender',
+					'2x-VBlank' => '2x VBlank',
+				],
+			],
 			'fceumm_overscan_v' => [
 				'label' => 'Crop vertical overscan',
 				'values' => ['enabled' => 'Yes', 'disabled' => 'No'],

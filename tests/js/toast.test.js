@@ -224,6 +224,44 @@ describe('createFlash', () => {
 		expect(first.hideToast).toHaveBeenCalled()
 	})
 
+	test('lets a confirmation go after a glance', () => {
+		const { flash } = createFlash(player)
+
+		flash('Game saved', 'success')
+		flash('Restarted', 'info')
+
+		expect(toast.success.mock.calls[0][1].timeout).toBe(3000)
+		expect(toast.info.mock.calls[0][1].timeout).toBe(3000)
+	})
+
+	test('leaves anything that went wrong up for the toaster default', () => {
+		const { flash } = createFlash(player)
+
+		flash('Could not load the state', 'error')
+		flash('No BIOS files found', 'warning')
+
+		// No length asked for at all, so the toaster keeps its own.
+		expect(toast.error.mock.calls[0][1]).not.toHaveProperty('timeout')
+		expect(toast.warning.mock.calls[0][1]).not.toHaveProperty('timeout')
+	})
+
+	test('a length the caller asked for wins', () => {
+		const { flash } = createFlash(player)
+
+		flash('Saving the game …', 'info', { timeout: 5000 })
+
+		expect(toast.info.mock.calls[0][1].timeout).toBe(5000)
+	})
+
+	test('gives the chrome back when a confirmation has had its glance', () => {
+		const { flash } = createFlash(player)
+		flash('Game saved', 'success')
+
+		vi.advanceTimersByTime(3000 + 1000)
+
+		expect(player.classes.has(MESSAGE_UP)).toBe(false)
+	})
+
 	test('stopping puts the message away and gives the chrome back', () => {
 		const { flash, stop } = createFlash(player)
 		const showing = { hideToast: vi.fn() }

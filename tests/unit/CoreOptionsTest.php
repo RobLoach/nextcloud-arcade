@@ -37,6 +37,16 @@ class CoreOptionsTest extends TestCase {
 		'pcsx_rearmed' => 'pcsx_rearmed_',
 	];
 
+	public function testOverclockingOffersWhatTheCoreAccepts(): void {
+		// Spelled exactly as fceumm lists them: RetroArch passes an
+		// unknown value straight to the core, which quietly keeps its
+		// default, so a typo here is a setting that does nothing.
+		$this->assertSame(
+			['disabled', '2x-Postrender', '2x-VBlank'],
+			array_keys(CoreOptions::OPTIONS['fceumm']['fceumm_overclocking']['values']),
+		);
+	}
+
 	public function testEveryOptionIsUsable(): void {
 		foreach (CoreOptions::OPTIONS as $core => $options) {
 			$this->assertArrayHasKey($core, self::PREFIXES, "$core has no known option prefix");

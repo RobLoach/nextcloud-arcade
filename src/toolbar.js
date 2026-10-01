@@ -222,7 +222,10 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 		if (interval > 0) {
 			autosaveTimer = setInterval(() => {
 				if (!paused && !document.hidden) {
-					statesPanel.save(AUTO_SLOT)
+					// Quietly: nobody asked for this one, and a message
+					// every few minutes in the middle of a game -- taking
+					// the chrome with it -- is not worth the reassurance.
+					statesPanel.save(AUTO_SLOT, { quiet: true })
 				}
 			}, interval * 1000)
 		}
@@ -236,7 +239,10 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 		if (settings.autosave_on_close !== true || statesPanel === null) {
 			return true
 		}
-		flash(t('arcade', 'Saving the game …'), 'info')
+		// For as long as the player is going to be kept waiting: this one
+		// explains a pause rather than confirming something done, so it
+		// outstays the three seconds a confirmation gets.
+		flash(t('arcade', 'Saving the game …'), 'info', { timeout: SAVE_BEFORE_LEAVING_WAIT })
 		// A tick of the autosave may be in the air. Letting it land first
 		// keeps this save from being turned away as a repeat of it, and
 		// so from reporting a failure that never happened.
@@ -378,7 +384,11 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 	let actionsMenu = null
 	let actionsButton = null
 	let refreshSidebarItem = null
-	const closeActionsMenu = () => {
+	/**
+	 * @param {boolean} [chosen] whether an item of the menu was picked,
+	 *   rather than the menu being dismissed
+	 */
+	const closeActionsMenu = (chosen = false) => {
 		if (actionsMenu === null) {
 			return
 		}
@@ -387,9 +397,16 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 		const held = actionsMenu.contains(document.activeElement)
 		actionsMenu.classList.add('hidden')
 		setExpanded(actionsButton, false)
-		if (held) {
-			actionsButton?.focus()
+		if (!held) {
+			return
 		}
+		// Dismissed, the focus goes back where it came from. Chosen, it
+		// goes to the bar along the bottom instead: what was picked
+		// usually has something to say, and the top-right chrome steps
+		// aside while it is said -- but not while it holds the focus, so
+		// staying here would keep the buttons sitting on the message.
+		// This is why restarting a game used to cover its own word.
+		;(chosen ? pauseButton : actionsButton)?.focus()
 	}
 	if (closeUrl !== '') {
 		actionsMenu = document.createElement('div')
@@ -403,7 +420,7 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 			element.appendChild(document.createTextNode(label))
 			element.addEventListener('click', (event) => {
 				event.stopPropagation()
-				closeActionsMenu()
+				closeActionsMenu(true)
 				onClick()
 			})
 			actionsMenu.appendChild(element)
