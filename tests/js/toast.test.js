@@ -181,17 +181,6 @@ describe('createFlash', () => {
 		expect(player.classes.has(MESSAGE_UP)).toBe(true)
 	})
 
-	test('gives the chrome back even if the toaster never says the toast went', () => {
-		// An older toaster, or one that drops the option: a button that
-		// cannot be reached is worse than a word in front of it.
-		const { flash } = createFlash(player)
-		flash('Game saved', 'success')
-
-		vi.advanceTimersByTime(60000)
-
-		expect(player.classes.has(MESSAGE_UP)).toBe(false)
-	})
-
 	test('waits out a message that asked to stay longer', () => {
 		const { flash } = createFlash(player)
 		flash('Game saved', 'success', { timeout: 30000 })
@@ -253,7 +242,10 @@ describe('createFlash', () => {
 		expect(toast.info.mock.calls[0][1].timeout).toBe(5000)
 	})
 
-	test('gives the chrome back when a confirmation has had its glance', () => {
+	test('gives the chrome back even if the toaster never says the toast went', () => {
+		// An older toaster, or one that drops the option: a button that
+		// cannot be reached is worse than a word in front of it. The
+		// watchdog is the confirmation's own three seconds, plus slack.
 		const { flash } = createFlash(player)
 		flash('Game saved', 'success')
 

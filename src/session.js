@@ -1,6 +1,7 @@
 import { loadState } from '@nextcloud/initial-state'
 import { davUrl, launchRom, recordRecent, startSramSync } from './player.js'
 import { systemForFolderPath } from './systems.js'
+import { createFlash } from './toast.js'
 import { attachToolbar } from './toolbar.js'
 
 const settings = loadState('arcade', 'settings', {})
@@ -24,19 +25,11 @@ const settings = loadState('arcade', 'settings', {})
  *                             answering once the save data is safe
  */
 export async function startSession({ canvas, container, filename, basename, source, closeUrl = '', signal = null }) {
-	// The launch learns of anything it went without -- a missing BIOS, a
-	// complaint from the core itself -- before there is a toolbar to say
-	// it with, so what is said early waits in here and is handed over
-	// once the bar is up. After that, words go straight to it.
-	const notices = []
-	let flash = null
-	const say = (text, type) => {
-		if (flash === null) {
-			notices.push([text, type])
-			return
-		}
-		flash(text, type)
-	}
+	// Messages belong to the session, not to the toolbar: a toast hangs
+	// in the player's container, which exists from the start, so the
+	// launch can say what it went without -- a missing BIOS, a complaint
+	// from the core -- before there is any chrome to say it on.
+	const { flash, stop: stopMessages } = createFlash(container)
 	const instance = await launchRom({
 		element: canvas,
 		romUrl: source ?? davUrl(filename),
@@ -44,10 +37,7 @@ export async function startSession({ canvas, container, filename, basename, sour
 		settings,
 		systemHint: systemForFolderPath(filename),
 		romPath: filename,
-		onWarning: (text) => {
-			say(text, 'warning')
-		},
-		onCoreMessage: say,
+		onMessage: flash,
 		signal,
 	})
 	const stopSramSync = startSramSync(instance, filename, (settings.saves_folder ?? '') !== '')
@@ -66,10 +56,10 @@ export async function startSession({ canvas, container, filename, basename, sour
 		stopped = true
 		stopPlayTime()
 		await stopSramSync()
-		// Nothing to say it on any more, and a core on its way out is
-		// often at its most talkative.
-		flash = null
 		detachToolbar?.()
+		// Nothing left to say it to, and a core on its way out is often
+		// at its most talkative.
+		stopMessages()
 		try {
 			instance.exit()
 		} catch (error) {
@@ -85,10 +75,7 @@ export async function startSession({ canvas, container, filename, basename, sour
 		settings,
 		closeUrl,
 		onClose: stop,
-		notices,
-		onFlash: (toolbarFlash) => {
-			flash = toolbarFlash
-		},
+		flash,
 	})
 
 	return stop

@@ -137,14 +137,13 @@ async function resolveRom(blob, romName, systemHint) {
  * @param {object} options.settings the user settings
  * @param {?object} [options.systemHint] system detected from the game's folder
  * @param {string} [options.romPath] path identifying the game, enables SRAM restore
- * @param {?Function} [options.onWarning] told, in words for the player, about
- *                                        anything the launch went without
- * @param {?Function} [options.onCoreMessage] told what the core itself has
- *                                            to say, with how it reads
+ * @param {?Function} [options.onMessage] told, in words for the player and
+ *   with how they read, about anything the launch went without and
+ *   anything the core itself has to say
  * @param {?AbortSignal} [options.signal] abandons the launch when it fires
  * @return {Promise<Nostalgist>} the running emulator
  */
-export async function launchRom({ element, romUrl, romName, settings = {}, systemHint = null, romPath = '', onWarning = null, onCoreMessage = null, signal = null }) {
+export async function launchRom({ element, romUrl, romName, settings = {}, systemHint = null, romPath = '', onMessage = null, signal = null }) {
 	const canSave = (settings.saves_folder ?? '') !== ''
 	// The core is a few megabytes of its own. Warming it in the browser
 	// cache now means it is there when Nostalgist asks, instead of being
@@ -167,13 +166,13 @@ export async function launchRom({ element, romUrl, romName, settings = {}, syste
 	}
 	const sram = canSave ? await fetchSram(romPath, signal) : null
 	const bios = await fetchBios(system.id, signal)
-	if (bios.length === 0 && biosForSystem(system.id).length > 0 && typeof onWarning === 'function') {
+	if (bios.length === 0 && biosForSystem(system.id).length > 0 && typeof onMessage === 'function') {
 		// The game starts anyway, just poorer for it -- most cores run
 		// without their BIOS, only worse (the PS1 much worse). Worth a
 		// word, and this is the only moment that knows it.
-		onWarning(t('arcade', 'No BIOS files found for {system}. Games may run worse without them.', {
+		onMessage(t('arcade', 'No BIOS files found for {system}. Games may run worse without them.', {
 			system: systemLabel(system.id),
-		}))
+		}), 'warning')
 	}
 	if (signal?.aborted === true) {
 		// Closed while the files were still coming in: no core is started
@@ -212,7 +211,7 @@ export async function launchRom({ element, romUrl, romName, settings = {}, syste
 		resolveCoreWasm(coreName) {
 			return coreUrl(`${coreName}_libretro.wasm`)
 		},
-		emscriptenModule: coreOutput(onCoreMessage),
+		emscriptenModule: coreOutput(onMessage),
 	})
 }
 
@@ -224,28 +223,31 @@ export async function launchRom({ element, romUrl, romName, settings = {}, syste
  * printed still lands there exactly as before, and only the lines a
  * player could act on are passed on to be said out loud as well.
  *
- * @param {?Function} onCoreMessage told what is worth saying, or null to
- *                                  leave the output to the console alone
+ * @param {?Function} onMessage told what is worth saying, or null to
+ *                               leave the output to the console alone
  * @return {object} the Emscripten module options for the launch
  */
-function coreOutput(onCoreMessage) {
-	if (typeof onCoreMessage !== 'function') {
+function coreOutput(onMessage) {
+	if (typeof onMessage !== 'function') {
 		return {}
 	}
-	const log = createCoreLog(onCoreMessage)
+	const log = createCoreLog(onMessage)
 	// A hook that threw would take the core's logging down with it, so
 	// whatever happens in here stops in here.
 	const watch = (write) => (...args) => {
 		write(...args)
 		try {
-			log(args.join(' '))
+			// Emscripten calls these with the one line it has to print;
+			// the join is for the shape of the signature, not for what
+			// actually arrives.
+			log(args.length === 1 ? args[0] : args.join(' '))
 		} catch (error) {
 			console.error('Arcade could not read the core output', error)
 		}
 	}
 	return {
-		print: watch((...args) => console.info(...args)),
-		printErr: watch((...args) => console.error(...args)),
+		print: watch(console.info.bind(console)),
+		printErr: watch(console.error.bind(console)),
 	}
 }
 

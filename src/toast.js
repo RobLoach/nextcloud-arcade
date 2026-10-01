@@ -50,21 +50,21 @@ function say(kind, message, ariaLive, log, options) {
 		log(message)
 		return null
 	}
+	// A message that cannot be shown must not take down whatever was
+	// trying to say it. Hanging a toast somewhere of our own is the only
+	// part of this that can fail, so a second attempt drops that and lets
+	// the toast go where toasts go by default.
 	try {
 		return toast[kind](message, { ariaLive, ...options })
 	} catch (error) {
-		// A message that cannot be shown must not take down whatever was
-		// trying to say it. Hanging a toast somewhere of our own is the
-		// only part of this that can fail, so it is dropped and the toast
-		// goes where toasts go by default -- and if even that fails, the
-		// console still has it.
 		console.error('Arcade could not show a toast', error)
-		try {
-			return toast[kind](message, { ariaLive })
-		} catch {
-			log(message)
-			return null
-		}
+	}
+	try {
+		return toast[kind](message, { ariaLive })
+	} catch {
+		// Not even that: the console still has it.
+		log(message)
+		return null
 	}
 }
 
@@ -156,40 +156,36 @@ export function createFlash(element) {
 	}
 
 	const flash = (text, type = 'info', options = {}) => {
-		current?.hideToast?.()
-		clearTimeout(expected)
+		stop()
 		const id = ++latest
-		// A message that waits to be dismissed leaves the chrome alone.
-		// The one the player has that never expires asks them to press
-		// Close, and Close is in the chrome -- hiding it would hide the
-		// button the words name, for as long as the words are up.
-		const stays = options.timeout === UNTIL_DISMISSED
-		element.classList.toggle(MESSAGE_UP, !stays)
-		// Only when the caller did not say: an explicit length wins, and
-		// a key set to undefined would overwrite the toaster's default
+		// How long it stays: what the caller asked for, else a glance for
+		// a confirmation, else whatever the toaster thinks. Left out of
+		// the options entirely when there is nothing to say about it -- a
+		// key set to undefined would overwrite the toaster's own default
 		// rather than leave it alone.
-		const asked = options.timeout === undefined && CONFIRMATIONS.includes(type)
-			? { timeout: CONFIRMATION_TIMEOUT }
-			: {}
+		const timeout = options.timeout
+			?? (CONFIRMATIONS.includes(type) ? CONFIRMATION_TIMEOUT : null)
 		current = toasts[type](text, {
 			...options,
-			...asked,
+			...(timeout === null ? {} : { timeout }),
 			onRemove: () => {
 				done(id)
 				options.onRemove?.()
 			},
 		})
-		if (current === null) {
-			// No toaster: the message went to the console, and nothing
-			// is ever going to call onRemove.
-			done(id)
-		} else if (!stays) {
-			// The chrome comes back even if that call never arrives --
-			// an older toaster, a helper that drops the option. A button
-			// that cannot be reached is worse than a word in front of it.
-			const timeout = options.timeout ?? asked.timeout ?? DEFAULT_TIMEOUT
-			expected = setTimeout(() => done(id), timeout + 1000)
+		// A message that waits to be dismissed leaves the chrome alone:
+		// the one the player has that never expires asks them to press
+		// Close, and Close is in the chrome -- hiding it would hide the
+		// button the words name, for as long as the words are up. And
+		// with no toaster there is no message on screen to make room for.
+		if (current === null || timeout === UNTIL_DISMISSED) {
+			return current
 		}
+		element.classList.add(MESSAGE_UP)
+		// The chrome comes back even if onRemove never arrives -- an
+		// older toaster, a helper that drops the option. A button that
+		// cannot be reached is worse than a word in front of it.
+		expected = setTimeout(() => done(id), (timeout ?? DEFAULT_TIMEOUT) + 1000)
 		return current
 	}
 

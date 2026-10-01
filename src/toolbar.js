@@ -8,7 +8,7 @@ import { offerResume } from './panels/resume.js'
 import { createStatesPanel } from './panels/states.js'
 import { davUrl, fileIdOf } from './player.js'
 import { shortNameForPath } from './systems.js'
-import { UNTIL_DISMISSED, createFlash } from './toast.js'
+import { UNTIL_DISMISSED } from './toast.js'
 import { attachTouchControls, isTouchDevice, isTouchPrimary } from './touch.js'
 import { waitAtMost } from './wait.js'
 
@@ -30,13 +30,11 @@ const CHROME_SELECTOR = '.arcade-toolbar, .arcade-topbar, .arcade-actions-menu, 
  * @param {string} options.romName file name of the ROM, for screenshots
  * @param {object} options.settings the user settings
  * @param {string} [options.closeUrl] when set, adds a close button leading there
- * @param {Array<[string, string]>} [options.notices] what the launch had to
- *   say before there was a bar to say it on, each with how it reads
- * @param {?Function} [options.onFlash] handed the flash function, so words
- *   arriving after the launch -- the core's own -- can be said too
+ * @param {Function} options.flash says something to the player, taking the
+ *   message and how it reads: success, info, warning or error
  * @return {Function} detaches the toolbar again
  */
-export function attachToolbar({ container, instance, romPath, romName, settings = {}, closeUrl = '', onClose = null, notices = [], onFlash = null }) {
+export function attachToolbar({ container, instance, romPath, romName, settings = {}, closeUrl = '', onClose = null, flash: say }) {
 	container.classList.add('arcade-player-container')
 
 	// Fires when the toolbar is taken down, so anything still on its way
@@ -56,15 +54,22 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 	}
 
 	// Everything the player is ever told -- a slot saved, a battery save
-	// deleted, a state that would not load, a missing BIOS -- is said with
-	// the same toast the rest of the app says things with, so there is one
-	// notification system here and not two.
+	// deleted, a state that would not load, a missing BIOS -- is said by
+	// the session's one messenger, so there is one notification system
+	// here and not two.
 	//
-	// Hung inside the player's own container rather than on document.body,
-	// and always, not only in fullscreen -- see toastsIn() for why. The
-	// top-right chrome steps aside while a message is up; createFlash()
-	// keeps both halves of that together.
-	const { flash, stop: stopMessages } = createFlash(container)
+	// The top-right cluster steps aside while a message is up, and the
+	// stylesheet will not take it away under the focus, so anything
+	// focused in there is moved out first. One place, rather than each
+	// button that might say something guessing whether it will: the
+	// actions menu hands the focus back to its own button before running
+	// what was picked, and so does Close.
+	const flash = (text, type = 'info', options = {}) => {
+		if (options.timeout !== UNTIL_DISMISSED && topbar?.contains(document.activeElement)) {
+			pauseButton.focus()
+		}
+		return say(text, type, options)
+	}
 
 	const button = (iconPath, label, onClick, parent = toolbar) => {
 		const element = document.createElement('button')
@@ -384,11 +389,7 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 	let actionsMenu = null
 	let actionsButton = null
 	let refreshSidebarItem = null
-	/**
-	 * @param {boolean} [chosen] whether an item of the menu was picked,
-	 *   rather than the menu being dismissed
-	 */
-	const closeActionsMenu = (chosen = false) => {
+	const closeActionsMenu = () => {
 		if (actionsMenu === null) {
 			return
 		}
@@ -397,16 +398,9 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 		const held = actionsMenu.contains(document.activeElement)
 		actionsMenu.classList.add('hidden')
 		setExpanded(actionsButton, false)
-		if (!held) {
-			return
+		if (held) {
+			actionsButton?.focus()
 		}
-		// Dismissed, the focus goes back where it came from. Chosen, it
-		// goes to the bar along the bottom instead: what was picked
-		// usually has something to say, and the top-right chrome steps
-		// aside while it is said -- but not while it holds the focus, so
-		// staying here would keep the buttons sitting on the message.
-		// This is why restarting a game used to cover its own word.
-		;(chosen ? pauseButton : actionsButton)?.focus()
 	}
 	if (closeUrl !== '') {
 		actionsMenu = document.createElement('div')
@@ -420,7 +414,7 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 			element.appendChild(document.createTextNode(label))
 			element.addEventListener('click', (event) => {
 				event.stopPropagation()
-				closeActionsMenu(true)
+				closeActionsMenu()
 				onClick()
 			})
 			actionsMenu.appendChild(element)
@@ -679,14 +673,6 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 	document.addEventListener('keydown', onKeyDown, true)
 
 	container.appendChild(toolbar)
-	// Known since before the toolbar existed -- the launch found out, or
-	// the core said it while loading, but there was nothing up yet to say
-	// it with. Said now, in the order it was heard.
-	for (const [text, type] of notices) {
-		flash(text, type)
-	}
-	// From here on the same words arrive as they are spoken.
-	onFlash?.(flash)
 	if (statesPanel !== null) {
 		container.appendChild(statesPanel.element)
 	}
@@ -762,11 +748,7 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 
 	return () => {
 		gone.abort()
-		// A message about a game that is no longer there has nobody left
-		// to be for -- and the one that waits to be dismissed would wait
-		// forever. This also gives the chrome back, so the container is
-		// handed on in the state it was found in.
-		stopMessages()
+
 		clearInterval(autosaveTimer)
 		clearTimeout(idleTimer)
 		document.removeEventListener('visibilitychange', onVisibilityChange)

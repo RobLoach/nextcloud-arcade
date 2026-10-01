@@ -62,10 +62,25 @@ occ() {
 	docker exec -u www-data "$CONTAINER" php occ "$@"
 }
 
-# GET a URL as the admin; body lands in $BODY, the HTTP status is echoed.
+# Ask the server something as the admin; body lands in $BODY, the HTTP
+# status is echoed. A plain GET needs only the URL; anything else -- a
+# POST, a form field -- passes its own curl arguments before it.
 get() {
 	curl -sS -o "$BODY" -w '%{http_code}' \
-		-b "$COOKIES" -H "requesttoken: $TOKEN" "$1"
+		-b "$COOKIES" -H "requesttoken: $TOKEN" "$@"
+}
+
+# As above, but fails the run when the status is not the one wanted.
+expect_status() {
+	local name=$1 want=$2
+	shift 2
+	local code
+	code=$(get "$@")
+	if [ "$code" != "$want" ]; then
+		fail "$name: expected HTTP $want, got $code (body: $(head -c 300 "$BODY"))"
+		return 1
+	fi
+	echo "ok: $name ($code)"
 }
 
 # Run a python3 check against $BODY; $1 names the assertion, $2 is the code.
@@ -87,13 +102,7 @@ PY
 
 assert_status() {
 	local name=$1 url=$2 want=${3:-200}
-	local code
-	code=$(get "$url")
-	if [ "$code" != "$want" ]; then
-		fail "$name: expected HTTP $want from $url, got $code (body: $(head -c 300 "$BODY"))"
-		return 1
-	fi
-	echo "ok: $name ($code)"
+	expect_status "$name" "$want" "$url"
 }
 
 # The failure signature all three past regressions shared: the app made the
@@ -262,13 +271,9 @@ GAME=/Games/Tetris.gb
 # Saves need somewhere of the user's own to live, and there is no default
 # for that: pointing the setting at a folder is what a player does first,
 # so the settings endpoint is exercised on the way.
-CODE=$(curl -sS -o "$BODY" -w '%{http_code}' -X POST \
-	-b "$COOKIES" -H "requesttoken: $TOKEN" \
+if expect_status 'the saves folder is set' 200 -X POST \
 	--data-urlencode 'saves_folder=/Saves' \
-	"$BASE/index.php/apps/arcade/arcade/settings")
-if [ "$CODE" != '200' ]; then
-	fail "setting the saves folder: expected HTTP 200, got $CODE (body: $(head -c 300 "$BODY"))"
-else
+	"$BASE/index.php/apps/arcade/arcade/settings"; then
 	assert_json 'the saves folder was kept' '
 kept = data.get("saves_folder")
 if kept != "/Saves":
@@ -276,15 +281,9 @@ if kept != "/Saves":
 '
 fi
 STATE_URL="$BASE/index.php/apps/arcade/arcade/state?file=$GAME&slot=1"
-CODE=$(curl -sS -o "$BODY" -w '%{http_code}' -X POST \
-	-b "$COOKIES" -H "requesttoken: $TOKEN" \
+expect_status 'a state is saved' 200 -X POST \
 	-H 'Content-Type: application/octet-stream' \
-	--data-binary 'not a real save state' "$STATE_URL")
-if [ "$CODE" != '200' ]; then
-	fail "saving a state: expected HTTP 200, got $CODE (body: $(head -c 300 "$BODY"))"
-else
-	echo 'ok: state saved (200)'
-fi
+	--data-binary 'not a real save state' "$STATE_URL" || true
 
 if assert_status 'states are listed' "$BASE/index.php/apps/arcade/arcade/states?file=$GAME"; then
 	assert_json 'the saved state is there' '
