@@ -225,6 +225,48 @@ class BiosServiceTest extends TestCase {
 		$this->assertSame('everybody\'s', $this->service()->readFor('player', 'Gb_Bios.Bin'));
 	}
 
+	public function testTheNameACoreAsksForIsKnownWhateverItsCase(): void {
+		// The one gate every way in shares -- the HTTP upload, the occ
+		// command, the service itself. It said no to GB_BIOS.BIN while
+		// the player happily served gb_bios.bin.
+		$this->assertTrue(BiosService::isKnown('gb_bios.bin'));
+		$this->assertTrue(BiosService::isKnown('GB_BIOS.BIN'));
+		$this->assertTrue(BiosService::isKnown('Gb_Bios.Bin'));
+		$this->assertFalse(BiosService::isKnown('notes.txt'));
+	}
+
+	public function testWritingKeepsTheOneSpelling(): void {
+		// However it arrives, it lands under the name the cores are
+		// listed by, so everything reading the store afterwards finds it.
+		$this->assertTrue($this->service()->write('GB_BIOS.BIN', 'the firmware'));
+
+		$this->assertArrayHasKey('gb_bios.bin', $this->files);
+		$this->assertSame('the firmware', $this->service()->read('gb_bios.bin'));
+	}
+
+	public function testReadingTheStoreIsAskedWhateverTheCase(): void {
+		$this->files['gb_bios.bin'] = 'the firmware';
+
+		$this->assertSame('the firmware', $this->service()->read('GB_BIOS.BIN'));
+	}
+
+	public function testRemovingIsAskedWhateverTheCase(): void {
+		$this->files['gb_bios.bin'] = 'the firmware';
+
+		$this->assertTrue($this->service()->remove('GB_BIOS.BIN'));
+		$this->assertArrayNotHasKey('gb_bios.bin', $this->files);
+	}
+
+	public function testAStrayIsStillRemovedByItsOwnName(): void {
+		// The store shows what no core asks for as well, so that an
+		// administrator can clear it out; such a file is only ever
+		// itself, and canonicalising would leave it unreachable.
+		$this->files['notes.txt'] = 'todo';
+
+		$this->assertTrue($this->service()->remove('notes.txt'));
+		$this->assertArrayNotHasKey('notes.txt', $this->files);
+	}
+
 	public function testReadForFallsBackToTheStore(): void {
 		$this->files['gb_bios.bin'] = 'everybody\'s';
 

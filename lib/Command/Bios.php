@@ -56,14 +56,18 @@ class Bios extends Command {
 		}
 
 		$name = basename($file);
-		if (!BiosService::isKnown($name)) {
+		// Under the spelling the cores are listed by, which is what the
+		// store keeps and so what the player will go looking for -- the
+		// file on disk may be called anything.
+		$canonical = BiosService::canonicalName($name);
+		if ($canonical === null) {
 			$output->writeln("<error>No core asks for a file called $name.</error>");
 			$output->writeln('The names that are asked for:');
 			$this->listBios($output);
 			return 1;
 		}
-		$this->biosService->write($name, (string)file_get_contents($file));
-		$output->writeln("Added <info>$name</info>, which every player can now use.");
+		$this->biosService->write($canonical, (string)file_get_contents($file));
+		$output->writeln("Added <info>$canonical</info>, which every player can now use.");
 		return 0;
 	}
 

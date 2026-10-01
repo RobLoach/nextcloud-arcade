@@ -355,6 +355,24 @@ CHUNK=$(cd "$REPO_ROOT/js" && ls -- *.chunk.mjs | head -1)
 [ -n "$CHUNK" ] || die 'no *.chunk.mjs in js/'
 assert_status "chunk bundle ($CHUNK)" "$BASE/apps/arcade/js/$CHUNK" || true
 
+step 'Adding a BIOS file by an unexpected spelling'
+# The names the cores ask for are matched without regard to case, and
+# the store keeps the one spelling whatever arrives -- this used to be
+# true of the web upload but not of the command.
+docker exec -u www-data "$CONTAINER" sh -c 'printf "not a real BIOS" > /tmp/GB_BIOS.BIN'
+if occ arcade:bios /tmp/GB_BIOS.BIN > "$BODY" 2>&1; then
+	grep -q 'gb_bios.bin' "$BODY" \
+		|| fail "arcade:bios did not store it under the name the cores ask for: $(head -c 200 "$BODY")"
+	# Into the file first: grep -q leaves a pipe early, which under
+	# pipefail would be read as occ having failed.
+	occ arcade:bios > "$BODY" 2>&1 || true
+	grep -q 'gb_bios.bin.*held' "$BODY" \
+		|| fail "the stored BIOS is not listed as held: $(head -c 200 "$BODY")"
+	echo 'ok: arcade:bios took GB_BIOS.BIN'
+else
+	fail "occ arcade:bios refused GB_BIOS.BIN: $(head -c 200 "$BODY")"
+fi
+
 step 'Running occ arcade:status'
 if occ arcade:status; then
 	echo 'ok: arcade:status'

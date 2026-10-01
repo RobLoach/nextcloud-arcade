@@ -53,8 +53,14 @@ class BiosService {
 		return array_keys($names);
 	}
 
+	/**
+	 * Whether any core asks for a file of this name -- whatever its case.
+	 * Case is not part of the question: a core wanting scph5501.bin and a
+	 * file called SCPH5501.BIN are the same file to everyone but the
+	 * string comparison, so every way in here agrees about that.
+	 */
 	public static function isKnown(string $name): bool {
-		return in_array($name, self::names(), true);
+		return self::canonicalName($name) !== null;
 	}
 
 	/**
@@ -69,7 +75,10 @@ class BiosService {
 	 * The file, or null when the instance has not been given it.
 	 */
 	public function read(string $name): ?string {
-		if (!self::isKnown($name)) {
+		// Under the spelling the cores are listed by, which is the one the
+		// store keeps its files under: write() puts them there that way.
+		$name = self::canonicalName($name);
+		if ($name === null) {
 			return null;
 		}
 		try {
@@ -89,12 +98,8 @@ class BiosService {
 	 * looked at.
 	 */
 	public function readFor(?string $userId, string $name): ?string {
-		// Without regard to case on the way in as well, not only in the
-		// folder: a core asking for scph5501.BIN wants the same file as
-		// one asking for scph5501.bin, and the spelling the cores are
-		// listed under is the one everything below here looks for.
-		$name = self::canonicalName($name) ?? '';
-		if ($name === '') {
+		$name = self::canonicalName($name);
+		if ($name === null) {
 			return null;
 		}
 		if ($userId !== null) {
@@ -117,7 +122,10 @@ class BiosService {
 	 * @return bool whether the name is one a core asks for
 	 */
 	public function write(string $name, string $data): bool {
-		if (!self::isKnown($name)) {
+		// Stored under the one spelling, whatever spelling it arrived as,
+		// so that everything reading the store afterwards finds it.
+		$name = self::canonicalName($name);
+		if ($name === null) {
 			return false;
 		}
 		$folder = $this->folder(true);
@@ -133,6 +141,10 @@ class BiosService {
 	}
 
 	public function remove(string $name): bool {
+		// A name a core asks for is taken under its own spelling, as the
+		// store holds it. Anything else is taken exactly as given: the
+		// store also shows strays, and a stray is only ever its own name.
+		$name = self::canonicalName($name) ?? $name;
 		try {
 			$folder = $this->folder(false);
 			if ($folder === null || !$folder->fileExists($name)) {
