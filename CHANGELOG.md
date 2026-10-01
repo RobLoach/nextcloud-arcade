@@ -6,6 +6,45 @@ All notable changes to NextCloud Arcade. The format follows
 
 ## [Unreleased]
 
+## [0.43.2] - 2026-10-01
+
+### Added
+- An Overclock option for the NES core, which runs the processor twice per
+  frame so the games that slow down when the screen fills up need not:
+  off, or the extra cycles given to either half of the frame, since games
+  disagree about which one they tolerate.
+- What the emulator core itself has to say is now passed on to the player
+  rather than left in the browser console. Only what can be acted on, each
+  thing once, and a few at most, so a core having a bad time cannot paper
+  the screen over.
+
+### Changed
+- Everything the library and the player say is now said with the same
+  notification the rest of Nextcloud uses — the one that slides in at the
+  top right — instead of a line of text inside the player's own chrome.
+- The buttons in the player's top-right corner step aside while a message
+  is on screen, so the message can be read. They come back as soon as it
+  goes, and a message that waits to be dismissed never takes them away:
+  that one asks for a button that lives there.
+- A message confirming something done — a game saved, a game restarted —
+  clears after three seconds. Anything that went wrong stays the usual
+  seven.
+- The automatic save made on a timer no longer announces itself. Nobody
+  asked for it, and it arrives in the middle of a game. A save that fails
+  still says so, whoever asked for it.
+- Refresh on the library page is turned off while a rescan is already
+  running, and says why.
+- A BIOS file is matched by name without regard to case everywhere, the
+  `occ arcade:bios` command included, which used to refuse a spelling the
+  player was happily serving. The store keeps whatever arrives under the
+  one spelling the cores ask for.
+
+### Fixed
+- The player's messages were not appearing at all. The toast was asked for
+  by CSS selector, which the toaster the server ships reads as an element
+  id; finding nothing, it threw, and took down whatever was reporting —
+  so loading a save state said it had failed after it had worked.
+
 ## [0.42.0] - 2026-09-27
 
 ### Fixed

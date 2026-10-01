@@ -127,6 +127,13 @@ work with one thumb, with A/B/X/Y, L/R, Start and Select.
 A plugged-in controller works in the player through RetroArch, which reads
 gamepads itself; its buttons can be remapped in the RetroArch menu.
 
+Anything the player has to say — a slot saved, a state that would not
+load, a BIOS the game went without, a complaint from the core itself —
+appears as the same notification the rest of Nextcloud uses, at the top
+right, in fullscreen as well. The buttons in that corner step aside while
+it is up. A confirmation goes after a few seconds; a problem stays longer,
+and can be dismissed.
+
 ### Save states
 
 The save state menu has three slots per game, each with a screenshot
