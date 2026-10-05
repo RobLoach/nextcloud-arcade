@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { keyLabel, retroarchKey } from '../../src/keys.js'
+import { UNBOUND, inputConfig, keyLabel, retroarchKey } from '../../src/keys.js'
 
 describe('retroarchKey', () => {
 	test('translates the named keys', () => {
@@ -54,5 +54,24 @@ describe('keyLabel', () => {
 
 	test('passes an unknown code through', () => {
 		expect(keyLabel('MetaLeft')).toBe('MetaLeft')
+	})
+})
+
+describe('a binding on no key at all', () => {
+	test('is shown as nothing rather than as its own name', () => {
+		expect(keyLabel(UNBOUND)).toBe('—')
+	})
+
+	test('gives the emulator no name, so no line about it is written', () => {
+		// inputConfig drops whatever retroarchKey cannot name, which is
+		// how a cleared button stays out of the RetroArch config.
+		expect(retroarchKey(UNBOUND)).toBeNull()
+		expect(inputConfig({ a: 'KeyX', b: UNBOUND })).toEqual({ input_player1_a: 'x' })
+	})
+
+	test('survives the server, which keeps a binding only if it reads as a name', () => {
+		// Controls::sanitize() takes /^[A-Za-z][A-Za-z0-9]{0,19}$/; an
+		// empty string would be dropped and the default would come back.
+		expect(UNBOUND).toMatch(/^[A-Za-z][A-Za-z0-9]{0,19}$/)
 	})
 })

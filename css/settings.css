@@ -74,9 +74,39 @@
 	display: none;
 }
 
+/* The key and the two things that can be done to it, as one item of the
+   row, so that the label keeps a column to wrap inside however many of
+   them are showing. */
+#arcade-settings .arcade-key-controls {
+	display: flex;
+	align-items: center;
+	gap: var(--default-grid-baseline, 4px);
+}
+
 #arcade-settings .arcade-key-binding {
 	min-width: 120px;
 	font-family: monospace;
+}
+
+/* Quieter than the key itself: these are there for the row that has been
+   changed, and most rows have not been. */
+#arcade-settings .arcade-key-action {
+	min-width: 34px;
+	padding: 0;
+	background-color: transparent;
+	border-color: transparent;
+	color: var(--color-text-maxcontrast);
+	line-height: 1;
+}
+
+#arcade-settings .arcade-key-action:hover,
+#arcade-settings .arcade-key-action:focus-visible {
+	background-color: var(--color-background-hover);
+	color: var(--color-main-text);
+}
+
+#arcade-settings .arcade-key-action[hidden] {
+	display: none;
 }
 
 #arcade-settings .arcade-key-binding.capturing {

@@ -104,11 +104,26 @@ $thumbnailTypes = $_['thumbnailTypes'];
 				?>
 				<div class="arcade-key">
 					<span id="<?php p($labelId); ?>"><?php p($l->t($binding['label'])); ?></span>
-					<button type="button" class="arcade-key-binding" id="<?php p($id); ?>"
-						aria-labelledby="<?php p($labelId . ' ' . $id); ?>"
-						data-kind="<?php p($kind); ?>" data-binding="<?php p($name); ?>"
-						data-default="<?php p($binding['default']); ?>"
-						data-code="<?php p($settings[$kind][$name] ?? $binding['default']); ?>"></button>
+					<?php /* The key and what can be done to it travel together, so
+					        that a long label wraps within its own column rather
+					        than pushing any of them onto a line of their own. */ ?>
+					<span class="arcade-key-controls">
+						<button type="button" class="arcade-key-binding" id="<?php p($id); ?>"
+							aria-labelledby="<?php p($labelId . ' ' . $id); ?>"
+							data-kind="<?php p($kind); ?>" data-binding="<?php p($name); ?>"
+							data-default="<?php p($binding['default']); ?>"
+							data-code="<?php p($settings[$kind][$name] ?? $binding['default']); ?>"></button>
+						<?php /* Shown only when there is something to undo or to
+						        clear, so a row left alone carries neither. Each
+						        says which binding it belongs to, since "Put back"
+						        on its own tells a screen reader nothing. */ ?>
+						<button type="button" class="arcade-key-action arcade-key-revert" hidden
+							aria-labelledby="<?php p($labelId); ?>" data-for="<?php p($id); ?>"
+							title="<?php p($l->t('Put this one back to its default')); ?>">↺</button>
+						<button type="button" class="arcade-key-action arcade-key-clear" hidden
+							aria-labelledby="<?php p($labelId); ?>" data-for="<?php p($id); ?>"
+							title="<?php p($l->t('Leave this one on no key at all')); ?>">×</button>
+					</span>
 					<span class="arcade-key-hint" id="<?php p($hintId); ?>"></span>
 				</div>
 				<?php
@@ -116,17 +131,28 @@ $thumbnailTypes = $_['thumbnailTypes'];
 		};
 		?>
 
+		<?php /* A reset for each set rather than one for both: the button
+		        sits under the set it belongs to, and says which keys it
+		        means, so resetting the hot keys cannot take the buttons of
+		        the controller with it. */ ?>
 		<h3><?php p($l->t('Keys')); ?></h3>
 		<div class="arcade-keys">
 			<?php $renderKeys($buttons, 'buttons'); ?>
 		</div>
+		<p>
+			<button type="button" class="arcade-keys-reset" data-kind="buttons">
+				<?php p($l->t('Put the keys back to their defaults')); ?>
+			</button>
+		</p>
 
 		<h3><?php p($l->t('Hot Keys')); ?></h3>
 		<div class="arcade-keys arcade-keys--wide">
 			<?php $renderKeys($hotkeys, 'hotkeys'); ?>
 		</div>
 		<p>
-			<button type="button" id="arcade-keys-reset"><?php p($l->t('Put the keys back as they were')); ?></button>
+			<button type="button" class="arcade-keys-reset" data-kind="hotkeys">
+				<?php p($l->t('Put the hot keys back to their defaults')); ?>
+			</button>
 		</p>
 	</div>
 

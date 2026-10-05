@@ -2,7 +2,7 @@ import { translate as t } from '@nextcloud/l10n'
 import { generateUrl } from '@nextcloud/router'
 import { api } from './api.js'
 import { formatSize } from './format.js'
-import { keyLabel, retroarchKey } from './keys.js'
+import { UNBOUND, keyLabel, retroarchKey } from './keys.js'
 
 const container = document.getElementById('arcade-settings')
 
@@ -285,6 +285,37 @@ function showBinding(element) {
 }
 
 /**
+ * Put away whichever of a row's two actions has nothing to do: there is
+ * nothing to put back on a binding already at its default, and nothing to
+ * clear on one that is already on no key.
+ *
+ * @param {HTMLElement} element the button of a binding
+ */
+function showKeyActions(element) {
+	const row = element.closest('.arcade-key')
+	const revert = row?.querySelector('.arcade-key-revert')
+	const clear = row?.querySelector('.arcade-key-clear')
+	if (revert !== null && revert !== undefined) {
+		revert.hidden = element.dataset.code === (element.dataset.default ?? '')
+	}
+	if (clear !== null && clear !== undefined) {
+		clear.hidden = element.dataset.code === UNBOUND
+	}
+}
+
+/**
+ * Give a binding a key, or take its key away, from somewhere other than
+ * the capture -- the two buttons beside it, and the reset under the set.
+ *
+ * @param {HTMLElement} element the button of a binding
+ * @param {string} code the key it should carry now
+ */
+function setBinding(element, code) {
+	element.dataset.code = code
+	showBinding(element)
+}
+
+/**
  * Say so where a key is bound more than once. A key of the player that is
  * also a key of the controller goes to the game, and the player is left
  * waiting for a key that never comes; two bindings of one kind on one key
@@ -292,25 +323,31 @@ function showBinding(element) {
  * the controller pressed at once.
  */
 function showShadowedHotkeys() {
+	// A binding left on no key is on no key with every other one of them,
+	// so they are kept out of all of this: half a dozen cleared hotkeys
+	// are not six ways of pressing the same key.
+	const bound = (element) => element.dataset.code !== UNBOUND && element.dataset.code !== ''
 	const taken = new Set(
 		[...container.querySelectorAll('.arcade-key-binding[data-kind="buttons"]')]
+			.filter(bound)
 			.map((element) => element.dataset.code),
 	)
 	for (const kind of ['buttons', 'hotkeys']) {
 		const elements = [...container.querySelectorAll(`.arcade-key-binding[data-kind="${kind}"]`)]
 		const counts = new Map()
-		for (const element of elements) {
+		for (const element of elements.filter(bound)) {
 			const code = element.dataset.code
 			counts.set(code, (counts.get(code) ?? 0) + 1)
 		}
 		for (const element of elements) {
 			const code = element.dataset.code
+			showKeyActions(element)
 			let message = ''
-			if (code && counts.get(code) > 1) {
+			if (bound(element) && counts.get(code) > 1) {
 				message = kind === 'buttons'
 					? t('arcade', 'Another button of the controller has this key too, so both are pressed at once')
 					: t('arcade', 'Another hotkey has this key too, so only one of the two ever runs')
-			} else if (kind === 'hotkeys' && taken.has(code)) {
+			} else if (kind === 'hotkeys' && bound(element) && taken.has(code)) {
 				message = t('arcade', 'This key works a button of the controller, so the game gets it instead')
 			}
 			element.classList.toggle('shadowed', message !== '')
@@ -487,13 +524,31 @@ if (container !== null) {
 		element.addEventListener('click', () => captureKey(element))
 	})
 	showShadowedHotkeys()
-	document.getElementById('arcade-keys-reset')?.addEventListener('click', (event) => {
-		container.querySelectorAll('.arcade-key-binding').forEach((element) => {
-			element.dataset.code = element.dataset.default ?? element.dataset.code
-			showBinding(element)
+	// Each reset is for its own set only. The one button that did both
+	// sat under the hot keys, so it read as belonging to them, and put
+	// back the controller's buttons as well without saying so.
+	container.querySelectorAll('.arcade-keys-reset').forEach((button) => {
+		button.addEventListener('click', (event) => {
+			const kind = button.dataset.kind
+			container.querySelectorAll(`.arcade-key-binding[data-kind="${kind}"]`)
+				.forEach((element) => setBinding(element, element.dataset.default ?? element.dataset.code))
+			showShadowedHotkeys()
+			save(event.target)
 		})
-		showShadowedHotkeys()
-		save(event.target)
+	})
+	// Undoing one row, and emptying one row.
+	container.querySelectorAll('.arcade-key-action').forEach((action) => {
+		action.addEventListener('click', (event) => {
+			const element = document.getElementById(action.dataset.for)
+			if (element === null) {
+				return
+			}
+			setBinding(element, action.classList.contains('arcade-key-revert')
+				? element.dataset.default ?? element.dataset.code
+				: UNBOUND)
+			showShadowedHotkeys()
+			save(event.target)
+		})
 	})
 	showFetchStatus()
 	container.querySelectorAll('.arcade-range').forEach((range) => {

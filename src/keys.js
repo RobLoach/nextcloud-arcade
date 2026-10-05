@@ -67,11 +67,20 @@ export function retroarchKey(code) {
 }
 
 /**
+ * A binding deliberately left on no key at all. No browser reports a key
+ * by this name, so nothing ever matches it: the hotkey simply never
+ * fires, and retroarchKey() has no name for it, so no line about it goes
+ * into the emulator's config either. A word rather than an empty string
+ * because the server keeps a binding only if it reads as a name.
+ */
+export const UNBOUND = 'none'
+
+/**
  * @param {string} code the code a browser reports for a key
  * @return {string} that key, as it would be spoken of
  */
 export function keyLabel(code) {
-	if (!code) {
+	if (!code || code === UNBOUND) {
 		return '—'
 	}
 	if (NAMED[code] !== undefined) {

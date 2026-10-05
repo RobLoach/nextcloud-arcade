@@ -56,4 +56,13 @@ class ControlsTest extends TestCase {
 		$this->assertSame(['a' => 'F12'], Controls::sanitize(['a' => 'F12'], Controls::BUTTONS));
 		$this->assertSame(['up' => 'ArrowUp'], Controls::sanitize(['up' => 'ArrowUp'], Controls::BUTTONS));
 	}
+
+	public function testABindingLeftOnNoKeyIsKept(): void {
+		// The settings page writes this for a binding the player has
+		// cleared. Were it dropped here, the default would come back on
+		// the next load and the key could never be given up -- which is
+		// why it is a word and not an empty string. No browser reports a
+		// key by this name, so nothing ever matches it.
+		$this->assertSame(['a' => 'none'], Controls::sanitize(['a' => 'none'], Controls::BUTTONS));
+	}
 }
