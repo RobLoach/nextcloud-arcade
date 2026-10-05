@@ -40,18 +40,32 @@
 	margin-bottom: calc(var(--default-grid-baseline, 4px) * 3);
 }
 
+/* The hot keys are named by what they do -- "Pause and resume" against
+   the buttons' "Up" and "A" -- so they are given wider columns, two
+   across instead of three. Sized for the label rather than for English:
+   a translation is usually the longer word, and the point of the column
+   is that it does not have to be measured again for each language. */
+#arcade-settings .arcade-keys--wide {
+	grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+}
+
+/* The label and its key, side by side and staying there. As a wrapping
+   flex row the key would drop onto a line of its own as soon as the
+   label outgrew what was left of the column -- which is what "Pause and
+   resume" did, taking the height of the whole grid row with it. A column
+   of its own lets a long label wrap within itself instead, and the key
+   keeps its place. */
 #arcade-settings .arcade-key {
-	display: flex;
-	flex-wrap: wrap;
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
 	align-items: center;
-	justify-content: space-between;
 	gap: calc(var(--default-grid-baseline, 4px) * 2);
 }
 
 /* What is wrong with a binding, said in the page rather than only in a
    tooltip. It takes a line of its own under the pair it belongs to. */
 #arcade-settings .arcade-key-hint {
-	flex-basis: 100%;
+	grid-column: 1 / -1;
 	color: var(--color-warning-text, var(--color-text-maxcontrast));
 	font-size: 0.9em;
 }

@@ -122,7 +122,7 @@ $thumbnailTypes = $_['thumbnailTypes'];
 		</div>
 
 		<h3><?php p($l->t('Hot Keys')); ?></h3>
-		<div class="arcade-keys">
+		<div class="arcade-keys arcade-keys--wide">
 			<?php $renderKeys($hotkeys, 'hotkeys'); ?>
 		</div>
 		<p>
