@@ -37,7 +37,7 @@ cleanup() {
 			echo '--- last container logs ---'
 			docker logs --tail 20 "$CONTAINER" 2>&1 || true
 		fi
-		docker rm -f "$CONTAINER" >/dev/null 2>&1 || true
+		docker rm -fv "$CONTAINER" >/dev/null 2>&1 || true
 	fi
 	rm -rf "$WORKDIR"
 }
