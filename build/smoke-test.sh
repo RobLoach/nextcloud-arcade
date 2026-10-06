@@ -53,7 +53,16 @@ die() {
 	exit 1
 }
 
+# Each phase says how long it took, so that a run getting slower says
+# where. The total lands at the end of a passing run.
+STEP_NAME=
+STEP_STARTED=0
 step() {
+	if [ -n "$STEP_NAME" ]; then
+		echo "    ($((SECONDS - STEP_STARTED))s)"
+	fi
+	STEP_NAME=$1
+	STEP_STARTED=$SECONDS
 	echo
 	echo "==> $*"
 }
@@ -118,16 +127,19 @@ check_log() {
 import json, sys
 bad = []
 for line in sys.stdin:
-    lower = line.lower()
-    if "arcade" not in lower:
-        continue
-    if "error" not in lower and "exception" not in lower:
-        continue
     try:
-        level = json.loads(line).get("level", 4)
+        entry = json.loads(line)
     except Exception:
-        level = 4
-    if level >= 2:  # warning and up; debug/info backtraces are not failures
+        continue
+    # Warning and up; debug and info carry harmless backtraces.
+    if entry.get("level", 4) < 2:
+        continue
+    # Ours when the server files it under the app, or when our own code
+    # is named in it. The word "arcade" anywhere in the line is not
+    # enough: core logs the whole list of installed apps in some of its
+    # own failures -- an app store fetch that cannot reach the internet
+    # does, and used to fail this run for no reason at all.
+    if entry.get("app") == "arcade" or "apps/arcade/" in line.replace(chr(92) + "/", "/"):
         bad.append(line.rstrip())
 if bad:
     for line in bad[:20]:
@@ -160,9 +172,17 @@ for i in $(seq 1 90); do
 done
 
 step 'Installing Nextcloud (sqlite)'
-occ maintenance:install --database sqlite \
-	--admin-user "$ADMIN_USER" --admin-pass "$ADMIN_PASS" \
-	|| die 'maintenance:install failed'
+# Installing is most of the time a run takes, and it only has to happen
+# once per container. A container handed in on the command line has very
+# likely had it done already, and asking to do it again is an error --
+# which is what the second usage above used to die of.
+if occ status 2>/dev/null | grep -q 'installed: true'; then
+	echo 'already installed, so this instance is reused as it stands'
+else
+	occ maintenance:install --database sqlite \
+		--admin-user "$ADMIN_USER" --admin-pass "$ADMIN_PASS" \
+		|| die 'maintenance:install failed'
+fi
 occ config:system:set trusted_domains 1 --value=127.0.0.1 >/dev/null
 
 # --- the app ----------------------------------------------------------------
@@ -405,4 +425,6 @@ if [ -n "$FAILED" ]; then
 	echo 'Smoke test FAILED' >&2
 	exit 1
 fi
-echo 'Smoke test passed'
+echo "    (${STEP_NAME}: $((SECONDS - STEP_STARTED))s)"
+echo
+echo "Smoke test passed in ${SECONDS}s"

@@ -53,6 +53,13 @@ jobs:
           php-version: '8.3'
           coverage: none
 
+      - name: Cache the Composer downloads
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/composer
+          key: composer-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-
+
       - name: Install dependencies
         run: composer install --no-interaction --no-progress --prefer-dist
 
@@ -71,6 +78,13 @@ jobs:
           php-version: '8.3'
           coverage: none
 
+      - name: Cache the Composer downloads
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/composer
+          key: composer-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-
+
       - name: Install dependencies
         run: composer install --no-interaction --no-progress --prefer-dist
 
@@ -87,6 +101,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
+          # The download cache, keyed on the lock file, so an unchanged
+          # dependency is not fetched again on every run.
+          cache: 'npm'
 
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
@@ -107,6 +124,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
+          # The download cache, keyed on the lock file, so an unchanged
+          # dependency is not fetched again on every run.
+          cache: 'npm'
 
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
