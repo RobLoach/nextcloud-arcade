@@ -11,9 +11,21 @@
 # Usage:
 #   build/smoke-test.sh                # starts its own container, cleans up
 #   build/smoke-test.sh <container>    # uses a running nextcloud container
+#   SMOKE_REUSE=1 build/smoke-test.sh  # keeps the installed instance for next time
+#
+# Standing a Nextcloud up is almost the whole of a run -- the app's own
+# part of it takes seconds -- and it is the same instance every time. With
+# SMOKE_REUSE the server lives in a named volume that outlives the
+# container, so the second run and every run after it skips the install
+# and starts testing straight away. The instance is put back to how a run
+# expects to find it first; see reset_instance below for what that covers.
+# It is off by default, so a plain run stays hermetic: CI, and anyone
+# chasing a bug that might be about leftover state, should not have to
+# think about any of this.
 #
 # Tunables (environment): SMOKE_PORT (default 8480), SMOKE_IMAGE
-# (default nextcloud:35-apache), SMOKE_ADMIN_PASS.
+# (default nextcloud:35-apache), SMOKE_ADMIN_PASS, SMOKE_REUSE,
+# SMOKE_VOLUME (default arcade-smoke-data).
 
 set -euo pipefail
 
@@ -24,6 +36,8 @@ PORT=${SMOKE_PORT:-8480}
 IMAGE=${SMOKE_IMAGE:-nextcloud:35-apache}
 ADMIN_USER=admin
 ADMIN_PASS=${SMOKE_ADMIN_PASS:-smoke-Adm1n-pass}
+REUSE=${SMOKE_REUSE:-}
+VOLUME=${SMOKE_VOLUME:-arcade-smoke-data}
 BASE="http://127.0.0.1:${PORT}"
 WORKDIR=$(mktemp -d)
 COOKIES="$WORKDIR/cookies.txt"
@@ -153,21 +167,65 @@ if bad:
 	fi
 }
 
+# What a run leaves behind, undone, so that the next one on the same
+# instance starts where the first one did. Everything here is small: the
+# point of keeping the instance is to keep the install, not the testing.
+reset_instance() {
+	# The upgrade at the end of a run records a version one higher than
+	# the one the next run installs, which the server would read as a
+	# downgrade. Forgetting it lets the app be set up again from scratch.
+	occ app:disable arcade >/dev/null 2>&1 || true
+	occ config:app:delete arcade installed_version >/dev/null 2>&1 || true
+	# The games, the saves, the screenshots, whatever went to the trash,
+	# and the app's own store of BIOS files. The listing afterwards is
+	# what tells the server they are gone.
+	docker exec -u www-data "$CONTAINER" sh -c '
+		rm -rf /var/www/html/data/admin/files/* \
+			/var/www/html/data/admin/files_trashbin \
+			/var/www/html/data/appdata_*/arcade
+	' >/dev/null 2>&1 || true
+	# Both listings have to be told, or the server goes on believing in
+	# files that are no longer there and writing to them fails. The app's
+	# own store is under appdata, which has a scan of its own.
+	occ files:scan "$ADMIN_USER" >/dev/null 2>&1 || true
+	occ files:scan-app-data >/dev/null 2>&1 || true
+	# A run reads the log from the top and fails on anything of ours in
+	# it, so last run's entries would be read as this run's.
+	docker exec "$CONTAINER" sh -c ': > /var/www/html/data/nextcloud.log' >/dev/null 2>&1 || true
+}
+
 # --- server -----------------------------------------------------------------
 
 if [ -z "$CONTAINER" ]; then
 	CONTAINER="arcade-smoke-$$"
 	OWN_CONTAINER=1
 	step "Starting $IMAGE as $CONTAINER on port $PORT"
-	docker run -d --name "$CONTAINER" -p "127.0.0.1:${PORT}:80" "$IMAGE" >/dev/null
+	# The server lives at /var/www/html, which the image declares a volume
+	# -- which is why committing a prepared container to an image would
+	# not carry the installation with it, and why the thing kept between
+	# runs is the volume itself. Without SMOKE_REUSE the volume is the
+	# anonymous one the image makes, and the cleanup takes it away again.
+	if [ -n "$REUSE" ]; then
+		docker volume create "$VOLUME" >/dev/null
+		docker run -d --name "$CONTAINER" -v "$VOLUME":/var/www/html \
+			-p "127.0.0.1:${PORT}:80" "$IMAGE" >/dev/null
+	else
+		docker run -d --name "$CONTAINER" -p "127.0.0.1:${PORT}:80" "$IMAGE" >/dev/null
+	fi
 fi
 
 step 'Waiting for the container to finish initializing'
+# Ready is occ answering at all, whether it answers "installed" or not:
+# that needs the entrypoint to have finished laying the server down, and
+# it is the very thing every step after this uses. Waiting on a line in
+# the log instead said ready too early on a volume that had been
+# installed into before -- the log was already past it -- and the next
+# command then quietly found nothing.
 for i in $(seq 1 90); do
-	if docker logs "$CONTAINER" 2>&1 | grep -q 'Initializing finished'; then
+	if occ status >/dev/null 2>&1; then
 		break
 	fi
-	[ "$i" = 90 ] && die 'container never finished initializing'
+	[ "$i" = 90 ] && die 'the server never came up'
 	sleep 2
 done
 
@@ -177,7 +235,8 @@ step 'Installing Nextcloud (sqlite)'
 # likely had it done already, and asking to do it again is an error --
 # which is what the second usage above used to die of.
 if occ status 2>/dev/null | grep -q 'installed: true'; then
-	echo 'already installed, so this instance is reused as it stands'
+	echo 'already installed, so this instance is reused'
+	reset_instance
 else
 	occ maintenance:install --database sqlite \
 		--admin-user "$ADMIN_USER" --admin-pass "$ADMIN_PASS" \

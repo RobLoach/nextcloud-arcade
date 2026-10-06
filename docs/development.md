@@ -31,6 +31,14 @@ app, seeds ROMs, walks the endpoints a browser would, and does it all
 again through an app upgrade. Unit tests and Psalm only see the app's own
 code; the bugs this catches live in the server it runs inside.
 
+Standing that server up is almost the whole of a run — the app's own part
+of it takes seconds — so `SMOKE_REUSE=1 build/smoke-test.sh` keeps the
+installed instance in a named volume and reuses it next time, putting it
+back to how a run expects to find it first: around twenty seconds instead
+of three minutes. Plain runs stay hermetic, which is what CI does and
+what to fall back to when a failure might itself be about leftover state.
+Each phase prints how long it took, so a run getting slower says where.
+
 The built bundles in `js/` are committed, so rebuild and commit them along
 with any change to `src/` — and bump the patch version whenever the
 bundles change, so browser caches roll instead of serving stale scripts.
