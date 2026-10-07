@@ -3,5 +3,5 @@ SPDX-FileCopyrightText: @robloach/nextcloud-arcade developers
 
 This file is generated from multiple sources. Included packages:
 - @robloach/nextcloud-arcade
-	- version: 0.44.6
+	- version: 0.45.0
 	- license: AGPL-3.0-or-later

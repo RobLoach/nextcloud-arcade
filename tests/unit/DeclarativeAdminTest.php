@@ -64,22 +64,45 @@ class DeclarativeAdminTest extends TestCase {
 		return $this->createStub(IUser::class);
 	}
 
-	public function testTheSchemaCoversExactlyTheInstanceOnlySettings(): void {
+	/** The two the app draws itself, as sliders, in templates/admin.php. */
+	private const DRAWN_BY_THE_APP = ['max_games', 'max_depth'];
+
+	public function testTheSchemaCoversTheInstanceOnlySettingsItDraws(): void {
 		$schema = $this->form()->getSchema();
 		$this->assertSame(DeclarativeSettingsTypes::SECTION_TYPE_ADMIN, $schema['section_type']);
 		$this->assertSame(Application::APP_ID, $schema['section_id'], 'it sits in the existing Arcade section');
 		$this->assertSame(DeclarativeSettingsTypes::STORAGE_TYPE_EXTERNAL, $schema['storage_type']);
+
+		// Every instance-only setting is drawn by exactly one of the two:
+		// this form, or the app's own template. A setting in neither is a
+		// setting nobody can reach.
 		$this->assertSame(
-			array_keys(SettingsService::INSTANCE_ONLY),
+			array_values(array_diff(array_keys(SettingsService::INSTANCE_ONLY), self::DRAWN_BY_THE_APP)),
 			array_column($schema['fields'], 'id'),
 		);
+	}
+
+	public function testTheSettingsTheAppDrawsAreStillSavedThroughTheForm(): void {
+		// They left the schema for a slider, not the instance: setValue is
+		// still what writes them, and still has to clamp them.
+		$form = $this->form();
+		foreach (self::DRAWN_BY_THE_APP as $key) {
+			$form->setValue($key, SettingsService::INSTANCE_ONLY[$key]['max'] * 10, $this->user());
+			$this->assertSame(
+				SettingsService::INSTANCE_ONLY[$key]['max'],
+				$form->getValue($key, $this->user()),
+				"$key is still clamped to what it allows",
+			);
+		}
 	}
 
 	public function testTheDefaultsOfTheFormAreTheDefaultsOfTheApp(): void {
 		// Nothing stored: what the form shows must be what the app does.
 		$form = $this->form();
 		$defaults = array_column($form->getSchema()['fields'], 'default', 'id');
-		foreach (array_keys(SettingsService::INSTANCE_ONLY) as $key) {
+		// Whatever the form declares -- the rest the app draws itself, and
+		// those are checked against the same bounds just below.
+		foreach (array_keys($defaults) as $key) {
 			$shown = $form->getValue($key, $this->user());
 			// A select is handed its whole option rather than the bare
 			// number; what it means is the number inside.

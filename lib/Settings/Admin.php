@@ -34,6 +34,8 @@ class Admin implements ISettings {
 			'defaults' => $this->settingsService->getInstanceDefaults(),
 			// What an empty field actually means, for the hint inside it.
 			'fallbacks' => $this->settingsService->folderFallbacks(),
+			// The ends of the sliders that bound a scan.
+			'limits' => SettingsService::INSTANCE_ONLY,
 			'coreOptions' => CoreOptions::OPTIONS,
 			'systemsByCore' => CoreOptions::systemsByCore(),
 			'storedCoreOptions' => $this->settingsService->getCoreOptions(),

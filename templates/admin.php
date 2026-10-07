@@ -3,6 +3,7 @@
 /** @var \OCP\IL10N $l */
 $defaults = $_['defaults'];
 $fallbacks = $_['fallbacks'];
+$limits = $_['limits'];
 $coreOptions = $_['coreOptions'];
 $systemsByCore = $_['systemsByCore'];
 $settings = ['core_options' => $_['storedCoreOptions']];
@@ -40,9 +41,33 @@ $systemFolder = $_['systemFolder'];
 					data-target="arcade-<?php p($key); ?>"><?php p($l->t('Browse …')); ?></button>
 			</p>
 		<?php endforeach; ?>
+
+		<?php /* How far into the library folder a scan goes, asked where
+		        the folder itself is asked for. Sliders rather than boxes
+		        to type a number into: both are bounded, neither wants an
+		        exact figure, and the ends say what the limits are without
+		        a line of prose under the field explaining them. */ ?>
+		<p>
+			<label for="arcade-max_games"><?php p($l->t('Games listed at most')); ?></label><br>
+			<input type="range" id="arcade-max_games" class="arcade-setting arcade-range"
+				data-setting="max_games"
+				min="<?php p($limits['max_games']['min']); ?>"
+				max="<?php p($limits['max_games']['max']); ?>" step="100"
+				value="<?php p($defaults['max_games']); ?>">
+			<output for="arcade-max_games"><?php p($defaults['max_games']); ?></output>
+		</p>
+		<p>
+			<label for="arcade-max_depth"><?php p($l->t('Folders deep at most')); ?></label><br>
+			<input type="range" id="arcade-max_depth" class="arcade-setting arcade-range"
+				data-setting="max_depth"
+				min="<?php p($limits['max_depth']['min']); ?>"
+				max="<?php p($limits['max_depth']['max']); ?>" step="1"
+				value="<?php p($defaults['max_depth']); ?>">
+			<output for="arcade-max_depth"><?php p($defaults['max_depth']); ?></output>
+		</p>
 	</div>
 
-	<?php /* Box art, checksums and the scan limits are a declarative
+	<?php /* Box art and checksums are a declarative
 	        settings form now, rendered and saved by the server itself:
 	        see \OCA\Arcade\Settings\DeclarativeAdmin. */ ?>
 

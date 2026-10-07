@@ -40,7 +40,6 @@ class DeclarativeAdmin implements IDeclarativeSettingsFormWithHandlers {
 	 * @psalm-suppress InvalidReturnType, InvalidReturnStatement
 	 */
 	public function getSchema(): array {
-		$limits = SettingsService::INSTANCE_ONLY;
 		return [
 			'id' => 'arcade-instance',
 			// After the app's own sections rather than before them. Forms
@@ -73,20 +72,6 @@ class DeclarativeAdmin implements IDeclarativeSettingsFormWithHandlers {
 					'description' => $this->l->t('Checksums that arrive with an upload are always kept. Working one out means reading the whole file, in the background, once per game — on object storage that is a download of each ROM.'),
 					'type' => DeclarativeSettingsTypes::CHECKBOX,
 					'default' => false,
-				],
-				[
-					'id' => 'max_games',
-					'title' => $this->l->t('Games listed at most'),
-					'description' => $this->l->t('Between %1$s and %2$s.', [(string)$limits['max_games']['min'], (string)$limits['max_games']['max']]),
-					'type' => DeclarativeSettingsTypes::NUMBER,
-					'default' => LibraryService::MAX_GAMES,
-				],
-				[
-					'id' => 'max_depth',
-					'title' => $this->l->t('Folders deep at most'),
-					'description' => $this->l->t('Between %1$s and %2$s.', [(string)$limits['max_depth']['min'], (string)$limits['max_depth']['max']]),
-					'type' => DeclarativeSettingsTypes::NUMBER,
-					'default' => LibraryService::MAX_DEPTH,
 				],
 				[
 					'id' => 'cache_ttl',
