@@ -2,6 +2,7 @@
 /** @var array $_ */
 /** @var \OCP\IL10N $l */
 $defaults = $_['defaults'];
+$fallbacks = $_['fallbacks'];
 $coreOptions = $_['coreOptions'];
 $systemsByCore = $_['systemsByCore'];
 $settings = ['core_options' => $_['storedCoreOptions']];
@@ -26,8 +27,14 @@ $systemFolder = $_['systemFolder'];
 		] as $key => $label): ?>
 			<p>
 				<label for="arcade-<?php p($key); ?>"><?php p($label); ?></label><br>
+				<?php /* The hint says what an empty field leaves in force: a
+				        user with nothing set still gets the app's own
+				        folder, and a blank box read as though none did. */ ?>
 				<input type="text" id="arcade-<?php p($key); ?>" class="arcade-setting"
-					data-setting="<?php p($key); ?>" value="<?php p($defaults[$key]); ?>">
+					data-setting="<?php p($key); ?>" value="<?php p($defaults[$key]); ?>"
+					<?php if (($fallbacks[$key] ?? '') !== ''): ?>
+						placeholder="<?php p($fallbacks[$key]); ?>"
+					<?php endif; ?>>
 				<button type="button" class="arcade-folder-picker"
 					data-target="arcade-<?php p($key); ?>"><?php p($l->t('Browse …')); ?></button>
 			</p>

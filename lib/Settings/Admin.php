@@ -32,6 +32,8 @@ class Admin implements ISettings {
 
 		return new TemplateResponse(Application::APP_ID, 'admin', [
 			'defaults' => $this->settingsService->getInstanceDefaults(),
+			// What an empty field actually means, for the hint inside it.
+			'fallbacks' => $this->settingsService->folderFallbacks(),
 			'coreOptions' => CoreOptions::OPTIONS,
 			'systemsByCore' => CoreOptions::systemsByCore(),
 			'storedCoreOptions' => $this->settingsService->getCoreOptions(),

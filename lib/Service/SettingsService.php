@@ -156,6 +156,28 @@ class SettingsService {
 	}
 
 	/**
+	 * What a folder setting falls back to when the instance has not named
+	 * one of its own.
+	 *
+	 * getInstanceDefaults() answers with what is stored, and nothing is
+	 * stored until an administrator sets something -- so the fields come
+	 * up empty while every user is in fact being given these. The page
+	 * shows them as the hint inside the empty field, which says what is
+	 * in force without pinning it: stored, it would stop following the
+	 * app the day the app changes its mind.
+	 *
+	 * @return array<string, string>
+	 */
+	public function folderFallbacks(): array {
+		$app = $this->appDefaults();
+		$fallbacks = [];
+		foreach (self::INSTANCE_DEFAULTS as $key) {
+			$fallbacks[$key] = (string)$app[$key];
+		}
+		return $fallbacks;
+	}
+
+	/**
 	 * What an administrator can set for the instance.
 	 *
 	 * @return array<string, string>

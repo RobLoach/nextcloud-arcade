@@ -43,11 +43,19 @@ class DeclarativeAdmin implements IDeclarativeSettingsFormWithHandlers {
 		$limits = SettingsService::INSTANCE_ONLY;
 		return [
 			'id' => 'arcade-instance',
-			'priority' => 10,
+			// After the app's own sections rather than before them. Forms
+			// are drawn in ascending priority, and Admin sits at 50, so
+			// this used to open the page with box art and scan limits
+			// while the folders -- without which nothing works at all --
+			// were further down.
+			'priority' => 60,
 			'section_type' => DeclarativeSettingsTypes::SECTION_TYPE_ADMIN,
 			'section_id' => Application::APP_ID,
 			'storage_type' => DeclarativeSettingsTypes::STORAGE_TYPE_EXTERNAL,
-			'title' => $this->l->t('Arcade'),
+			// Named for what is in it. Every section of this page is
+			// Arcade, so a heading saying so told an administrator
+			// nothing about which settings they were looking at.
+			'title' => $this->l->t('Box art and scanning'),
 			'description' => $this->l->t('What holds for every user of this server: box art lookups, ROM checksums, and how far a games library is scanned.'),
 			'fields' => [
 				[

@@ -470,4 +470,20 @@ class SettingsServiceTest extends TestCase {
 		]);
 		$this->assertSame(['fceumm' => ['fceumm_palette' => 'wavebeam']], $saved);
 	}
+
+	public function testTheFolderHintsSayWhatAnUnsetFieldLeavesInForce(): void {
+		// The administration page renders these as the placeholder of an
+		// empty field. They have to be what a user without a setting of
+		// their own actually gets, or the page states a default that is
+		// not the one in force.
+		$service = $this->service();
+		$fallbacks = $service->folderFallbacks();
+		$effective = $service->getDefaults();
+
+		$this->assertNotSame([], $fallbacks);
+		foreach ($fallbacks as $key => $hint) {
+			$this->assertSame($effective[$key], $hint, "$key is hinted as what it falls back to");
+		}
+		$this->assertSame('/Games', $fallbacks['library_folder'], 'the one that matters is named');
+	}
 }
