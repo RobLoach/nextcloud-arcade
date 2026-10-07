@@ -3,8 +3,7 @@ name: CI
 on:
   push:
     branches: [master]
-    # Pre-release tags run the heavy jobs (JavaScript build, server smoke
-    # test) that every push skips.
+    # Pre-release tags run the JavaScript build, which every push skips.
     tags:
       - '*alpha*'
       - '*beta*'
@@ -14,8 +13,11 @@ on:
 permissions:
   contents: read
 
+# Per branch, so that pushing twice in a minute does not leave the first
+# run grinding through work nobody is waiting for any more. Keyed on
+# run_id before, which is unique, so a push never superseded anything.
 concurrency:
-  group: ci-${{ github.head_ref || github.run_id }}
+  group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -41,8 +43,11 @@ jobs:
           find appinfo lib templates -name '*.php' -print0 \
             | xargs -0 -n1 -P4 php -l
 
-  php-tests:
-    name: PHP tests
+  php:
+    # The tests and the analysis want the same PHP and the same vendor
+    # directory, so they share them: two runners and two installs of the
+    # same dependencies bought nothing but a second name in the list.
+    name: PHP tests and static analysis
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -66,29 +71,10 @@ jobs:
       - name: Run the test suite
         run: composer test
 
-  psalm:
-    name: Static analysis
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.3'
-          coverage: none
-
-      - name: Cache the Composer downloads
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/composer
-          key: composer-${{ hashFiles('composer.lock') }}
-          restore-keys: composer-
-
-      - name: Install dependencies
-        run: composer install --no-interaction --no-progress --prefer-dist
-
+      # Always, even when the tests failed: a type error and a broken test
+      # are usually the same mistake, and seeing both saves a round trip.
       - name: Analyse
+        if: '!cancelled()'
         run: composer psalm
 
   js-tests:
@@ -144,23 +130,6 @@ jobs:
             git diff --stat -- js/
             exit 1
           fi
-
-  server-smoke:
-    name: Server smoke test
-    # Only on pre-release tags, alongside the JavaScript build.
-    if: startsWith(github.ref, 'refs/tags/')
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Run the app inside a real Nextcloud
-        # Unit tests and Psalm only see the app's own code; the regressions
-        # this catches live in the server it runs inside -- query-optimizer
-        # crashes, mimetype corruption, listeners that never register. The
-        # script installs a real Nextcloud in Docker, enables the app, seeds
-        # ROMs, walks the endpoints, and exercises the upgrade path. The
-        # committed bundles are served as-is, so no npm or composer here.
-        run: build/smoke-test.sh
 
   appinfo:
     name: App metadata

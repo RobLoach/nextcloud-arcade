@@ -40,7 +40,14 @@ REPO_ROOT=$(cd "$(dirname "$0")/.." && pwd)
 CONTAINER=${1:-}
 OWN_CONTAINER=
 PORT=${SMOKE_PORT:-8480}
-IMAGE=${SMOKE_IMAGE:-nextcloud:35-apache}
+# Pinned by digest, so that a run today and a run next month test the
+# same server. The tag alone moves under you: a Nextcloud patch release
+# re-points it, which turns an unrelated run into a multi-minute pull and
+# quietly changes what "passing" meant. To take a newer server, pull the
+# tag and put its digest here:
+#   docker pull nextcloud:35-apache
+#   docker image inspect nextcloud:35-apache --format '{{index .RepoDigests 0}}'
+IMAGE=${SMOKE_IMAGE:-nextcloud:35-apache@sha256:4ba2af4695e1801b5f66ed4df863c0fa0f236f632ffd04b2fdc32ee0c2fefe42}
 ADMIN_USER=admin
 ADMIN_PASS=${SMOKE_ADMIN_PASS:-smoke-Adm1n-pass}
 REUSE=${SMOKE_REUSE:-}
@@ -208,7 +215,7 @@ reset_instance() {
 if [ -z "$CONTAINER" ]; then
 	CONTAINER="arcade-smoke-$$"
 	OWN_CONTAINER=1
-	step "Starting $IMAGE as $CONTAINER on port $PORT"
+	step "Starting ${IMAGE%%@*} as $CONTAINER on port $PORT"
 	# The server lives at /var/www/html, which the image declares a volume
 	# -- which is why committing a prepared container to an image would
 	# not carry the installation with it, and why the thing kept between
