@@ -29,6 +29,16 @@ class DeclarativeAdmin implements IDeclarativeSettingsFormWithHandlers {
 	) {
 	}
 
+	/**
+	 * The server's own type for a field seals `options` to `name` and
+	 * `value`, but the select that draws them is an NcSelect, which reads
+	 * `label` -- so an option spelled the documented way renders as
+	 * "undefined", once per choice. Both keys are sent, which is one more
+	 * than the type allows and exactly as many as the page needs. The
+	 * mismatch is the server's; see cacheTtlOptions().
+	 *
+	 * @psalm-suppress InvalidReturnType, InvalidReturnStatement
+	 */
 	public function getSchema(): array {
 		$limits = SettingsService::INSTANCE_ONLY;
 		return [
@@ -88,44 +98,69 @@ class DeclarativeAdmin implements IDeclarativeSettingsFormWithHandlers {
 	 * scan long before any of these elapse -- and the old field invited
 	 * an admin to tune something that does not want tuning.
 	 *
-	 * @return list<array{name: string, value: int}>
+	 * Each option carries its wording twice. The server's own docblock for
+	 * a declarative field asks for `name`, but the select that renders it
+	 * is an NcSelect, which reads `label` and showed a list of "undefined"
+	 * for every option that only had the documented one.
+	 *
+	 * @return list<array{name: string, label: string, value: int}>
 	 */
 	private function cacheTtlOptions(): array {
+		$option = fn (string $words, int $seconds): array => [
+			'name' => $words,
+			'label' => $words,
+			'value' => $seconds,
+		];
+
 		$options = [];
 		foreach ([1, 2, 6, 12] as $hours) {
-			$options[] = [
-				'name' => $this->l->n('%n hour', '%n hours', $hours),
-				'value' => $hours * 3600,
-			];
+			$options[] = $option($this->l->n('%n hour', '%n hours', $hours), $hours * 3600);
 		}
 		foreach ([1, 3] as $days) {
-			$options[] = [
-				'name' => $this->l->n('%n day', '%n days', $days),
-				'value' => $days * 24 * 3600,
-			];
+			$options[] = $option($this->l->n('%n day', '%n days', $days), $days * 24 * 3600);
 		}
-		$options[] = ['name' => $this->l->t('1 week'), 'value' => 7 * 24 * 3600];
+		$options[] = $option($this->l->t('1 week'), 7 * 24 * 3600);
 
 		// Whatever was set before this was a list -- the field used to take
 		// any number of seconds -- stays on offer, so that opening the page
 		// and saving it cannot quietly change a choice already made.
 		$current = (int)($this->settingsService->getInstanceDefaults()['cache_ttl'] ?? LibraryService::CACHE_TTL);
 		if (!in_array($current, array_column($options, 'value'), true)) {
-			array_unshift($options, [
-				'name' => $this->l->n('%n second', '%n seconds', $current),
-				'value' => $current,
-			]);
+			array_unshift($options, $option(
+				$this->l->n('%n second', '%n seconds', $current),
+				$current,
+			));
 		}
 		return $options;
 	}
 
 	public function getValue(string $fieldId, IUser $user): mixed {
-		return $this->settingsService->getInstanceDefaults()[$fieldId] ?? null;
+		$value = $this->settingsService->getInstanceDefaults()[$fieldId] ?? null;
+		// A select is handed the whole option, not the number inside it.
+		// The form passes the stored value straight to an NcSelect as its
+		// model, and an NcSelect draws whatever it is given by reading
+		// `label` off it: given the bare 86400 it drew "86400", and given
+		// an option with no `label` it drew "undefined".
+		if ($fieldId === 'cache_ttl') {
+			$wanted = (int)$value;
+			foreach ($this->cacheTtlOptions() as $option) {
+				if ($option['value'] === $wanted) {
+					return $option;
+				}
+			}
+		}
+		return $value;
 	}
 
 	public function setValue(string $fieldId, mixed $value, IUser $user): void {
 		if (!array_key_exists($fieldId, SettingsService::INSTANCE_ONLY)) {
 			return;
+		}
+		// And it comes back the same way it went out: picking from a select
+		// sends the whole option, which is not a number and would be
+		// dropped on the way in without a word.
+		if (is_array($value) && array_key_exists('value', $value)) {
+			$value = $value['value'];
 		}
 		// setInstanceDefaults() sanitizes: bounds are clamped, and the value
 		// lands on the very appconfig key older versions of the app used.

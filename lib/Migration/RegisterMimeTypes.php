@@ -49,7 +49,12 @@ class RegisterMimeTypes implements IRepairStep {
 			$mimeId = $this->mimeTypeLoader->getId($mime);
 			$updated += $this->mimeTypeLoader->updateFilecache($extension, $mimeId);
 		}
-		$output->info("Updated the mimetype of $updated files");
+		// Only when there was something to say. Every upgrade ran this and
+		// announced nought files, which is noise in the one place an
+		// administrator is reading for something that went wrong.
+		if ($updated > 0) {
+			$output->info("Updated the mimetype of $updated files");
+		}
 		if ($healed > 0) {
 			$output->info("Gave $healed files their server mimetype back");
 		}

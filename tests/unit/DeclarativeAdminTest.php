@@ -47,6 +47,13 @@ class DeclarativeAdminTest extends TestCase {
 		$l->method('t')->willReturnCallback(
 			fn (string $text, $parameters = []): string => vsprintf($text, is_array($parameters) ? $parameters : [$parameters]),
 		);
+		// Counted wording goes through n(), not t(). Unstubbed it answered
+		// with an empty string, which is how a field of options that all
+		// said nothing still looked fine from here.
+		$l->method('n')->willReturnCallback(
+			fn (string $singular, string $plural, int $count): string
+				=> str_replace('%n', (string)$count, $count === 1 ? $singular : $plural),
+		);
 		return new DeclarativeAdmin(
 			new SettingsService($this->createStub(IUserConfig::class), $appConfig, $root),
 			$l,
@@ -73,7 +80,10 @@ class DeclarativeAdminTest extends TestCase {
 		$form = $this->form();
 		$defaults = array_column($form->getSchema()['fields'], 'default', 'id');
 		foreach (array_keys(SettingsService::INSTANCE_ONLY) as $key) {
-			$this->assertSame($form->getValue($key, $this->user()), $defaults[$key], $key);
+			$shown = $form->getValue($key, $this->user());
+			// A select is handed its whole option rather than the bare
+			// number; what it means is the number inside.
+			$this->assertSame(is_array($shown) ? $shown['value'] : $shown, $defaults[$key], $key);
 		}
 	}
 
@@ -87,12 +97,42 @@ class DeclarativeAdminTest extends TestCase {
 		$this->assertNotEmpty($field['options']);
 
 		foreach ($field['options'] as $option) {
-			$form->setValue('cache_ttl', $option['value'], $this->user());
-			$this->assertSame(
-				$option['value'],
-				$form->getValue('cache_ttl', $this->user()),
-				$option['name'] . ' comes back as it went in',
-			);
+			// As the select sends it: the option, not the number. Sending
+			// the number works too, which is what every other caller does.
+			foreach ([$option, $option['value']] as $sent) {
+				$form->setValue('cache_ttl', $sent, $this->user());
+				$this->assertSame(
+					$option['value'],
+					$form->getValue('cache_ttl', $this->user())['value'],
+					$option['name'] . ' comes back as it went in',
+				);
+			}
+		}
+	}
+
+	public function testTheLengthIsShownAsSomethingAnAdministratorCanRead(): void {
+		// The form hands this straight to an NcSelect as its model, and an
+		// NcSelect draws it by reading `label`. Given the bare number it
+		// drew "86400"; given an option without that key, "undefined".
+		$form = $this->form();
+		$form->setValue('cache_ttl', 86400, $this->user());
+
+		$shown = $form->getValue('cache_ttl', $this->user());
+
+		$this->assertIsArray($shown, 'the whole option goes to the select');
+		$this->assertSame(86400, $shown['value']);
+		$this->assertNotSame('', $shown['label'], 'and it has something to draw');
+	}
+
+	public function testEveryChoiceIsWordedForTheThingThatDrawsIt(): void {
+		// The select is an NcSelect, which shows `label`; the server's own
+		// docblock for a field asks for `name`. An option with only one of
+		// them drew a list of "undefined", once per choice.
+		$field = array_column($this->form()->getSchema()['fields'], null, 'id')['cache_ttl'];
+
+		foreach ($field['options'] as $option) {
+			$this->assertNotSame('', $option['label'] ?? '', 'every option is drawn with something');
+			$this->assertSame($option['name'], $option['label'], 'and says the same either way');
 		}
 	}
 

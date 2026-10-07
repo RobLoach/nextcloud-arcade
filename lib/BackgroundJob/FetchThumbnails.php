@@ -211,14 +211,26 @@ class FetchThumbnails extends QueuedJob {
 	 * @param list<File> $files
 	 */
 	private function warm(array $files): void {
+		// Counted rather than narrated: this runs twice per file, so a run
+		// that cannot warm anything used to say so a hundred times over,
+		// and the first line said everything the hundredth did.
+		$failed = 0;
+		$first = null;
 		foreach ($files as $file) {
 			foreach (self::PREVIEW_SIZES as $size) {
 				try {
 					$this->preview->getPreview($file, $size, $size, false);
 				} catch (\Throwable $e) {
-					$this->logger->debug('Could not warm a box art preview', ['exception' => $e]);
+					$failed++;
+					$first ??= $e;
 				}
 			}
+		}
+		if ($failed > 0) {
+			$this->logger->debug(
+				"Could not warm $failed box art previews",
+				['exception' => $first],
+			);
 		}
 	}
 }

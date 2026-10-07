@@ -47,6 +47,8 @@ class RegisterMetadata implements IRepairStep {
 				IMetadataValueWrapper::EDIT_FORBIDDEN,
 			);
 		}
-		$output->info('The system, title, region, checksums and mapper of a ROM are known.');
+		// Nothing is said about it. Declaring the keys is the same work on
+		// every upgrade whether or not anything changed, so a line here
+		// only ever repeated the step's own name back.
 	}
 }
