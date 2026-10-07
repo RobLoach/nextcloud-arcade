@@ -12,6 +12,7 @@
 #   build/smoke-test.sh                # starts its own container, cleans up
 #   build/smoke-test.sh <container>    # uses a running nextcloud container
 #   SMOKE_REUSE=1 build/smoke-test.sh  # keeps the installed instance for next time
+#   SMOKE_TMPFS=1 build/smoke-test.sh  # keeps the server in memory, never on disk
 #
 # Standing a Nextcloud up is almost the whole of a run -- the app's own
 # part of it takes seconds -- and it is the same instance every time. With
@@ -23,9 +24,15 @@
 # chasing a bug that might be about leftover state, should not have to
 # think about any of this.
 #
+# The image is an Apache one on purpose, and not the smaller fpm-alpine:
+# the app ships img/cores/.htaccess, which is what gives the emulator
+# cores their wasm mimetype and their cache headers, and only a server
+# reading .htaccess exercises it. An fpm image serves no HTTP at all.
+#
 # Tunables (environment): SMOKE_PORT (default 8480), SMOKE_IMAGE
 # (default nextcloud:35-apache), SMOKE_ADMIN_PASS, SMOKE_REUSE,
-# SMOKE_VOLUME (default arcade-smoke-data).
+# SMOKE_VOLUME (default arcade-smoke-data), SMOKE_TMPFS,
+# SMOKE_TMPFS_SIZE (default 2g).
 
 set -euo pipefail
 
@@ -38,6 +45,8 @@ ADMIN_USER=admin
 ADMIN_PASS=${SMOKE_ADMIN_PASS:-smoke-Adm1n-pass}
 REUSE=${SMOKE_REUSE:-}
 VOLUME=${SMOKE_VOLUME:-arcade-smoke-data}
+TMPFS=${SMOKE_TMPFS:-}
+TMPFS_SIZE=${SMOKE_TMPFS_SIZE:-2g}
 BASE="http://127.0.0.1:${PORT}"
 WORKDIR=$(mktemp -d)
 COOKIES="$WORKDIR/cookies.txt"
@@ -209,6 +218,14 @@ if [ -z "$CONTAINER" ]; then
 		docker volume create "$VOLUME" >/dev/null
 		docker run -d --name "$CONTAINER" -v "$VOLUME":/var/www/html \
 			-p "127.0.0.1:${PORT}:80" "$IMAGE" >/dev/null
+	elif [ -n "$TMPFS" ]; then
+		# Nothing of the server ever reaches the disk: no volume to leave
+		# behind, and the install goes at the speed of memory. It costs
+		# that much memory for as long as the run lasts, which is why it
+		# is asked for rather than assumed.
+		docker run -d --name "$CONTAINER" \
+			--tmpfs "/var/www/html:rw,size=${TMPFS_SIZE}" \
+			-p "127.0.0.1:${PORT}:80" "$IMAGE" >/dev/null
 	else
 		docker run -d --name "$CONTAINER" -p "127.0.0.1:${PORT}:80" "$IMAGE" >/dev/null
 	fi
@@ -284,7 +301,7 @@ LOCATION=$(curl -sSf -o /dev/null -w '%{redirect_url}' \
 	--data-urlencode "user=$ADMIN_USER" \
 	--data-urlencode "password=$ADMIN_PASS" \
 	--data-urlencode "requesttoken=$LOGIN_TOKEN" \
-	"$BASE/index.php/login")
+	"$BASE/index.php/login" || true)
 case "$LOCATION" in
 	*/login*|'') die "login failed, redirected to '$LOCATION'" ;;
 esac
@@ -294,7 +311,12 @@ TOKEN=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["token"]
 	|| die 'no CSRF token in the response'
 
 step 'Hitting the endpoints'
-assert_status 'app page' "$BASE/index.php/apps/arcade/" || true
+# A 200 is not enough on its own: an error page is a 200 too. The app
+# page is known by the script that makes it one.
+if assert_status 'app page' "$BASE/index.php/apps/arcade/"; then
+	grep -q 'arcade-main' "$BODY" \
+		|| fail 'the app page came back without the app on it'
+fi
 
 if assert_status 'library endpoint' "$BASE/index.php/apps/arcade/arcade/library?limit=5"; then
 	assert_json 'library lists the seeded ROMs' '
@@ -383,7 +405,7 @@ fi
 # turns away a request naming a game the user does not have -- so the save
 # is watched where it actually lives: in the user's own files.
 SAVES_DIR=/var/www/html/data/admin/files/Saves
-SAVE_FILE=$(docker exec "$CONTAINER" find "$SAVES_DIR" -name '*.state' | head -1)
+SAVE_FILE=$(docker exec "$CONTAINER" find "$SAVES_DIR" -name '*.state' | head -1 || true)
 if [ -z "$SAVE_FILE" ]; then
 	die "nothing was written under $SAVES_DIR ($(docker exec "$CONTAINER" find "$SAVES_DIR" | head -5 | tr '\n' ' '))"
 fi
@@ -457,6 +479,38 @@ if occ arcade:bios /tmp/GB_BIOS.BIN > "$BODY" 2>&1; then
 	echo 'ok: arcade:bios took GB_BIOS.BIN'
 else
 	fail "occ arcade:bios refused GB_BIOS.BIN: $(head -c 200 "$BODY")"
+fi
+
+step 'Serving an emulator core'
+# The app ships img/cores/.htaccess, and it is the whole reason this runs
+# against an Apache image. A core served as anything but application/wasm
+# cannot be compiled while it downloads, and without the cache headers
+# every launch fetches megabytes again.
+CORE_WASM=$(cd "$REPO_ROOT/img/cores" && ls -- *_libretro.wasm | head -1)
+[ -n "$CORE_WASM" ] || die 'no core wasm in img/cores/'
+CORE_URL="$BASE/apps/arcade/img/cores/$CORE_WASM"
+if assert_status "core ($CORE_WASM)" "$CORE_URL"; then
+	CORE_TYPE=$(curl -sS -o /dev/null -w '%{content_type}' -b "$COOKIES" "$CORE_URL" || true)
+	case "$CORE_TYPE" in
+		application/wasm*) echo 'ok: the core is served as wasm' ;;
+		*) fail "a core is served as '$CORE_TYPE', so the browser cannot stream-compile it" ;;
+	esac
+	# Long enough that a second launch does not fetch megabytes again.
+	# Which .htaccess wins is the server's business -- Nextcloud's own
+	# covers wasm as well -- so what is asked is the result, not the rule.
+	CORE_AGE=$(curl -sSI -b "$COOKIES" "$CORE_URL" | tr -d '\r' \
+		| sed -n 's/^[Cc]ache-[Cc]ontrol:.*max-age=\([0-9]*\).*/\1/p' | head -1 || true)
+	if [ "${CORE_AGE:-0}" -ge 86400 ]; then
+		echo "ok: the core is kept by the browser (max-age=$CORE_AGE)"
+	else
+		fail "a core is cached for '${CORE_AGE:-nothing}', so every launch fetches it again"
+	fi
+	CORE_ENC=$(curl -sSI -H 'Accept-Encoding: gzip' -b "$COOKIES" "$CORE_URL" \
+		| tr -d '\r' | sed -n 's/^[Cc]ontent-[Ee]ncoding: *//p' | head -1 || true)
+	case "$CORE_ENC" in
+		gzip*|br*) echo "ok: the core comes down compressed ($CORE_ENC)" ;;
+		*) fail 'a core is sent uncompressed, which is megabytes over the wire for nothing' ;;
+	esac
 fi
 
 step 'Running occ arcade:status'
