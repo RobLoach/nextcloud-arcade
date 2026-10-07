@@ -61,7 +61,7 @@ Administration settings → Arcade holds what is the same for everybody:
 | Work out ROM checksums | Off | Whether to read a whole ROM to hash it, when the upload brought no checksum |
 | Games listed at most | 5000 | How many games one library scan lists |
 | Folders deep at most | 6 | How far into a library folder the scan goes |
-| Seconds a scan is kept | 86400 | How long the result of a scan is cached |
+| How long a scan is kept | 1 day | How long an unchanged scan may be reused, from 1 hour to 1 week |
 | Core options | Core default | Options of the emulator cores, which users cannot change |
 | Picture each system starts out shown with | Box art | The default for the personal setting of the same name |
 

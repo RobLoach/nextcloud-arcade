@@ -77,6 +77,42 @@ class DeclarativeAdminTest extends TestCase {
 		}
 	}
 
+	public function testEveryLengthOfferedForAScanSurvivesBeingSaved(): void {
+		// The list is the only thing stopping a value being offered that
+		// the bounds would then clamp to something else -- the form would
+		// show one length and the instance would keep another.
+		$form = $this->form();
+		$field = array_column($form->getSchema()['fields'], null, 'id')['cache_ttl'];
+		$this->assertSame(DeclarativeSettingsTypes::SELECT, $field['type']);
+		$this->assertNotEmpty($field['options']);
+
+		foreach ($field['options'] as $option) {
+			$form->setValue('cache_ttl', $option['value'], $this->user());
+			$this->assertSame(
+				$option['value'],
+				$form->getValue('cache_ttl', $this->user()),
+				$option['name'] . ' comes back as it went in',
+			);
+		}
+	}
+
+	public function testTheLengthAScanIsKeptByDefaultIsOneOfTheChoices(): void {
+		$field = array_column($this->form()->getSchema()['fields'], null, 'id')['cache_ttl'];
+
+		$this->assertContains($field['default'], array_column($field['options'], 'value'));
+	}
+
+	public function testALengthSetBeforeTheListStaysOnOffer(): void {
+		// The field used to take any number of seconds. Opening the page
+		// must not quietly round somebody's choice to the nearest one of
+		// ours the next time it is saved.
+		$this->stored['cache_ttl'] = '500';
+
+		$field = array_column($this->form()->getSchema()['fields'], null, 'id')['cache_ttl'];
+
+		$this->assertContains(500, array_column($field['options'], 'value'));
+	}
+
 	public function testAStoredValueIsReadFromTheOldKeysUnchanged(): void {
 		// As written by the app before the form was declarative.
 		$this->stored = ['fetch_enabled' => '0', 'max_games' => '250'];

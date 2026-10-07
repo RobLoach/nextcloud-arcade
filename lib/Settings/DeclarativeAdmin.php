@@ -72,13 +72,51 @@ class DeclarativeAdmin implements IDeclarativeSettingsFormWithHandlers {
 				],
 				[
 					'id' => 'cache_ttl',
-					'title' => $this->l->t('Seconds a scan is kept'),
-					'description' => $this->l->t('Between %1$s and %2$s.', [(string)$limits['cache_ttl']['min'], (string)$limits['cache_ttl']['max']]),
-					'type' => DeclarativeSettingsTypes::NUMBER,
+					'title' => $this->l->t('How long a scan is kept'),
+					'description' => $this->l->t('A scan is dropped as soon as anything in the games folder changes, so this is only how long an unchanged one may be reused. Refresh on the library page rebuilds it whatever this says.'),
+					'type' => DeclarativeSettingsTypes::SELECT,
+					'options' => $this->cacheTtlOptions(),
 					'default' => LibraryService::CACHE_TTL,
 				],
 			],
 		];
+	}
+
+	/**
+	 * The lengths worth offering, rather than a box to type a number of
+	 * seconds into: the exact figure never mattered -- an etag drops the
+	 * scan long before any of these elapse -- and the old field invited
+	 * an admin to tune something that does not want tuning.
+	 *
+	 * @return list<array{name: string, value: int}>
+	 */
+	private function cacheTtlOptions(): array {
+		$options = [];
+		foreach ([1, 2, 6, 12] as $hours) {
+			$options[] = [
+				'name' => $this->l->n('%n hour', '%n hours', $hours),
+				'value' => $hours * 3600,
+			];
+		}
+		foreach ([1, 3] as $days) {
+			$options[] = [
+				'name' => $this->l->n('%n day', '%n days', $days),
+				'value' => $days * 24 * 3600,
+			];
+		}
+		$options[] = ['name' => $this->l->t('1 week'), 'value' => 7 * 24 * 3600];
+
+		// Whatever was set before this was a list -- the field used to take
+		// any number of seconds -- stays on offer, so that opening the page
+		// and saving it cannot quietly change a choice already made.
+		$current = (int)($this->settingsService->getInstanceDefaults()['cache_ttl'] ?? LibraryService::CACHE_TTL);
+		if (!in_array($current, array_column($options, 'value'), true)) {
+			array_unshift($options, [
+				'name' => $this->l->n('%n second', '%n seconds', $current),
+				'value' => $current,
+			]);
+		}
+		return $options;
 	}
 
 	public function getValue(string $fieldId, IUser $user): mixed {
