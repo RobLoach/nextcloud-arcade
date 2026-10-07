@@ -354,8 +354,20 @@ step 'Rendering the settings pages'
 # Both are the app's own markup, and a fatal in either is invisible to
 # every other check here: the endpoints below are JSON, and the app page
 # does not include them.
-assert_status 'personal settings' "$BASE/index.php/settings/user/arcade" || true
-assert_status 'administration settings' "$BASE/index.php/settings/admin/arcade" || true
+# A status on its own is not enough. A template that fails to include a
+# part of itself still answers 200 -- PHP warns and carries on -- so the
+# page comes back whole-looking and short of whatever did not load. Each
+# page is checked for the heading markup every section of it carries.
+for SETTINGS_PAGE in user admin; do
+	if assert_status "$SETTINGS_PAGE settings" "$BASE/index.php/settings/$SETTINGS_PAGE/arcade"; then
+		SECTIONS=$(grep -c 'class="msg"' "$BODY" || true)
+		if [ "${SECTIONS:-0}" -ge 3 ]; then
+			echo "ok: the $SETTINGS_PAGE settings drew $SECTIONS sections"
+		else
+			fail "the $SETTINGS_PAGE settings drew $SECTIONS sections, so part of the page did not load"
+		fi
+	fi
+done
 
 step 'Reading the capabilities'
 # What other apps and clients read this app through. The version is taken

@@ -2,6 +2,7 @@
 /** @var array $_ */
 /** @var \OCP\IL10N $l */
 $settings = $_['settings'];
+$fallbacks = $_['fallbacks'];
 $buttons = $_['buttons'];
 $hotkeys = $_['hotkeys'];
 $systems = $_['systems'];
@@ -10,8 +11,9 @@ $thumbnailTypes = $_['thumbnailTypes'];
 
 <div id="arcade-settings">
 	<div class="section">
-		<h2 class="inlineblock"><?php p($l->t('Player')); ?></h2>
-		<span class="msg" aria-live="polite"></span>
+		<?php print_unescaped($this->inc('part.sectionhead', [
+			'title' => $l->t('Player'),
+		])); ?>
 		<p class="settings-hint"><?php p($l->t('Configure how the Arcade retro game player behaves.')); ?></p>
 		<?php foreach ([
 			'arcade-smooth' => ['video_smooth', $l->t('Smooth video filtering (bilinear)')],
@@ -86,8 +88,9 @@ $thumbnailTypes = $_['thumbnailTypes'];
 	</div>
 
 	<div class="section">
-		<h2 class="inlineblock"><?php p($l->t('Controls')); ?></h2>
-		<span class="msg" aria-live="polite"></span>
+		<?php print_unescaped($this->inc('part.sectionhead', [
+			'title' => $l->t('Controls'),
+		])); ?>
 		<p class="settings-hint"><?php p($l->t('Click a key to set it, then press the one to use. A key that works a button of the controller is left to the game.')); ?></p>
 
 		<?php /* The button of a binding holds only the key glyph -- "↑", or
@@ -157,65 +160,60 @@ $thumbnailTypes = $_['thumbnailTypes'];
 	</div>
 
 	<div class="section">
-		<h2 class="inlineblock"><?php p($l->t('Folders')); ?></h2>
-		<span class="msg" aria-live="polite"></span>
-		<p>
-			<label for="arcade-library-folder"><?php p($l->t('Games library folder')); ?></label><br>
-			<em><?php p($l->t('Games in this folder are listed on the Arcade page.')); ?></em><br>
-			<input type="text" id="arcade-library-folder" class="arcade-setting"
-				data-setting="library_folder" placeholder="/Games"
-				value="<?php p($settings['library_folder']); ?>">
-			<button type="button" class="arcade-folder-picker"
-				data-target="arcade-library-folder"><?php p($l->t('Browse …')); ?></button>
-		</p>
-		<p>
-			<label for="arcade-thumbnails-folder"><?php p($l->t('Thumbnails folder')); ?></label><br>
-			<em><?php p($l->t('Images in this folder are used as game thumbnails, matched by file name: Mario.png is the thumbnail of Mario.nes. Leave empty to disable.')); ?></em><br>
-			<input type="text" id="arcade-thumbnails-folder" class="arcade-setting"
-				data-setting="thumbnails_folder"
-				value="<?php p($settings['thumbnails_folder']); ?>">
-			<button type="button" class="arcade-folder-picker"
-				data-target="arcade-thumbnails-folder"><?php p($l->t('Browse …')); ?></button>
-			<?php if ($settings['fetch_enabled']): ?>
-				<button type="button" id="arcade-fetch-thumbnails"><?php p($l->t('Look for missing box art')); ?></button>
-				<span id="arcade-fetch-status" aria-live="polite"></span>
-			<?php endif; ?>
-		</p>
-		<p>
-			<label for="arcade-saves-folder"><?php p($l->t('Saves folder')); ?></label><br>
-			<em><?php p($l->t('Save states and battery saves are stored here, under the system and the game. Without a folder, a game cannot be saved at all and the player says so.')); ?></em><br>
-			<input type="text" id="arcade-saves-folder" class="arcade-setting"
-				data-setting="saves_folder"
-				value="<?php p($settings['saves_folder']); ?>">
-			<button type="button" class="arcade-folder-picker"
-				data-target="arcade-saves-folder"><?php p($l->t('Browse …')); ?></button>
-		</p>
-		<p>
-			<label for="arcade-system-folder"><?php p($l->t('System folder')); ?></label><br>
-			<em><?php p($l->t('BIOS files are read from this folder, by the name the core expects, such as colecovision.rom. Leave empty if no game needs one.')); ?></em><br>
-			<input type="text" id="arcade-system-folder" class="arcade-setting"
-				data-setting="system_folder"
-				value="<?php p($settings['system_folder']); ?>">
-			<button type="button" class="arcade-folder-picker"
-				data-target="arcade-system-folder"><?php p($l->t('Browse …')); ?></button>
-		</p>
-		<p>
-			<label for="arcade-screenshots-folder"><?php p($l->t('Screenshots folder')); ?></label><br>
-			<em><?php p($l->t('Screenshots taken in the player are saved here, under the system. Leave empty to download them instead.')); ?></em><br>
-			<input type="text" id="arcade-screenshots-folder" class="arcade-setting"
-				data-setting="screenshots_folder"
-				value="<?php p($settings['screenshots_folder']); ?>">
-			<button type="button" class="arcade-folder-picker"
-				data-target="arcade-screenshots-folder"><?php p($l->t('Browse …')); ?></button>
-		</p>
+		<?php print_unescaped($this->inc('part.sectionhead', [
+			'title' => $l->t('Folders'),
+		])); ?>
+
+		<?php /* One row apiece, written once. Each folder differs only in
+		        what it is called, what it is for, and what an empty field
+		        leaves in force -- the hint comes from the app rather than
+		        being spelled out here, so it cannot drift from what a
+		        user without a setting actually gets. */ ?>
+		<?php foreach ([
+			'library_folder' => [
+				$l->t('Games library folder'),
+				$l->t('Games in this folder are listed on the Arcade page.'),
+			],
+			'thumbnails_folder' => [
+				$l->t('Thumbnails folder'),
+				$l->t('Images in this folder are used as game thumbnails, matched by file name: Mario.png is the thumbnail of Mario.nes. Leave empty to disable.'),
+			],
+			'saves_folder' => [
+				$l->t('Saves folder'),
+				$l->t('Save states and battery saves are stored here, under the system and the game. Without a folder, a game cannot be saved at all and the player says so.'),
+			],
+			'system_folder' => [
+				$l->t('System folder'),
+				$l->t('BIOS files are read from this folder, by the name the core expects, such as colecovision.rom. Leave empty if no game needs one.'),
+			],
+			'screenshots_folder' => [
+				$l->t('Screenshots folder'),
+				$l->t('Screenshots taken in the player are saved here, under the system. Leave empty to download them instead.'),
+			],
+		] as $key => [$label, $hint]): ?>
+			<p>
+				<label for="arcade-<?php p($key); ?>"><?php p($label); ?></label><br>
+				<em><?php p($hint); ?></em><br>
+				<input type="text" id="arcade-<?php p($key); ?>" class="arcade-setting"
+					data-setting="<?php p($key); ?>" value="<?php p($settings[$key]); ?>"
+					<?php if (($fallbacks[$key] ?? '') !== ''): ?>
+						placeholder="<?php p($fallbacks[$key]); ?>"
+					<?php endif; ?>>
+				<button type="button" class="arcade-folder-picker"
+					data-target="arcade-<?php p($key); ?>"><?php p($l->t('Browse …')); ?></button>
+				<?php if ($key === 'thumbnails_folder' && $settings['fetch_enabled']): ?>
+					<button type="button" id="arcade-fetch-thumbnails"><?php p($l->t('Look for missing box art')); ?></button>
+					<span id="arcade-fetch-status" aria-live="polite"></span>
+				<?php endif; ?>
+			</p>
+		<?php endforeach; ?>
 	</div>
 
 	<div class="section">
-		<h2 class="inlineblock"><?php p($l->t('Picture shown for each system')); ?></h2>
-		<span class="msg" aria-live="polite"></span>
-		<p class="settings-hint">
-			<?php p($l->t('Which of the pictures in your thumbnails folder a system is shown with, when it has more than one.')); ?>
-		</p>
+		<?php print_unescaped($this->inc('part.sectionhead', [
+			'title' => $l->t('Picture shown for each system'),
+			'hint' => $l->t('Which of the pictures in your thumbnails folder a system is shown with, when it has more than one.'),
+		])); ?>
 		<?php foreach ($systems as $systemId => $system): ?>
 			<p>
 				<label for="arcade-thumbnail-<?php p($systemId); ?>"><?php p($system['short']); ?></label><br>

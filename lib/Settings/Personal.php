@@ -30,6 +30,10 @@ class Personal implements ISettings {
 
 		return new TemplateResponse(Application::APP_ID, 'settings', [
 			'settings' => $settings,
+			// What an empty field leaves in force, from the one place that
+			// knows: the page used to spell "/Games" out for itself, which
+			// is a second answer to a question the app already answers.
+			'fallbacks' => $this->settingsService->folderFallbacks(),
 			'buttons' => Controls::BUTTONS,
 			'hotkeys' => Controls::HOTKEYS,
 			'systems' => CoreMap::SYSTEMS,

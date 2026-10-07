@@ -14,9 +14,10 @@ $systemFolder = $_['systemFolder'];
 
 <div id="arcade-settings" data-scope="admin">
 	<div class="section">
-		<h2 class="inlineblock"><?php p($l->t('Folders')); ?></h2>
-		<span class="msg" aria-live="polite"></span>
-		<p class="settings-hint"><?php p($l->t('The folders users start with. Everybody can pick their own afterwards. Each path is read inside every user\'s own files, so Browse is only picking the name — a folder only you have leaves everybody else with nothing to show.')); ?></p>
+		<?php print_unescaped($this->inc('part.sectionhead', [
+			'title' => $l->t('Folders'),
+			'hint' => $l->t('The folders users start with. Everybody can pick their own afterwards. Each path is read inside every user\'s own files, so Browse is only picking the name — a folder only you have leaves everybody else with nothing to show.'),
+		])); ?>
 
 		<?php foreach ([
 			'library_folder' => $l->t('Games library folder'),
@@ -47,9 +48,10 @@ $systemFolder = $_['systemFolder'];
 
 	<?php if ($systemFolder !== ''): ?>
 	<div class="section" id="arcade-bios-section">
-		<h2 class="inlineblock"><?php p($l->t('BIOS')); ?></h2>
-		<span class="msg" aria-live="polite"></span>
-		<p class="settings-hint"><?php p($l->t('A few consoles will not start without the firmware file of the real hardware. Copy these files from a console you own; they go into your System folder. Files added instance-wide with occ arcade:bios are offered to every player as a fallback.')); ?></p>
+		<?php print_unescaped($this->inc('part.sectionhead', [
+			'title' => $l->t('BIOS'),
+			'hint' => $l->t('A few consoles will not start without the firmware file of the real hardware. Copy these files from a console you own; they go into your System folder. Files added instance-wide with occ arcade:bios are offered to every player as a fallback.'),
+		])); ?>
 		<?php foreach ($systems as $systemId => $system): ?>
 			<?php if ($system['bios'] === []) { continue; } ?>
 			<div class="arcade-bios-system">
@@ -78,9 +80,10 @@ $systemFolder = $_['systemFolder'];
 	<?php endif; ?>
 
 	<div class="section">
-		<h2 class="inlineblock"><?php p($l->t('Core options')); ?></h2>
-		<span class="msg" aria-live="polite"></span>
-		<p class="settings-hint"><?php p($l->t('Options of the emulator cores themselves. Left on "Core default", the core decides.')); ?></p>
+		<?php print_unescaped($this->inc('part.sectionhead', [
+			'title' => $l->t('Core options'),
+			'hint' => $l->t('Options of the emulator cores themselves. Left on "Core default", the core decides.'),
+		])); ?>
 		<?php foreach ($coreOptions as $core => $options): ?>
 			<?php
 			// What an administrator came looking for is the system, not the
@@ -133,9 +136,10 @@ $systemFolder = $_['systemFolder'];
 	        a game is pictured with has nothing to do with the emulator,
 	        so it is asked by system, which is how it is thought about. */ ?>
 	<div class="section">
-		<h2 class="inlineblock"><?php p($l->t('Pictures')); ?></h2>
-		<span class="msg" aria-live="polite"></span>
-		<p class="settings-hint"><?php p($l->t('What a game of each system is shown with to begin with. Everybody can pick their own afterwards; which file each kind comes out of is in the usage guide.')); ?></p>
+		<?php print_unescaped($this->inc('part.sectionhead', [
+			'title' => $l->t('Pictures'),
+			'hint' => $l->t('What a game of each system is shown with to begin with. Everybody can pick their own afterwards; which file each kind comes out of is in the usage guide.'),
+		])); ?>
 		<div class="arcade-pictures">
 			<?php foreach ($systems as $systemId => $system): ?>
 				<p>
