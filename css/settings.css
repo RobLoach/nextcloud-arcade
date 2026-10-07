@@ -120,6 +120,34 @@
 	text-decoration: line-through;
 }
 
+/* The systems a core runs lead the row; the core's own name follows,
+   quietly, for whoever is looking for that instead. */
+#arcade-settings .arcade-core-options > summary > em {
+	color: var(--color-text-maxcontrast);
+	font-style: normal;
+	font-size: 0.9em;
+}
+
+/* Said only on a core that carries something, so a row that says nothing
+   has nothing set. */
+#arcade-settings .arcade-core-changed {
+	margin-inline-start: calc(var(--default-grid-baseline, 4px) * 2);
+	padding: 0 calc(var(--default-grid-baseline, 4px) * 2);
+	border-radius: var(--border-radius-pill, 100px);
+	background-color: var(--color-primary-element-light);
+	color: var(--color-primary-element-light-text);
+	font-size: 0.85em;
+}
+
+/* One picture setting per system, in as many columns as there is room
+   for: seventeen systems in a single column is a long way to scroll. */
+#arcade-settings .arcade-pictures {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+	gap: 0 calc(var(--default-grid-baseline, 4px) * 4);
+	max-width: 900px;
+}
+
 #arcade-settings .arcade-bios-system h3 {
 	margin-bottom: 0;
 }

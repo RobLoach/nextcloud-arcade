@@ -321,6 +321,13 @@ if not system.get("id"):
 '
 fi
 
+step 'Rendering the settings pages'
+# Both are the app's own markup, and a fatal in either is invisible to
+# every other check here: the endpoints below are JSON, and the app page
+# does not include them.
+assert_status 'personal settings' "$BASE/index.php/settings/user/arcade" || true
+assert_status 'administration settings' "$BASE/index.php/settings/admin/arcade" || true
+
 step 'Reading the capabilities'
 # What other apps and clients read this app through. The version is taken
 # from the app manager, so a capabilities payload that still answers proves

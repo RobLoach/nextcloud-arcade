@@ -15,7 +15,7 @@ $systemFolder = $_['systemFolder'];
 	<div class="section">
 		<h2 class="inlineblock"><?php p($l->t('Folders')); ?></h2>
 		<span class="msg" aria-live="polite"></span>
-		<p class="settings-hint"><?php p($l->t('The folders users start with. Everybody can pick their own afterwards.')); ?></p>
+		<p class="settings-hint"><?php p($l->t('The folders users start with. Everybody can pick their own afterwards. Each path is read inside every user\'s own files, so Browse is only picking the name — a folder only you have leaves everybody else with nothing to show.')); ?></p>
 
 		<?php foreach ([
 			'library_folder' => $l->t('Games library folder'),
@@ -75,10 +75,24 @@ $systemFolder = $_['systemFolder'];
 		<span class="msg" aria-live="polite"></span>
 		<p class="settings-hint"><?php p($l->t('Options of the emulator cores themselves. Left on "Core default", the core decides.')); ?></p>
 		<?php foreach ($coreOptions as $core => $options): ?>
+			<?php
+			// What an administrator came looking for is the system, not the
+			// name of the core that runs it, so the systems are what the
+			// row says first. How many options have been moved off "Core
+			// default" is said too: without it, fourteen collapsed rows
+			// look alike, and finding what somebody set means opening all
+			// of them.
+			$changed = count($settings['core_options'][$core] ?? []);
+			?>
 			<details class="arcade-core-options">
 				<summary>
-					<?php p($core); ?>
-					<em><?php p(implode(', ', $systemsByCore[$core] ?? [])); ?></em>
+					<?php p(implode(', ', $systemsByCore[$core] ?? []) ?: $core); ?>
+					<em><?php p($core); ?></em>
+					<?php if ($changed > 0): ?>
+						<span class="arcade-core-changed">
+							<?php p($l->n('%n option changed', '%n options changed', $changed)); ?>
+						</span>
+					<?php endif; ?>
 				</summary>
 				<?php foreach ($options as $key => $option): ?>
 					<p>
@@ -98,28 +112,38 @@ $systemFolder = $_['systemFolder'];
 						</select>
 					</p>
 				<?php endforeach; ?>
-				<?php foreach ($systems as $systemId => $system): ?>
-					<?php if ($system['core'] !== $core) { continue; } ?>
-					<p>
-						<label for="arcade-thumbnail-<?php p($systemId); ?>">
-							<?php p($l->t('Picture %s starts out shown with', [$system['short']])); ?>
-						</label><br>
-						<select id="arcade-thumbnail-<?php p($systemId); ?>" class="arcade-thumbnail-type"
-							data-system="<?php p($systemId); ?>">
-							<?php foreach ($thumbnailTypes as $type => $label): ?>
-								<option value="<?php p($type); ?>"
-									<?php if (($storedTypes[$systemId] ?? 'boxart') === $type) { p('selected'); } ?>>
-									<?php p($label); ?>
-								</option>
-							<?php endforeach; ?>
-						</select>
-					</p>
-				<?php endforeach; ?>
 				<p>
 					<button type="button" class="arcade-core-reset"
 						data-core="<?php p($core); ?>"><?php p($l->t('Reset this core to defaults')); ?></button>
 				</p>
 			</details>
 		<?php endforeach; ?>
+	</div>
+
+	<?php /* These used to sit inside the core options, under whichever
+	        core happened to run the system -- so choosing what a Game Boy
+	        shows meant knowing it runs on gambatte and opening that. What
+	        a game is pictured with has nothing to do with the emulator,
+	        so it is asked by system, which is how it is thought about. */ ?>
+	<div class="section">
+		<h2 class="inlineblock"><?php p($l->t('Pictures')); ?></h2>
+		<span class="msg" aria-live="polite"></span>
+		<p class="settings-hint"><?php p($l->t('What a game of each system is shown with to begin with. Everybody can pick their own afterwards; which file each kind comes out of is in the usage guide.')); ?></p>
+		<div class="arcade-pictures">
+			<?php foreach ($systems as $systemId => $system): ?>
+				<p>
+					<label for="arcade-thumbnail-<?php p($systemId); ?>"><?php p($system['label']); ?></label><br>
+					<select id="arcade-thumbnail-<?php p($systemId); ?>" class="arcade-thumbnail-type"
+						data-system="<?php p($systemId); ?>">
+						<?php foreach ($thumbnailTypes as $type => $label): ?>
+							<option value="<?php p($type); ?>"
+								<?php if (($storedTypes[$systemId] ?? 'boxart') === $type) { p('selected'); } ?>>
+								<?php p($label); ?>
+							</option>
+						<?php endforeach; ?>
+					</select>
+				</p>
+			<?php endforeach; ?>
+		</div>
 	</div>
 </div>
