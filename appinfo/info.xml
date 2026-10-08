@@ -9,7 +9,7 @@
 Arcade runs the RetroArch libretro cores in the browser, so nothing is uploaded anywhere else. Seventeen systems are covered, from ColecoVision to the PlayStation, with a games library you can browse by keyboard, mouse, touch or gamepad.
 
 The library carries box art, play statistics, save states, screenshots, battery saves and BIOS handling, rewind and run-ahead, and configurable keys — all kept in folders of your own choosing. ROMs stay ordinary files: they open in the Files app and its viewer, carry an Arcade tab in the sidebar, take collaborative tags as library filters, show their box art as previews, and what you play lands in your Activity stream.]]></description>
-	<version>0.47.0</version>
+	<version>0.47.1</version>
 	<licence>AGPL-3.0-or-later</licence>
 	<author homepage="https://robloach.net">Rob Loach</author>
 	<namespace>Arcade</namespace>

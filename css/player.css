@@ -42,6 +42,18 @@
 	top: calc(var(--default-grid-baseline, 4px) * 2 + env(safe-area-inset-top, 0px));
 	inset-inline-end: calc(var(--default-grid-baseline, 4px) * 2 + env(safe-area-inset-right, 0px));
 }
+/* With the virtual gamepad up, the bar moves out of its way. Every part
+   of that pad is along the bottom -- the D-pad and the face buttons at
+   70px, START and SELECT at 24px -- and the bar sat at 8px and 42px tall,
+   straight over the last two, taking their taps with it at z-index 20100
+   against the pad's 20090.
+   Below the line the top-right cluster occupies rather than beside it:
+   its own offset plus a 34px button in 4px of padding. Side by side they
+   would meet on a narrow phone, which is the only place this applies. */
+.arcade-player-container.arcade-touch-on .arcade-toolbar {
+	top: calc(var(--default-grid-baseline, 4px) * 4 + env(safe-area-inset-top, 0px) + 42px);
+	bottom: auto;
+}
 .arcade-toolbar:hover,
 .arcade-toolbar:focus-within,
 .arcade-topbar:hover,

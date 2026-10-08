@@ -259,10 +259,17 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 	// could work it, but only put over the picture where a finger is how
 	// the device is pointed at in the first place.
 	let touchControls = null
+	// The virtual gamepad lays itself along the bottom of the screen, and
+	// so does the control bar -- over the top of START and SELECT, and
+	// being the higher of the two it took their taps as well, which left
+	// those two buttons of the pad unpressable on a phone. While the pad
+	// is up the bar goes to the top, where the pad has nothing.
+	const showingTouch = (showing) => container.classList.toggle('arcade-touch-on', showing)
 	if (isTouchDevice()) {
 		touchControls = attachTouchControls({ container, instance })
 		const showTouch = isTouchPrimary()
 		touchControls.element.classList.toggle('hidden', !showTouch)
+		showingTouch(showTouch)
 		const touchButton = button(ICONS.gamepad, t('arcade', 'Touch controls'), (element) => {
 			const hidden = touchControls.element.classList.toggle('hidden')
 			if (hidden) {
@@ -270,6 +277,7 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 				// rest of the game, with nothing left on screen to lift it.
 				touchControls.release()
 			}
+			showingTouch(!hidden)
 			setPressed(element, !hidden)
 		})
 		setPressed(touchButton, showTouch)
@@ -790,6 +798,7 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 	}
 	const wakeChrome = () => {
 		container.classList.remove('arcade-chrome-hidden')
+		container.classList.remove('arcade-touch-on')
 		scheduleHide()
 	}
 	const onPointerMove = () => wakeChrome()
