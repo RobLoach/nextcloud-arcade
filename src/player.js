@@ -7,6 +7,7 @@ import { generateFilePath, generateUrl } from '@nextcloud/router'
 import { api } from './api.js'
 import { createCoreLog } from './corelog.js'
 import { inputConfig, retroarchKey } from './keys.js'
+import { volumeInDecibels } from './volume.js'
 import { biosForSystem, coreForSystem, systemForFile, systemFromBytes, systemLabel } from './systems.js'
 import { waitAtMost } from './wait.js'
 
@@ -201,7 +202,7 @@ export async function launchRom({ element, romUrl, romName, settings = {}, syste
 			video_smooth: settings.video_smooth === true,
 			video_scale_integer: settings.scale_integer === true,
 			fastforward_ratio: Number(settings.fastforward_ratio ?? 3),
-			audio_volume: Number(settings.audio_volume ?? 0),
+			audio_volume: volumeInDecibels(settings.volume),
 			audio_latency: Number(settings.audio_latency ?? 64),
 		},
 		retroarchCoreConfig: settings.core_options?.[coreForSystem(system.id)] ?? {},

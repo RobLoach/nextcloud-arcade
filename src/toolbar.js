@@ -1,7 +1,7 @@
 import { getCurrentUser, getRequestToken } from '@nextcloud/auth'
 import { translate as t } from '@nextcloud/l10n'
 import { generateUrl } from '@nextcloud/router'
-import { AUTO_SLOT } from './api.js'
+import { AUTO_SLOT, api } from './api.js'
 import { ICONS, icon } from './icons.js'
 import { createGalleryPanel } from './panels/gallery.js'
 import { offerResume } from './panels/resume.js'
@@ -275,11 +275,91 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 		setPressed(touchButton, showTouch)
 	}
 
-	const muteButton = button(ICONS.mute, t('arcade', 'Mute'), (element) => {
-		instance.sendCommand('MUTE')
-		setPressed(element, !element.classList.contains('active'))
+	// Volume, as a slider that comes up out of the bar rather than a mute
+	// button with two positions. What a player wants is usually quieter,
+	// not silent, and the level is theirs to keep: it is written to their
+	// settings, so the next game starts where this one left off.
+	let volume = Number(settings.volume ?? 100)
+	const volumePanel = document.createElement('div')
+	volumePanel.className = 'arcade-volume hidden'
+	const volumeSlider = document.createElement('input')
+	volumeSlider.type = 'range'
+	volumeSlider.min = '0'
+	volumeSlider.max = '100'
+	volumeSlider.step = '5'
+	volumeSlider.value = String(volume)
+	volumeSlider.setAttribute('aria-label', t('arcade', 'Volume'))
+	// Upright, which is what a volume control is, and what the issue asks
+	// for: the writing mode is the part every browser agrees on.
+	volumeSlider.style.writingMode = 'vertical-lr'
+	volumeSlider.style.direction = 'rtl'
+	const volumeValue = document.createElement('span')
+	volumeValue.className = 'arcade-volume-value'
+	volumePanel.appendChild(volumeSlider)
+	volumePanel.appendChild(volumeValue)
+
+	const volumeButton = button(ICONS.mute, t('arcade', 'Volume'), (element) => {
+		const open = volumePanel.classList.toggle('hidden')
+		setExpanded(element, !open)
+		if (!open) {
+			volumeSlider.focus()
+		}
 	})
-	setPressed(muteButton, false)
+	volumeButton.appendChild(volumePanel)
+	setExpanded(volumeButton, false)
+
+	// The level the player hears, and the face of the button that sets it.
+	const showVolume = () => {
+		volumeValue.textContent = `${volume}%`
+		volumeSlider.setAttribute('aria-valuetext', t('arcade', '{percent}%', { percent: volume }))
+		volumeButton.classList.toggle('active', volume === 0)
+		volumeButton.title = volume === 0
+			? t('arcade', 'Volume, muted')
+			: t('arcade', 'Volume, {percent}%', { percent: volume })
+		volumeButton.setAttribute('aria-label', volumeButton.title)
+	}
+	showVolume()
+
+	/**
+	 * Turn the running game up or down there and then.
+	 *
+	 * RetroArch's own commands only step the volume by a notch and never
+	 * say where it is, so there is nothing to drive a slider with. What
+	 * the sound actually passes through is the gain of the audio context
+	 * the core plays into, which Emscripten's OpenAL hands over.
+	 *
+	 * Undocumented, so it is reached for carefully and never depended on:
+	 * a core that does not offer it keeps playing at the level it was
+	 * launched with, and the slider still decides what the next launch
+	 * starts at.
+	 *
+	 * @param {number} level how loud, from 0 to 100
+	 */
+	const setLiveVolume = (level) => {
+		try {
+			const gain = instance.getEmscriptenAL?.()?.currentCtx?.gain
+			if (gain?.gain !== undefined) {
+				gain.gain.value = level / 100
+			}
+		} catch (error) {
+			console.debug('The core does not offer a volume to set', error)
+		}
+	}
+
+	// Heard at once, saved once the slider is let go of: dragging it is a
+	// stream of values, and each one would otherwise be a request.
+	volumeSlider.addEventListener('input', () => {
+		volume = Number(volumeSlider.value)
+		showVolume()
+		setLiveVolume(volume)
+	})
+	volumeSlider.addEventListener('change', () => {
+		api(generateUrl('/apps/arcade/arcade/settings'), {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ volume }),
+		}).catch((error) => console.error('Could not save the volume', error))
+	})
 
 	const fastForwardButton = button(ICONS.fastForward, t('arcade', 'Fast-forward'), (element) => {
 		instance.sendCommand('FAST_FORWARD')

@@ -146,7 +146,7 @@ class SettingsServiceTest extends TestCase {
 		$this->assertSame(3, $settings['fastforward_ratio']);
 		$this->assertFalse($settings['rewind_enabled'], 'rewinding costs performance, so it is asked for');
 		$this->assertSame(0, $settings['runahead_frames'], 'and so is run-ahead');
-		$this->assertSame(0, $settings['audio_volume']);
+		$this->assertSame(100, $settings['volume'], 'the game exactly as recorded');
 		$this->assertSame(64, $settings['audio_latency']);
 		$this->assertFalse($settings['pause_when_hidden'], 'a background tab does not pause unless asked');
 		$this->assertFalse($settings['autosave_on_close'], 'closing does not save the game unless asked');
@@ -314,10 +314,10 @@ class SettingsServiceTest extends TestCase {
 	}
 
 	public function testAudioSettingsAreClamped(): void {
-		$this->assertEquals(10, $this->save(['audio_volume' => 100])['audio_volume']);
-		$this->assertEquals(-20, $this->save(['audio_volume' => -100])['audio_volume']);
-		$this->assertEquals(-6, $this->save(['audio_volume' => '-6'])['audio_volume']);
-		$this->assertArrayNotHasKey('audio_volume', $this->save(['audio_volume' => 'loud']));
+		$this->assertSame(100, $this->save(['volume' => 500])['volume']);
+		$this->assertSame(0, $this->save(['volume' => -40])['volume']);
+		$this->assertSame(35, $this->save(['volume' => '35'])['volume']);
+		$this->assertArrayNotHasKey('volume', $this->save(['volume' => 'loud']));
 
 		$this->assertSame(256, $this->save(['audio_latency' => 5000])['audio_latency']);
 		$this->assertSame(16, $this->save(['audio_latency' => 0])['audio_latency']);
@@ -485,5 +485,25 @@ class SettingsServiceTest extends TestCase {
 			$this->assertSame($effective[$key], $hint, "$key is hinted as what it falls back to");
 		}
 		$this->assertSame('/Games', $fallbacks['library_folder'], 'the one that matters is named');
+	}
+
+	public function testAVolumeSetInDecibelsIsReadForwardAsAPercentage(): void {
+		// The setting used to be the gain RetroArch takes, from -20 to 10.
+		// Read as a percentage, the old default of 0 -- the game exactly
+		// as recorded -- would have meant silence for everybody who had
+		// ever opened the settings page.
+		$this->assertSame(100, $this->service('{"audio_volume":0}')->getUserSettings('player')['volume']);
+		$this->assertEqualsWithDelta(50, $this->service('{"audio_volume":-6}')->getUserSettings('player')['volume'], 2);
+		$this->assertEqualsWithDelta(10, $this->service('{"audio_volume":-20}')->getUserSettings('player')['volume'], 2);
+	}
+
+	public function testAVolumeAlreadyAPercentageIsLeftAlone(): void {
+		$settings = $this->service('{"volume":30,"audio_volume":0}')->getUserSettings('player');
+		$this->assertSame(30, $settings['volume']);
+		$this->assertArrayNotHasKey('audio_volume', $settings, 'the old key does not travel on');
+	}
+
+	public function testTheVolumeDefaultsToTheGameAsRecorded(): void {
+		$this->assertSame(100, $this->service()->getDefaults()['volume']);
 	}
 }

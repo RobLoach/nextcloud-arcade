@@ -30,6 +30,12 @@ use OCP\IRequest;
 class PageController extends ArcadeController {
 	private const MAX_PAGE_SIZE = 500;
 
+	/**
+	 * How many games a shelf above the library holds. The same as the
+	 * recently played keeps, so the rows are the same length.
+	 */
+	private const SHELF_SIZE = 12;
+
 	public function __construct(
 		string $appName,
 		IRequest $request,
@@ -121,7 +127,8 @@ class PageController extends ArcadeController {
 				'limit' => $limit,
 				'systems' => [],
 				'tags' => [],
-				'recent' => [],
+				'continuePlaying' => [],
+				'recentlyAdded' => [],
 				'favorites' => [],
 				'stats' => [],
 				'games' => [],
@@ -147,8 +154,9 @@ class PageController extends ArcadeController {
 			$this->recentService->stats($this->userId),
 			array_column($games, 'id', 'id'),
 		);
-		$recent = $this->getRecent($games, $stats);
+		$continuePlaying = $this->getContinuePlaying($games, $stats);
 		$favorites = $this->getFavorites($games, $stats);
+		$recentlyAdded = $this->getRecentlyAdded($games, $stats);
 		// The systems of the whole library, so the filter keeps offering
 		// them while a filter is active.
 		$systems = array_values(array_unique(array_column($games, 'system')));
@@ -173,7 +181,7 @@ class PageController extends ArcadeController {
 		// Only for what is about to be shown, and outside the cached scan:
 		// screenshots and save states change as games are played.
 		$page = array_slice($games, $offset, $limit);
-		$this->libraryService->addFallbackImages($this->userId, $userFolder, $settings, $page, $recent, $favorites);
+		$this->libraryService->addFallbackImages($this->userId, $userFolder, $settings, $page, $continuePlaying, $favorites, $recentlyAdded);
 
 		return $this->respond([
 			'folder' => $folderPath,
@@ -185,7 +193,8 @@ class PageController extends ArcadeController {
 			'truncated' => $libraryTotal >= (int)($settings['max_games'] ?? LibraryService::MAX_GAMES),
 			'systems' => $systems,
 			'tags' => $tags,
-			'recent' => $recent,
+			'continuePlaying' => $continuePlaying,
+			'recentlyAdded' => $recentlyAdded,
 			'favorites' => $favorites,
 			'stats' => $stats,
 			'games' => $page,
@@ -318,7 +327,7 @@ class PageController extends ArcadeController {
 	 * @param array<int, array<string, int>> $stats what they were played for
 	 * @return list<array<string, mixed>>
 	 */
-	private function getRecent(array $games, array $stats): array {
+	private function getContinuePlaying(array $games, array $stats): array {
 		$byId = [];
 		foreach ($games as $game) {
 			$byId[$game['id'] ?? 0] = $game;
@@ -331,6 +340,24 @@ class PageController extends ArcadeController {
 			}
 		}
 		return $recent;
+	}
+
+	/**
+	 * The newest games of the library, by the time the file was last
+	 * written. What somebody filling a library up wants to see: the shelf
+	 * answers "did the thing I just uploaded arrive?" without a search.
+	 *
+	 * @param list<array<string, mixed>> $games
+	 * @param array<int, array<string, int>> $stats what they were played for
+	 * @return list<array<string, mixed>>
+	 */
+	private function getRecentlyAdded(array $games, array $stats): array {
+		usort($games, static fn (array $a, array $b): int => ($b['mtime'] ?? 0) <=> ($a['mtime'] ?? 0));
+		$newest = array_slice($games, 0, self::SHELF_SIZE);
+		return array_map(
+			static fn (array $game): array => [...$game, ...($stats[$game['id'] ?? 0] ?? [])],
+			$newest,
+		);
 	}
 
 	/**

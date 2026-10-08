@@ -72,11 +72,14 @@ $thumbnailTypes = $_['thumbnailTypes'];
 			<output for="arcade-fastforward"><?php p($settings['fastforward_ratio']); ?>×</output>
 		</p>
 		<p>
-			<label for="arcade-volume"><?php p($l->t('Volume, in decibels, 0 is as recorded')); ?></label><br>
+			<?php /* Out of a hundred rather than in decibels: a gain of -6 dB
+			        is a thing a mixing desk asks for, not a thing a person
+			        playing a game knows the answer to. */ ?>
+			<label for="arcade-volume"><?php p($l->t('Volume')); ?></label><br>
 			<input type="range" id="arcade-volume" class="arcade-setting arcade-range"
-				data-setting="audio_volume" data-unit=" dB" min="-20" max="10" step="1"
-				value="<?php p($settings['audio_volume']); ?>">
-			<output for="arcade-volume"><?php p($settings['audio_volume']); ?> dB</output>
+				data-setting="volume" data-unit="%" min="0" max="100" step="5"
+				value="<?php p($settings['volume']); ?>">
+			<output for="arcade-volume"><?php p($settings['volume']); ?>%</output>
 		</p>
 		<p>
 			<label for="arcade-audio-latency"><?php p($l->t('Audio latency, raise it if the sound crackles')); ?></label><br>

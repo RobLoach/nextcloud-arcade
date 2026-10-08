@@ -312,7 +312,7 @@ function renderRow(title, className, games, reload, scope) {
 	section.appendChild(heading)
 
 	const row = document.createElement('ul')
-	row.className = 'arcade-library-recent-row'
+	row.className = 'arcade-library-shelf-row'
 	for (const game of games) {
 		row.appendChild(renderCard(game, reload, scope))
 	}
@@ -970,7 +970,12 @@ export async function renderLibrary(container, onError) {
 		// them up here.
 		const favorites = new Set((data.favorites ?? []).map((game) => game.path))
 		const stats = data.stats ?? {}
-		for (const game of [...(data.games ?? []), ...(data.recent ?? []), ...(data.favorites ?? [])]) {
+		for (const game of [
+			...(data.games ?? []),
+			...(data.continuePlaying ?? []),
+			...(data.recentlyAdded ?? []),
+			...(data.favorites ?? []),
+		]) {
 			game.favorite = favorites.has(game.path)
 			if (game.seconds === undefined && stats[game.id] !== undefined) {
 				game.seconds = stats[game.id].seconds
@@ -1051,13 +1056,25 @@ export async function renderLibrary(container, onError) {
 				'favorites',
 			))
 		}
-		if (plainPage && (data.recent ?? []).length > 0) {
+		if (plainPage && (data.continuePlaying ?? []).length > 0) {
 			container.appendChild(renderRow(
-				t('arcade', 'Recently played'),
-				'arcade-library-recent',
-				data.recent,
+				t('arcade', 'Continue Playing'),
+				'arcade-library-continue',
+				data.continuePlaying,
 				load,
-				'recent',
+				'continue',
+			))
+		}
+		// Last, because it is the shelf for a library still being filled:
+		// what was played and what was starred both matter more once there
+		// is anything to play.
+		if (plainPage && (data.recentlyAdded ?? []).length > 0) {
+			container.appendChild(renderRow(
+				t('arcade', 'Recently Added'),
+				'arcade-library-added',
+				data.recentlyAdded,
+				load,
+				'added',
 			))
 		}
 

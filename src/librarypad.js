@@ -72,7 +72,7 @@ function columnsAround(link) {
 	// where they landed. Counting the leading links that share the first
 	// one's top edge gives the column count — and comes out as 1 for the
 	// list and table, where every game has a row of its own.
-	const group = link.closest('.arcade-library-grid, .arcade-library-recent-row, .arcade-library-rows, .arcade-library-table')
+	const group = link.closest('.arcade-library-grid, .arcade-library-shelf-row, .arcade-library-rows, .arcade-library-table')
 	if (group === null) {
 		return 1
 	}

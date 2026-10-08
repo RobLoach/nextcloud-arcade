@@ -243,7 +243,11 @@ class SettingsService {
 			// for rewinding without asking.
 			'rewind_enabled' => false,
 			'runahead_frames' => 0,
-			'audio_volume' => 0,
+			// Out of a hundred, where a hundred is the game as recorded.
+			// RetroArch is told a gain in decibels, which is what the
+			// setting used to hold -- see volumeOf() for the conversion
+			// and for what becomes of a decibel figure stored back then.
+			'volume' => 100,
 			'audio_latency' => 64,
 			'respond_to_global_events' => true,
 			'pause_when_hidden' => false,
@@ -317,7 +321,7 @@ class SettingsService {
 		}
 		// The row is cleaned of what is not the user's to hold -- and trued
 		// up for good by the write-back below.
-		$settings = $this->withoutInstanceKeys($decoded);
+		$settings = $this->readStoredRow($decoded);
 		// The folders are looked up by their ids, so the settings follow
 		// them when they are moved or renamed. Anything learned -- a new
 		// path, or the id of a folder that was only stored as a path
@@ -435,24 +439,53 @@ class SettingsService {
 	private function storedUserSettings(string $userId): array {
 		$stored = $this->userConfig->getValueString($userId, Application::APP_ID, 'settings', '');
 		$decoded = $stored === '' ? null : json_decode($stored, true);
-		return is_array($decoded) ? $this->withoutInstanceKeys($decoded) : [];
+		return is_array($decoded) ? $this->readStoredRow($decoded) : [];
 	}
 
 	/**
-	 * A stored settings row without the keys that are not the user's to
-	 * hold. Early versions saved the whole settings form, so a row from
-	 * then still carries the core options and the instance-only settings.
-	 * Those belong to the administrator, and a stale copy here would
-	 * shadow whatever is set now.
+	 * A stored settings row with its volume as a percentage.
+	 *
+	 * The setting used to be the gain in decibels RetroArch itself takes,
+	 * from -20 to 10, which is not a thing to ask a player for. A row
+	 * written back then is read forward here rather than left to be read
+	 * as a percentage, where the old default of 0 -- the game exactly as
+	 * recorded -- would have meant silence.
 	 *
 	 * @param array<string, mixed> $stored
 	 * @return array<string, mixed>
 	 */
-	private function withoutInstanceKeys(array $stored): array {
-		return array_diff_key(
+	private static function volumeOf(array $stored): array {
+		if (array_key_exists('volume', $stored) || !is_numeric($stored['audio_volume'] ?? null)) {
+			unset($stored['audio_volume']);
+			return $stored;
+		}
+		// Decibels are a gain: every 20 of them is a factor of ten. The
+		// boost the old setting allowed has nowhere to go above a
+		// hundred, so it lands there.
+		$stored['volume'] = max(0, min(100, (int)round(100 * (10 ** ((float)$stored['audio_volume'] / 20)))));
+		unset($stored['audio_volume']);
+		return $stored;
+	}
+
+	/**
+	 * A stored settings row, read forward: without the keys that are not
+	 * the user's to hold, and with its volume as a percentage.
+	 *
+	 * Early versions saved the whole settings form, so a row from then
+	 * still carries the core options and the instance-only settings.
+	 * Those belong to the administrator, and a stale copy here would
+	 * shadow whatever is set now. Both readers of a stored row come
+	 * through here, which is why the volume is brought forward here too
+	 * rather than in one of them.
+	 *
+	 * @param array<string, mixed> $stored
+	 * @return array<string, mixed>
+	 */
+	private function readStoredRow(array $stored): array {
+		return self::volumeOf(array_diff_key(
 			$stored,
 			array_flip(['core_options', ...array_keys(self::INSTANCE_ONLY)]),
-		);
+		));
 	}
 
 	/**
@@ -481,9 +514,8 @@ class SettingsService {
 		if (array_key_exists('fastforward_ratio', $settings) && is_numeric($settings['fastforward_ratio'])) {
 			$sanitized['fastforward_ratio'] = (float)max(1, min(5, (float)$settings['fastforward_ratio']));
 		}
-		if (array_key_exists('audio_volume', $settings) && is_numeric($settings['audio_volume'])) {
-			// RetroArch takes a gain in decibels, where 0 is as recorded.
-			$sanitized['audio_volume'] = (float)max(-20, min(10, (float)$settings['audio_volume']));
+		if (array_key_exists('volume', $settings) && is_numeric($settings['volume'])) {
+			$sanitized['volume'] = max(0, min(100, (int)$settings['volume']));
 		}
 		if (array_key_exists('autosave_interval', $settings)
 			&& is_numeric($settings['autosave_interval'])

@@ -102,7 +102,7 @@
 	margin: 0 0 calc(var(--default-grid-baseline, 4px) * 2) 0;
 }
 
-.arcade .arcade-library-recent-row {
+.arcade .arcade-library-shelf-row {
 	list-style: none;
 	margin: 0;
 	padding: 0;
@@ -113,12 +113,12 @@
 	scroll-snap-type: x proximity;
 }
 
-.arcade .arcade-library-recent-row .arcade-library-game {
+.arcade .arcade-library-shelf-row .arcade-library-game {
 	flex: 0 0 140px;
 	scroll-snap-align: start;
 }
 
-.arcade .arcade-library-recent-row .arcade-library-thumbnail {
+.arcade .arcade-library-shelf-row .arcade-library-thumbnail {
 	width: 100%;
 	aspect-ratio: 4 / 3;
 	object-fit: contain;

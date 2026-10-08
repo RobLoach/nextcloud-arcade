@@ -77,6 +77,39 @@
 .arcade-topbar > button.active { background-color: rgba(255, 255, 255, 0.35); }
 .arcade-toolbar > button svg,
 .arcade-topbar > button svg { width: 20px; height: 20px; fill: #fff; }
+/* The volume, stood upright above the button that opens it. Inside the
+   button so it travels with it, and anchored to it rather than to the
+   bar, which is centred and would put the slider somewhere else. */
+.arcade-volume {
+	position: absolute;
+	bottom: calc(100% + var(--default-grid-baseline, 4px) * 2);
+	left: 50%;
+	transform: translateX(-50%);
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: var(--default-grid-baseline, 4px);
+	padding: calc(var(--default-grid-baseline, 4px) * 2);
+	border-radius: var(--border-radius-large, 8px);
+	background-color: rgba(0, 0, 0, 0.85);
+	z-index: 20101;
+}
+
+.arcade-volume.hidden {
+	display: none;
+}
+
+.arcade-volume input[type='range'] {
+	height: 120px;
+	margin: 0;
+}
+
+.arcade-volume-value {
+	color: #fff;
+	font-size: 12px;
+	font-variant-numeric: tabular-nums;
+}
+
 /* The two panels above the toolbar -- save states and screenshots --
    share one dress; the gallery only adds a width cap for its grid. */
 .arcade-states,
