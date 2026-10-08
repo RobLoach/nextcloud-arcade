@@ -47,14 +47,28 @@ $systemFolder = $_['systemFolder'];
 		        to type a number into: both are bounded, neither wants an
 		        exact figure, and the ends say what the limits are without
 		        a line of prose under the field explaining them. */ ?>
+		<?php
+		// A list rather than a slider for this one. It runs from a hundred
+		// to a hundred thousand, so the default sat at a twentieth of the
+		// way along and every library anybody has lives in the first inch
+		// of the track. Whatever was set before, if it is not one of these,
+		// stays on offer so that saving the page cannot quietly round it.
+		$gameCounts = [500, 1000, 2500, 5000, 10000, 25000, 50000, 100000];
+		if (!in_array((int)$defaults['max_games'], $gameCounts, true)) {
+			$gameCounts[] = (int)$defaults['max_games'];
+			sort($gameCounts);
+		}
+		?>
 		<p>
 			<label for="arcade-max_games"><?php p($l->t('Games listed at most')); ?></label><br>
-			<input type="range" id="arcade-max_games" class="arcade-setting arcade-range"
-				data-setting="max_games"
-				min="<?php p($limits['max_games']['min']); ?>"
-				max="<?php p($limits['max_games']['max']); ?>" step="100"
-				value="<?php p($defaults['max_games']); ?>">
-			<output for="arcade-max_games"><?php p($defaults['max_games']); ?></output>
+			<select id="arcade-max_games" class="arcade-setting" data-setting="max_games">
+				<?php foreach ($gameCounts as $count): ?>
+					<option value="<?php p($count); ?>"
+						<?php if ((int)$defaults['max_games'] === $count) { p('selected'); } ?>>
+						<?php p($count); ?>
+					</option>
+				<?php endforeach; ?>
+			</select>
 		</p>
 		<p>
 			<label for="arcade-max_depth"><?php p($l->t('Folders deep at most')); ?></label><br>

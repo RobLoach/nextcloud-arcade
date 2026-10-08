@@ -521,6 +521,44 @@ function renderFilters(systems, tags, reload) {
 	})
 	filters.appendChild(systemFilter)
 
+	// The table sorts by its own column headings, which is how a table is
+	// sorted. The other two views had no way to say it at all: the server
+	// has always taken a sort and an order, and two views out of three
+	// could only ever ask for name, ascending.
+	//
+	// One control for both halves of the answer. Asking for the field and
+	// the direction separately would mean two selects to say "most
+	// played", and "played, ascending" is not a thing anybody wants.
+	if (state.view !== 'table') {
+		const orders = [
+			['name/asc', t('arcade', 'Name, A to Z')],
+			['name/desc', t('arcade', 'Name, Z to A')],
+			['system/asc', t('arcade', 'System')],
+			['mtime/desc', t('arcade', 'Newest first')],
+			['mtime/asc', t('arcade', 'Oldest first')],
+			['playtime/desc', t('arcade', 'Most played')],
+			['size/desc', t('arcade', 'Largest first')],
+		]
+		const sortBy = focusable(document.createElement('select'), 'filters/sort')
+		sortBy.className = 'arcade-library-sort'
+		sortBy.setAttribute('aria-label', t('arcade', 'Sort games'))
+		for (const [value, label] of orders) {
+			const option = document.createElement('option')
+			option.value = value
+			option.textContent = label
+			option.selected = value === `${state.sort}/${state.order}`
+			sortBy.appendChild(option)
+		}
+		sortBy.addEventListener('change', () => {
+			const [sort, order] = sortBy.value.split('/')
+			state.sort = sort
+			state.order = order
+			state.offset = 0
+			reload()
+		})
+		filters.appendChild(sortBy)
+	}
+
 	// A tag the filter is set to stays offered even when the last game
 	// carrying it was filtered away, so it can be unset again.
 	const tagOptions = tags.includes(state.tag) || state.tag === ''
