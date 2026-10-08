@@ -1,3 +1,4 @@
+import { getRequestToken } from '@nextcloud/auth'
 import { loadState } from '@nextcloud/initial-state'
 import { translate as t, translatePlural as n } from '@nextcloud/l10n'
 import { generateUrl } from '@nextcloud/router'
@@ -5,6 +6,7 @@ import { api } from './api.js'
 import { formatDuration, formatPlayTime, formatSize } from './format.js'
 import { ICONS, icon } from './icons.js'
 import { attachLibraryGamepad } from './librarypad.js'
+import { davUrl } from './player.js'
 import { playUrl, previewUrl } from './play.js'
 import { systemLabel } from './systems.js'
 import { showError, showInfo } from './toast.js'
@@ -13,6 +15,34 @@ const VIEWS = ['grid', 'list', 'table']
 const PAGE_SIZES = [24, 60, 120, 240]
 const VIEW_KEY = 'arcade-library-view'
 const PAGE_SIZE_KEY = 'arcade-library-page-size'
+const SORT_KEY = 'arcade-library-sort'
+
+// What the server will sort by. A stored order is read back through this
+// rather than trusted: it is whatever is in the browser's storage, and a
+// sort the server does not know would come back as an empty library.
+const SORTS = ['name', 'system', 'size', 'mtime', 'playtime']
+
+/**
+ * The sort kept from last time, as the field and the direction.
+ *
+ * Kept at all because the view and the page size beside it are: picking
+ * "Most played" and finding it back on names at the next visit, while
+ * the view button next to it remembered perfectly well, reads as the
+ * page forgetting rather than as a thing it never offered.
+ *
+ * @return {{sort: string, order: string}} what to start out sorted by
+ */
+function storedSort() {
+	const [sort, order] = (localStorage.getItem(SORT_KEY) ?? '').split('/')
+	return SORTS.includes(sort) && (order === 'asc' || order === 'desc')
+		? { sort, order }
+		: { sort: 'name', order: 'asc' }
+}
+
+/** Remember it for next time. */
+function rememberSort() {
+	localStorage.setItem(SORT_KEY, `${state.sort}/${state.order}`)
+}
 
 // Boxarts are the cover of a game and read best big; logos are made to be
 // recognized small. The rest is used when those are missing.
@@ -38,8 +68,7 @@ const CACHE_TTL = 60 * 1000
 const state = {
 	view: localStorage.getItem(VIEW_KEY) ?? 'grid',
 	pageSize: Number(localStorage.getItem(PAGE_SIZE_KEY)) || 60,
-	sort: 'name',
-	order: 'asc',
+	...storedSort(),
 	offset: 0,
 	search: '',
 	system: '',
@@ -172,9 +201,25 @@ function thumbnailFor(game, size) {
 		return image
 	}
 
+	// Nothing to show it with. A fresh library has no box art at all, so
+	// this is what every card of it is, and one grey gamepad per game
+	// makes a wall in which only the titles differ. The system is known,
+	// so the placeholder wears it: a colour of its own, and its name for
+	// anything too small to read a label under the card.
 	const placeholder = document.createElement('div')
 	placeholder.className = 'arcade-library-thumbnail arcade-library-placeholder'
 	placeholder.innerHTML = icon(ICONS.gamepad)
+	if (game.system) {
+		placeholder.dataset.system = game.system
+		// Spread around the wheel by the name of the system, so each keeps
+		// the same colour between visits without a table of them to keep
+		// in step with the systems themselves.
+		let hash = 0
+		for (const character of game.system) {
+			hash = (hash * 31 + character.charCodeAt(0)) % 360
+		}
+		placeholder.style.setProperty('--arcade-system-hue', String(hash))
+	}
 	return placeholder
 }
 
@@ -342,6 +387,7 @@ function renderTable(games, reload) {
 			state.order = state.sort === column.key && state.order === 'asc' ? 'desc' : 'asc'
 			state.sort = column.key
 			state.offset = 0
+			rememberSort()
 			reload()
 		})
 		cell.appendChild(button)
@@ -554,6 +600,7 @@ function renderFilters(systems, tags, reload) {
 			state.sort = sort
 			state.order = order
 			state.offset = 0
+			rememberSort()
 			reload()
 		})
 		filters.appendChild(sortBy)
@@ -734,6 +781,25 @@ async function loadSuggestions(status, reload) {
 }
 
 /**
+ * Make a folder in the user's own files.
+ *
+ * MKCOL answers 405 when the folder is already there, which is the
+ * outcome being asked for either way, so only a real refusal is raised.
+ *
+ * @param {string} path the folder to make, relative to the user's files
+ */
+async function createFolder(path) {
+	const response = await fetch(davUrl(path), {
+		method: 'MKCOL',
+		headers: { requesttoken: getRequestToken() ?? '' },
+		credentials: 'same-origin',
+	})
+	if (!response.ok && response.status !== 405) {
+		throw new Error(`${response.status} ${response.statusText}`)
+	}
+}
+
+/**
  * The first-run panel, shown when the library folder is missing or holds
  * no games: what the app looks for, the folders that already hold ROMs,
  * and the way to pick one by hand.
@@ -754,12 +820,37 @@ function renderOnboarding(data, reload, status) {
 		: t('arcade', 'The games library folder {folder} does not exist yet.', { folder: data.folder })
 	panel.appendChild(where)
 
+
 	const explain = document.createElement('p')
 	explain.textContent = t(
 		'arcade',
 		'Arcade lists the ROM files of retro consoles — like .nes, .sfc, .gba, .md or zipped games — and plays them right in the browser.',
 	)
 	panel.appendChild(explain)
+
+	// The page has just said which folder is missing, so it offers to make
+	// it. Without this the only way forward was to leave for the Files
+	// app, make the folder by hand, come back and rescan -- four steps to
+	// answer a question the page had already asked and answered.
+	if (!data.exists && data.folder) {
+		const make = focusable(document.createElement('button'), 'onboarding/create')
+		make.type = 'button'
+		make.className = 'primary'
+		make.textContent = t('arcade', 'Create {folder}', { folder: data.folder })
+		make.addEventListener('click', async () => {
+			make.disabled = true
+			try {
+				await createFolder(data.folder)
+				showInfo(t('arcade', 'Created {folder}. Put some games in it and rescan.', { folder: data.folder }))
+				reload(true)
+			} catch (error) {
+				console.error('Could not create the games library folder', error)
+				showError(t('arcade', 'Could not create {folder}', { folder: data.folder }))
+				make.disabled = false
+			}
+		})
+		panel.appendChild(make)
+	}
 
 	// The looking goes on in the background and rewrites this line when it
 	// is done, so it is the page's live region that carries it.
