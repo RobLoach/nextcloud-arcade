@@ -22,12 +22,8 @@ use PHPUnit\Framework\TestCase;
 class TestableStateController extends StateController {
 	public string $body = '';
 
-	protected function readBody(int $maxSize): ?string {
-		$body = substr($this->body, 0, $maxSize + 1);
-		if ($body === '' || strlen($body) > $maxSize) {
-			return null;
-		}
-		return $body;
+	protected function rawBody(int $limit): string|false {
+		return substr($this->body, 0, $limit);
 	}
 }
 
@@ -44,6 +40,7 @@ class StateControllerTest extends TestCase {
 		?string $userId = 'alice',
 		string $body = '',
 		bool $fileExists = true,
+		string $contentLength = '',
 	): TestableStateController {
 		$this->stateService = $this->createMock(StateService::class);
 		$settings = $this->createStub(SettingsService::class);
@@ -52,9 +49,11 @@ class StateControllerTest extends TestCase {
 		$userFolder->method('nodeExists')->willReturn($fileExists);
 		$rootFolder = $this->createStub(IRootFolder::class);
 		$rootFolder->method('getUserFolder')->willReturn($userFolder);
+		$request = $this->createStub(IRequest::class);
+		$request->method('getHeader')->willReturn($contentLength);
 		$controller = new TestableStateController(
 			'arcade',
-			$this->createStub(IRequest::class),
+			$request,
 			$this->stateService,
 			$settings,
 			$this->createStub(ActivityPublisher::class),
@@ -81,6 +80,61 @@ class StateControllerTest extends TestCase {
 		$this->stateService->expects($this->never())->method('save');
 
 		$response = $controller->save(self::GAME, 2);
+
+		$this->assertSame(Http::STATUS_BAD_REQUEST, $response->getStatus());
+	}
+
+	/**
+	 * A client that goes away mid-upload leaves a body that is only short,
+	 * and a short save state is a broken one. Written out it would replace
+	 * a save that worked, so the length the client promised is checked
+	 * against the length that arrived.
+	 */
+	public function testSavingRefusesABodyCutShortOfItsContentLength(): void {
+		$controller = $this->controller(body: 'half a st', contentLength: '32');
+		$this->stateService->expects($this->never())->method('save');
+
+		$response = $controller->save(self::GAME, 2);
+
+		$this->assertSame(Http::STATUS_BAD_REQUEST, $response->getStatus());
+	}
+
+	public function testSavingTakesABodyOfExactlyItsContentLength(): void {
+		$controller = $this->controller(body: 'the state', contentLength: '9');
+		$this->stateService->expects($this->once())->method('save')
+			->with('alice', self::GAME, 2, 'the state');
+
+		$this->assertSame(Http::STATUS_OK, $controller->save(self::GAME, 2)->getStatus());
+	}
+
+	/**
+	 * Something in front of the app may rewrite a request and leave the
+	 * header behind the body it describes. That is not the accident being
+	 * guarded against, and an honest save should not fail for it.
+	 */
+	public function testSavingTakesABodyLongerThanItsContentLength(): void {
+		$controller = $this->controller(body: 'the whole state', contentLength: '4');
+		$this->stateService->expects($this->once())->method('save');
+
+		$this->assertSame(Http::STATUS_OK, $controller->save(self::GAME, 2)->getStatus());
+	}
+
+	public function testSavingTakesABodyWhenNoLengthWasPromised(): void {
+		$controller = $this->controller(body: 'the state', contentLength: '');
+		$this->stateService->expects($this->once())->method('save');
+
+		$this->assertSame(Http::STATUS_OK, $controller->save(self::GAME, 2)->getStatus());
+	}
+
+	/**
+	 * The battery save goes through the same door, and is the file a
+	 * truncated write would cost the most: it is the game's own save.
+	 */
+	public function testTheBatterySaveRefusesABodyCutShort(): void {
+		$controller = $this->controller(body: 'half', contentLength: '4096');
+		$this->stateService->expects($this->never())->method('saveSram');
+
+		$response = $controller->saveSram(self::GAME);
 
 		$this->assertSame(Http::STATUS_BAD_REQUEST, $response->getStatus());
 	}

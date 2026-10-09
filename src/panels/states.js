@@ -49,9 +49,16 @@ export function createStatesPanel({ instance, romPath, flash, onDone }) {
 	// The buttons of each rendered slot, with the state they were rendered
 	// in, so the slot being worked on can be held and let go again.
 	const slotButtons = new Map()
-	const setSlotBusy = (slot, working) => {
-		for (const [element, disabled] of slotButtons.get(slot) ?? []) {
-			element.disabled = working || disabled
+	// While one operation runs, none of the slots can be worked. Only the
+	// slot being written used to be held, so a press on any other reached
+	// a door that was already shut: it was turned away and answered false,
+	// with nothing on screen to say why -- the click simply did nothing.
+	// A button that cannot be pressed says it itself.
+	const setSlotsBusy = (working) => {
+		for (const entries of slotButtons.values()) {
+			for (const [element, disabled] of entries) {
+				element.disabled = working || disabled
+			}
 		}
 	}
 	const addSlotButton = (slot, element) => {
@@ -69,14 +76,14 @@ export function createStatesPanel({ instance, romPath, flash, onDone }) {
 	// The extra ones are turned away, and their slot is held while the
 	// one that got through runs, so it cannot be pressed either.
 	let inFlight = null
-	const alone = (slot, work) => {
+	const alone = (work) => {
 		if (inFlight !== null) {
 			return Promise.resolve(false)
 		}
-		setSlotBusy(slot, true)
+		setSlotsBusy(true)
 		inFlight = work().finally(() => {
 			inFlight = null
-			setSlotBusy(slot, false)
+			setSlotsBusy(false)
 		})
 		return inFlight
 	}
@@ -84,7 +91,7 @@ export function createStatesPanel({ instance, romPath, flash, onDone }) {
 	// does not: it arrives in the middle of the game, unbidden, and takes
 	// the top-right chrome with it while it shows. Going wrong is still
 	// worth saying either way.
-	const save = (slot, { quiet = false } = {}) => alone(slot, async () => {
+	const save = (slot, { quiet = false } = {}) => alone(async () => {
 		try {
 			let { state, thumbnail } = await instance.saveState()
 			if (thumbnail === undefined) {
@@ -118,7 +125,7 @@ export function createStatesPanel({ instance, romPath, flash, onDone }) {
 		}
 	})
 
-	const load = (slot) => alone(slot, async () => {
+	const load = (slot) => alone(async () => {
 		try {
 			const response = await api(stateUrl('/state', romPath, slot))
 			const state = await response.blob()
@@ -316,6 +323,11 @@ export function createStatesPanel({ instance, romPath, flash, onDone }) {
 			slotsContainer.appendChild(row)
 		}
 		renderSram(data?.hasSram === true)
+		// These buttons are new, and know nothing of an operation that was
+		// already running when they were drawn.
+		if (inFlight !== null) {
+			setSlotsBusy(true)
+		}
 	}
 
 	const refresh = async () => {
