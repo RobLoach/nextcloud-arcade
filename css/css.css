@@ -125,6 +125,23 @@
 	background-color: var(--color-background-dark);
 }
 
+/* A shelf card carries the grid's caption at three quarters of the
+   grid's width, so the same 58px of text took better than a third of
+   it: the row came out looking like stretched grid cards rather than a
+   compact row to glance along. The words are the same; they are set
+   closer together. */
+.arcade .arcade-library-shelf-row .arcade-library-game-name {
+	padding: calc(var(--default-grid-baseline, 4px) * 1.5) calc(var(--default-grid-baseline, 4px) * 2) 0;
+	font-size: 0.9em;
+	line-height: 1.3;
+}
+
+.arcade .arcade-library-shelf-row .arcade-library-game-system {
+	padding: 0 calc(var(--default-grid-baseline, 4px) * 2) calc(var(--default-grid-baseline, 4px) * 1.5);
+	font-size: 0.78em;
+	line-height: 1.3;
+}
+
 .arcade .arcade-library-filters {
 	display: flex;
 	gap: calc(var(--default-grid-baseline, 4px) * 2);
