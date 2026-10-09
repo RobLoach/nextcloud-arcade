@@ -361,5 +361,27 @@ export function createStatesPanel({ instance, romPath, flash, onDone }) {
 	 */
 	const savedWithin = (ms) => autoSavedAt !== 0 && Date.now() - autoSavedAt < ms
 
-	return { element, refresh, load, save, settled, savedWithin }
+	/**
+	 * Save a slot, waiting for a turn rather than being turned away.
+	 *
+	 * One state operation runs at a time, and the extra ones are answered
+	 * false -- which the save on the way out of the game then reported as
+	 * "could not save", a failure that never happened and that never even
+	 * reached the server. That save is not a repeat to be dropped: it is
+	 * the last one of the session, so it queues behind whatever is running
+	 * instead. The wait is the caller's to bound.
+	 *
+	 * @param {number} slot the slot to write
+	 * @return {Promise<boolean>} whether it got through
+	 */
+	const saveWhenFree = async (slot) => {
+		while (inFlight !== null) {
+			await settled()
+		}
+		// Nothing is awaited between the check and the claim, so the turn
+		// cannot be taken in between.
+		return await save(slot)
+	}
+
+	return { element, refresh, load, save, saveWhenFree, settled, savedWithin }
 }

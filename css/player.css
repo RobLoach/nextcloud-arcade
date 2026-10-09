@@ -60,6 +60,20 @@
 	top: var(--arcade-chrome-top);
 	inset-inline-end: calc(var(--default-grid-baseline, 4px) * 2 + env(safe-area-inset-right, 0px));
 }
+/* Given the width, the two share the one line and give the picture the
+   other back. The bar is at most seven 34px buttons in 4px gaps inside
+   8px of padding -- 278px -- and centred, that clears a 94px cluster on
+   anything wider than about 500px; 600px is the same call with room to
+   spare. Narrower than that they stack, which is the phone. */
+@media (min-width: 600px) {
+	.arcade-toolbar {
+		top: var(--arcade-chrome-top);
+	}
+	.arcade-states,
+	.arcade-gallery {
+		top: calc(var(--arcade-chrome-top) + var(--arcade-pill-height) + var(--arcade-pill-gap));
+	}
+}
 .arcade-toolbar:hover,
 .arcade-toolbar:focus-within,
 .arcade-topbar:hover,
@@ -254,7 +268,14 @@
 	z-index: 20101;
 }
 .arcade-actions-menu.hidden { display: none; }
-.arcade-actions-item {
+/* An entry that does something is a <button> and one that leads
+   somewhere is an <a>, and they are meant to read as the same row. Core
+   dresses a bare button as a button -- its own pale background, bold
+   text, its own radius -- and a selector naming the element beats a
+   class on its own, so half the menu came out as buttons and half as
+   plain rows. Naming the element here wins the point back. */
+.arcade-actions-menu a.arcade-actions-item,
+.arcade-actions-menu button.arcade-actions-item {
 	display: flex;
 	align-items: center;
 	gap: calc(var(--default-grid-baseline, 4px) * 2);
@@ -264,6 +285,7 @@
 	border-radius: var(--border-radius, 6px);
 	color: var(--color-main-text, #222);
 	font-size: 13px;
+	font-weight: normal;
 	text-align: start;
 	text-decoration: none;
 	padding: 8px 12px;
@@ -271,12 +293,14 @@
 	min-height: 34px;
 	cursor: pointer;
 }
-.arcade-actions-item:hover,
-.arcade-actions-item:focus-visible {
+.arcade-actions-menu a.arcade-actions-item:hover,
+.arcade-actions-menu a.arcade-actions-item:focus-visible,
+.arcade-actions-menu button.arcade-actions-item:hover,
+.arcade-actions-menu button.arcade-actions-item:focus-visible {
 	background-color: var(--color-background-hover, rgba(0, 0, 0, 0.1));
 	color: var(--color-main-text, #222);
 }
-.arcade-actions-item svg {
+.arcade-actions-menu .arcade-actions-item svg {
 	width: 20px;
 	height: 20px;
 	fill: var(--color-main-text, #222);

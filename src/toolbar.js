@@ -170,6 +170,9 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 	// so on a public share, or without a saves folder, there is none.
 	const canSave = getCurrentUser() !== null && romPath && (settings.saves_folder ?? '') !== ''
 	let autosaveTimer = null
+	// Set while the game is on its way out, so the autosave clock stops
+	// competing with the save that is seeing it off.
+	let leaving = false
 	let statesPanel = null
 	let statesButton = null
 	let galleryPanel = null
@@ -243,7 +246,7 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 		const interval = Number(settings.autosave_interval ?? 0)
 		if (interval > 0) {
 			autosaveTimer = setInterval(() => {
-				if (!paused && !document.hidden) {
+				if (!leaving && !paused && !document.hidden) {
 					// Quietly: nobody asked for this one, and a message
 					// every few minutes in the middle of a game -- taking
 					// the chrome with it -- is not worth the reassurance.
@@ -261,24 +264,33 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 		if (settings.autosave_on_close !== true || statesPanel === null) {
 			return true
 		}
+		// No new tick of the autosave from here on: one starting now would
+		// write a slot this save is about to write anyway, and would take
+		// the turn this one is waiting for.
+		leaving = true
 		// For as long as the player is going to be kept waiting: this one
 		// explains a pause rather than confirming something done, so it
 		// outstays the three seconds a confirmation gets.
 		flash(t('arcade', 'Saving the game …'), 'info', { timeout: SAVE_BEFORE_LEAVING_WAIT })
-		// A tick of the autosave may be in the air. Letting it land first
-		// keeps this save from being turned away as a repeat of it, and
-		// so from reporting a failure that never happened. It is given a
-		// deadline of its own: it is somebody else's save, and waiting it
-		// out used to spend the time this one was about to need.
+		// A tick of the autosave may already be in the air. Letting it land
+		// first means that if it wrote the automatic slot a moment ago there
+		// is nothing here to write: the close would otherwise make and
+		// upload a second copy of a game the slot already holds. It is given
+		// a deadline of its own -- it is somebody else's save, and waiting
+		// it out used to spend the time this one was about to need.
 		await waitAtMost(statesPanel.settled(), SAVE_BEFORE_LEAVING_WAIT, undefined)
-		// And if that tick -- or any save a moment before it -- already
-		// wrote the automatic slot, there is nothing here to write: the
-		// close would otherwise make and upload a second copy of a game
-		// the slot already holds, which is the whole of the wait.
-		if (statesPanel.savedWithin(AUTO_SAVE_STAYS_CURRENT)) {
-			return true
+		let saved = true
+		if (!statesPanel.savedWithin(AUTO_SAVE_STAYS_CURRENT)) {
+			// Queueing rather than asking: this save is the last of the
+			// session, so being told no by whatever is still running is not
+			// an answer it can take -- that refusal is what used to be read
+			// out as "could not save the game".
+			saved = await waitAtMost(statesPanel.saveWhenFree(AUTO_SLOT), SAVE_BEFORE_LEAVING_WAIT, STILL_SAVING)
 		}
-		return await waitAtMost(statesPanel.save(AUTO_SLOT), SAVE_BEFORE_LEAVING_WAIT, STILL_SAVING)
+		// A player told the save did not land stays on the game, so the
+		// clock that keeps it saved starts again along with them.
+		leaving = saved === true
+		return saved
 	}
 
 	// Virtual gamepad for touch play. It is offered wherever a finger
