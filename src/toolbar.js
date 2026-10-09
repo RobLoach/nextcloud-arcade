@@ -16,6 +16,13 @@ import { waitAtMost } from './wait.js'
 // anyway. Long enough for a healthy core, short enough to stay a door.
 const SAVE_BEFORE_LEAVING_WAIT = 5000
 
+// What a save that is merely slow answers with, as against the false a
+// save that actually failed answers with. The two used to arrive as the
+// same false, so a state still on its way up was reported as a state
+// that could not be written -- which is the one of the two that is
+// worth staying on the page for.
+const STILL_SAVING = Symbol('still saving')
+
 // Everything the player puts on top of the game. Keys pressed inside it
 // belong to whatever has the focus there, not to the emulator.
 const CHROME_SELECTOR = '.arcade-toolbar, .arcade-topbar, .arcade-actions-menu, .arcade-states, .arcade-gallery, .arcade-resume'
@@ -250,9 +257,11 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 		flash(t('arcade', 'Saving the game …'), 'info', { timeout: SAVE_BEFORE_LEAVING_WAIT })
 		// A tick of the autosave may be in the air. Letting it land first
 		// keeps this save from being turned away as a repeat of it, and
-		// so from reporting a failure that never happened.
-		await statesPanel.settled()
-		return await statesPanel.save(AUTO_SLOT)
+		// so from reporting a failure that never happened. It is given a
+		// deadline of its own: it is somebody else's save, and waiting it
+		// out used to spend the time this one was about to need.
+		await waitAtMost(statesPanel.settled(), SAVE_BEFORE_LEAVING_WAIT, undefined)
+		return await waitAtMost(statesPanel.save(AUTO_SLOT), SAVE_BEFORE_LEAVING_WAIT, STILL_SAVING)
 	}
 
 	// Virtual gamepad for touch play. It is offered wherever a finger
@@ -477,10 +486,14 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 				? 'OCA'
 				: window.OCA.Files === undefined ? 'OCA.Files' : 'OCA.Files.Sidebar'
 			console.warn(`arcade: cannot open the Files sidebar, window.${missing} is undefined; opening the Files app instead`)
-			if (!await waitAtMost(saveBeforeLeaving(), SAVE_BEFORE_LEAVING_WAIT, false)) {
-				// Leaving this page ends the game, so a save that did not
-				// happen means staying put and saying so.
-				flash(t('arcade', 'Could not save the game, so the details were not opened.'), 'error')
+			const ready = await saveBeforeLeaving()
+			if (ready !== true) {
+				// Leaving this page ends the game, so a save that has not
+				// landed means staying put and saying so.
+				flash(ready === STILL_SAVING
+					? t('arcade', 'The game is still saving, so the details were not opened.')
+					: t('arcade', 'Could not save the game, so the details were not opened.'),
+				ready === STILL_SAVING ? 'warning' : 'error')
 				return
 			}
 			const absolute = romPath.startsWith('/') ? romPath : `/${romPath}`
@@ -569,9 +582,8 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 			// Bounded: the save polls the core's file system for the file
 			// it wrote, and a core that never writes it would otherwise
 			// hold the page here for a minute with nothing to press.
-			const saved = leaveUnsaved
-				|| await waitAtMost(saveBeforeLeaving(), SAVE_BEFORE_LEAVING_WAIT, false)
-			if (!saved) {
+			const saved = leaveUnsaved || await saveBeforeLeaving()
+			if (saved !== true) {
 				leaveUnsaved = true
 				element.disabled = false
 				element.title = t('arcade', 'Close without saving')
@@ -586,8 +598,10 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 				// left sitting on the game -- and pressing Close again leaves
 				// the page, which takes it away regardless.
 				flash(
-					t('arcade', 'Could not save the game. Press Close again to leave without saving.'),
-					'error',
+					saved === STILL_SAVING
+						? t('arcade', 'The game is still saving. Press Close again to leave without waiting.')
+						: t('arcade', 'Could not save the game. Press Close again to leave without saving.'),
+					saved === STILL_SAVING ? 'warning' : 'error',
 					{ timeout: UNTIL_DISMISSED },
 				)
 				return
