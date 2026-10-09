@@ -425,7 +425,7 @@ class CoreOptions {
 	public static function systemsByCore(): array {
 		$systems = [];
 		foreach (CoreMap::SYSTEMS as $system) {
-			$systems[$system['core']][] = $system['short'];
+			$systems[$system['core']][] = $system['display'] ?? $system['short'];
 		}
 		return $systems;
 	}

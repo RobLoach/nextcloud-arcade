@@ -17,7 +17,18 @@ class CoreMap {
 	public const SYSTEMS = [
 		'nes' => [
 			'label' => 'Nintendo Entertainment System',
+			// 'short' is the folder saves and screenshots are filed under,
+			// so it is left exactly as it has always been: renaming it
+			// would leave every state already written under the old name
+			// where the player can no longer find it. What it says on
+			// screen is 'display' below.
 			'short' => 'Nintendo',
+			// Every other system drops only the maker from its label --
+			// Sega Genesis to Genesis, Atari Lynx to Lynx. Doing that here
+			// leaves "Entertainment System", so the name was left as the
+			// maker instead, and a library read "Nintendo" beside "Super
+			// Nintendo" and "Game Boy", which are consoles.
+			'display' => 'NES',
 			'platform' => 'Nintendo - Nintendo Entertainment System',
 			'mime' => 'application/x-nes-rom',
 			'extensions' => ['nes', 'fds', 'unf', 'unif'],
@@ -322,6 +333,23 @@ class CoreMap {
 			}
 		}
 		return null;
+	}
+
+	/**
+	 * What a system is called on screen: its compact name, which is the
+	 * short one unless the short one is the folder's to keep rather than
+	 * anything a player would recognise.
+	 *
+	 * Separate from 'short' because that one names a folder on disk --
+	 * see shortNameForPath() -- and a folder cannot be renamed without
+	 * taking what is already in it along.
+	 */
+	public static function displayName(string $system): string {
+		$definition = self::SYSTEMS[$system] ?? null;
+		if ($definition === null) {
+			return $system;
+		}
+		return $definition['display'] ?? $definition['short'];
 	}
 
 	/**

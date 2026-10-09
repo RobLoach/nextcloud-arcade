@@ -128,10 +128,6 @@ class GameController extends Controller {
 	 * names its shelves.
 	 */
 	private function systemName(string $system): string {
-		$definition = CoreMap::SYSTEMS[$system] ?? null;
-		if ($definition === null) {
-			return $system;
-		}
-		return $definition['short'];
+		return CoreMap::displayName($system);
 	}
 }

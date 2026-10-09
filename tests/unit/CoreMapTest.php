@@ -143,4 +143,24 @@ class CoreMapTest extends TestCase {
 			}
 		}
 	}
+
+	public function testWhatASystemIsCalledIsNotWhatItsFolderIsCalled(): void {
+		// 'short' names the folder saves and screenshots are filed under,
+		// so it cannot be renamed without stranding what is already in it.
+		// 'display' is only ever drawn, which is why the two can differ.
+		$this->assertSame('NES', CoreMap::displayName('nes'));
+		$this->assertSame('Nintendo', CoreMap::SYSTEMS['nes']['short'], 'the folder keeps its name');
+
+		// Everything else says the same thing either way.
+		foreach (CoreMap::SYSTEMS as $id => $system) {
+			if ($id === 'nes') {
+				continue;
+			}
+			$this->assertSame($system['short'], CoreMap::displayName($id), $id);
+		}
+	}
+
+	public function testAnUnknownSystemIsCalledWhateverItWasAskedBy(): void {
+		$this->assertSame('madeup', CoreMap::displayName('madeup'));
+	}
 }

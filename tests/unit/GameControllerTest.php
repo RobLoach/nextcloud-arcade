@@ -99,7 +99,9 @@ class GameControllerTest extends TestCase {
 
 		$this->assertSame(Http::STATUS_OK, $response->getStatus());
 		$this->assertSame([
-			'system' => ['id' => 'nes', 'name' => 'Nintendo'],
+			// What it is called on screen, which is not the name of the
+			// folder its saves go in -- see CoreMap::displayName().
+			'system' => ['id' => 'nes', 'name' => 'NES'],
 			'title' => 'SUPER MARIO',
 			'region' => 'Japan, USA',
 			'mapper' => 'MMC3',

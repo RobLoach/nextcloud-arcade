@@ -53,7 +53,12 @@ export function biosForSystem(systemId) {
  * @return {string} the short display name of the system
  */
 export function systemLabel(systemId) {
-	return systems[systemId]?.short ?? systems[systemId]?.label ?? systemId
+	// `display` where the system has one: `short` names the folder its
+	// saves are filed under, which is not always what it is called.
+	return systems[systemId]?.display
+		?? systems[systemId]?.short
+		?? systems[systemId]?.label
+		?? systemId
 }
 
 /**

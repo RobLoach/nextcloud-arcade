@@ -80,7 +80,7 @@ class Bios extends Command {
 		foreach (CoreMap::SYSTEMS as $system) {
 			foreach ($system['bios'] as $name) {
 				$mark = in_array($name, $held, true) ? '<info>held</info>' : '<comment>missing</comment>';
-				$output->writeln(sprintf('  %-24s %-18s %s', $name, $system['short'], $mark));
+				$output->writeln(sprintf('  %-24s %-18s %s', $name, $system['display'] ?? $system['short'], $mark));
 			}
 		}
 	}
