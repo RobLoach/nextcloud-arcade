@@ -6,6 +6,63 @@ All notable changes to NextCloud Arcade. The format follows
 
 ## [Unreleased]
 
+### Added
+- An empty library now says what to do about it: where the app is looking,
+  what it found there, and a way to point it somewhere else — instead of
+  an empty page.
+- The grid and the list can be sorted. The table had always sorted by its
+  own column headings, and the server had always taken a sort and an
+  order, but the other two views could only ever ask for name, ascending.
+- A hotkey can be left on no key at all, and a whole set of keys can be
+  put back to its defaults.
+- Mute, in the player's control bar, drawn as whichever of the two it
+  would do next.
+
+### Changed
+- The player's chrome is along the top. It used to run along the bottom,
+  which on a phone is where the thumbs and the virtual gamepad are: the
+  bar sat over START and SELECT and took their taps with it. Given the
+  width, it shares the top line with the buttons in the corner; narrower
+  than that, the two stack.
+- Screenshot moved into the player's actions menu.
+- The virtual gamepad's shoulder buttons moved from the top corners to
+  just above the D-pad and the face buttons, so the chrome keeps the top
+  and the pad keeps the bottom. On the narrowest phones the pad is drawn
+  a size smaller, where its two halves used to meet in the middle.
+- The volume is set as a percentage rather than in decibels.
+- The NES is called the NES wherever it is drawn. The folder its saves
+  live in is unchanged, so nothing saved under the old name is lost.
+- Shelf cards in the library are drawn as a row to glance along rather
+  than as stretched grid cards.
+- How long a scan is kept is picked from a few lengths instead of typed
+  in as a number of seconds: a scan is dropped as soon as anything in the
+  games folder changes, so the exact figure never mattered.
+- In the admin settings the core options are listed by the systems they
+  run rather than by the name of the core, and each row says how many of
+  its options have been moved off the core's default.
+- The admin settings put the folders first, size their headings, and say
+  what each limit is currently set to.
+
+### Fixed
+- Battery saves larger than 64 KiB never reached the server. Every upload
+  asked to outlive the page, which the Fetch standard refuses above that
+  size, so the request failed before it was sent and said so only in the
+  browser console — on the timer as much as at the end. A Game Boy
+  Advance flash save is 128 KiB, so for those games in-game saving never
+  persisted at all.
+- A save state or battery save cut short by a client that went away
+  mid-upload is refused rather than written over the save that worked.
+- A core that stops answering no longer takes the save states panel with
+  it. Saving and loading are given a deadline, and so is every request,
+  so an operation that cannot finish ends and says so instead of leaving
+  every slot shut for the rest of the session.
+- Pressing Save or Load on one slot while another was working did
+  nothing, silently. Every slot is now held while an operation runs.
+- Cards in the Favorites and Continue Playing shelves were drawn around
+  220px tall whatever they held: a card scrolled off the end of a shelf
+  is skipped by the browser and drawn at a fallback height, and the row
+  stretched every card beside it to match.
+
 ### Removed
 - The "Save the game automatically when closing the player" setting, and
   the save it made. Closing wrote the same Auto slot the clock writes, and
