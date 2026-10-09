@@ -45,7 +45,7 @@ This file is generated from multiple sources. Included packages:
 	- version: 9.13.0
 	- license: AGPL-3.0-or-later
 - @robloach/nextcloud-arcade
-	- version: 0.47.4
+	- version: 0.47.5
 	- license: AGPL-3.0-or-later
 - @vue/reactivity
 	- version: 3.5.43
