@@ -288,11 +288,22 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 	// an absolute volume on a running core -- only to step it, with no
 	// way to read where it is -- and the cores here build their audio
 	// without a gain node to turn down from outside.
-	const muteButton = button(ICONS.mute, t('arcade', 'Mute'), (element) => {
+	let muted = false
+	const muteButton = button(ICONS.volume, t('arcade', 'Mute'), () => {
 		instance.sendCommand('MUTE')
-		setPressed(element, !element.classList.contains('active'))
+		setMuted(!muted)
 	})
-	setPressed(muteButton, false)
+	// The one place that decides what muted looks like, the way pausing
+	// has one: the icon says which it is now, and the words say what
+	// pressing it would do.
+	const setMuted = (value) => {
+		muted = value
+		muteButton.innerHTML = icon(muted ? ICONS.mute : ICONS.volume)
+		muteButton.title = muted ? t('arcade', 'Unmute') : t('arcade', 'Mute')
+		muteButton.setAttribute('aria-label', muteButton.title)
+		setPressed(muteButton, muted)
+	}
+	setMuted(false)
 
 	const fastForwardButton = button(ICONS.fastForward, t('arcade', 'Fast-forward'), (element) => {
 		instance.sendCommand('FAST_FORWARD')
