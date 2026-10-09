@@ -23,6 +23,16 @@ const SAVE_BEFORE_LEAVING_WAIT = 5000
 // worth staying on the page for.
 const STILL_SAVING = Symbol('still saving')
 
+// How recently the save on a timer must have written the automatic slot
+// for the save on the way out to be skipped as a repeat of it.
+//
+// Short on purpose: it is the most play that can go unwritten, and the
+// whole point of saving on the way out is to keep where the player got
+// to. A second or two of a game nobody is playing any more -- the close
+// button is already pressed -- against a multi-megabyte state written
+// and uploaded twice over.
+const AUTO_SAVE_STAYS_CURRENT = 3000
+
 // Everything the player puts on top of the game. Keys pressed inside it
 // belong to whatever has the focus there, not to the emulator.
 const CHROME_SELECTOR = '.arcade-toolbar, .arcade-topbar, .arcade-actions-menu, .arcade-states, .arcade-gallery, .arcade-resume'
@@ -261,6 +271,13 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 		// deadline of its own: it is somebody else's save, and waiting it
 		// out used to spend the time this one was about to need.
 		await waitAtMost(statesPanel.settled(), SAVE_BEFORE_LEAVING_WAIT, undefined)
+		// And if that tick -- or any save a moment before it -- already
+		// wrote the automatic slot, there is nothing here to write: the
+		// close would otherwise make and upload a second copy of a game
+		// the slot already holds, which is the whole of the wait.
+		if (statesPanel.savedWithin(AUTO_SAVE_STAYS_CURRENT)) {
+			return true
+		}
 		return await waitAtMost(statesPanel.save(AUTO_SLOT), SAVE_BEFORE_LEAVING_WAIT, STILL_SAVING)
 	}
 

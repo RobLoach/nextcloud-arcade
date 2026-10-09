@@ -13,9 +13,10 @@ import { createPanel } from './panel.js'
  *                                 the message and how it reads: success,
  *                                 info, warning or error
  * @param {Function} options.onDone called after a slot was saved or loaded
- * @return {{element: HTMLElement, refresh: Function, load: Function, save: Function, settled: Function}}
- *         the panel; load and save answer whether they got through, and
- *         settled waits out whichever of them is running
+ * @return {{element: HTMLElement, refresh: Function, load: Function, save: Function, settled: Function, savedWithin: Function}}
+ *         the panel; load and save answer whether they got through,
+ *         settled waits out whichever of them is running, and savedWithin
+ *         says whether the automatic slot is already current
  */
 export function createStatesPanel({ instance, romPath, flash, onDone }) {
 	const element = createPanel('arcade-states', t('arcade', 'Save states'))
@@ -92,6 +93,11 @@ export function createStatesPanel({ instance, romPath, flash, onDone }) {
 		}
 	}
 
+	// When the automatic slot was last written, so that a second write of
+	// the same game can be skipped rather than repeated. Zero until one
+	// lands: never written is not the same as written long ago.
+	let autoSavedAt = 0
+
 	// A save the player asked for says so. The one the clock asks for
 	// does not: it arrives in the middle of the game, unbidden, and takes
 	// the top-right chrome with it while it shows. Going wrong is still
@@ -115,6 +121,9 @@ export function createStatesPanel({ instance, romPath, flash, onDone }) {
 					headers: { 'Content-Type': 'image/png' },
 					body: thumbnail,
 				}).catch(() => {})
+			}
+			if (slot === AUTO_SLOT) {
+				autoSavedAt = Date.now()
 			}
 			if (!quiet) {
 				flash(slot === AUTO_SLOT
@@ -343,5 +352,14 @@ export function createStatesPanel({ instance, romPath, flash, onDone }) {
 		}
 	}
 
-	return { element, refresh, load, save, settled }
+	/**
+	 * Whether the automatic slot was written within the last `ms`, and so
+	 * already holds this game closely enough to leave on.
+	 *
+	 * @param {number} ms how recent counts as current
+	 * @return {boolean} whether there is nothing worth writing again
+	 */
+	const savedWithin = (ms) => autoSavedAt !== 0 && Date.now() - autoSavedAt < ms
+
+	return { element, refresh, load, save, settled, savedWithin }
 }
