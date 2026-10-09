@@ -285,17 +285,13 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 	// could work it, but only put over the picture where a finger is how
 	// the device is pointed at in the first place.
 	let touchControls = null
-	// The virtual gamepad lays itself along the bottom of the screen, and
-	// so does the control bar -- over the top of START and SELECT, and
-	// being the higher of the two it took their taps as well, which left
-	// those two buttons of the pad unpressable on a phone. While the pad
-	// is up the bar goes to the top, where the pad has nothing.
-	const showingTouch = (showing) => container.classList.toggle('arcade-touch-on', showing)
+	// The gamepad lays itself along the bottom of the screen and has it to
+	// itself: the chrome keeps to the top whether the pad is up or not, so
+	// there is no longer a layout here for the pad to ask for.
 	if (isTouchDevice()) {
 		touchControls = attachTouchControls({ container, instance })
 		const showTouch = isTouchPrimary()
 		touchControls.element.classList.toggle('hidden', !showTouch)
-		showingTouch(showTouch)
 		const touchButton = button(ICONS.gamepad, t('arcade', 'Touch controls'), (element) => {
 			const hidden = touchControls.element.classList.toggle('hidden')
 			if (hidden) {
@@ -303,7 +299,6 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 				// rest of the game, with nothing left on screen to lift it.
 				touchControls.release()
 			}
-			showingTouch(!hidden)
 			setPressed(element, !hidden)
 		})
 		setPressed(touchButton, showTouch)
@@ -345,8 +340,9 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 	}
 
 	// Inside the Files Viewer there is no actions menu of ours -- the
-	// Viewer's own knows nothing of the emulator -- so the two commands
-	// keep their old place in the pill there.
+	// Viewer's own knows nothing of the emulator -- so what the menu holds
+	// on the app page keeps its old place in the pill there. Screenshot is
+	// the same bargain, further down, once its handler exists.
 	if (closeUrl === '') {
 		button(ICONS.menu, t('arcade', 'RetroArch menu'), toggleRetroArchMenu)
 		button(ICONS.restart, t('arcade', 'Restart'), restartGame)
@@ -356,7 +352,7 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 	// operation at a time: a held hotkey would otherwise fire a burst of
 	// them, each one a file of its own.
 	let shooting = false
-	const screenshotButton = button(ICONS.screenshot, t('arcade', 'Screenshot'), async () => {
+	const takeScreenshot = async () => {
 		if (shooting) {
 			return
 		}
@@ -390,7 +386,15 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 		} finally {
 			shooting = false
 		}
-	})
+	}
+	// Taking a shot is a thing done once, not a mode to sit in, so it reads
+	// as an actions entry rather than a pill of its own -- and the pill is
+	// the one piece of chrome a thumb has to share with the gamepad. In the
+	// Files Viewer there is no actions menu of ours to hold it, so there it
+	// keeps its button, the way the RetroArch menu and Restart do.
+	if (closeUrl === '') {
+		button(ICONS.screenshot, t('arcade', 'Screenshot'), takeScreenshot)
+	}
 
 	// The screenshots of this game, which also live in the user's files.
 	if (getCurrentUser() !== null && romPath && (settings.screenshots_folder ?? '') !== '') {
@@ -493,6 +497,7 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 		}
 
 		item(ICONS.fullscreen, t('arcade', 'Full screen'), () => fullscreenButton.click())
+		item(ICONS.screenshot, t('arcade', 'Screenshot'), takeScreenshot)
 		item(ICONS.menu, t('arcade', 'RetroArch menu'), toggleRetroArchMenu)
 		item(ICONS.restart, t('arcade', 'Restart'), restartGame)
 		// Without the sidebar, the details live one page away: in the Files
@@ -640,7 +645,9 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 		fullscreen: () => fullscreenButton.click(),
 		saveState: () => statesPanel?.save(1),
 		loadState: () => statesPanel?.load(1),
-		screenshot: () => screenshotButton.click(),
+		// Straight to the handler, not through a button: on the app page
+		// there is no button any more, only the actions entry.
+		screenshot: takeScreenshot,
 		// Inside the Files Viewer there is nowhere to close to, so the key
 		// is not the player's to take: saying so lets it through to the
 		// Viewer, whose own Escape closes the modal.
@@ -765,7 +772,6 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 	}
 	const wakeChrome = () => {
 		container.classList.remove('arcade-chrome-hidden')
-		container.classList.remove('arcade-touch-on')
 		scheduleHide()
 	}
 	const onPointerMove = () => wakeChrome()

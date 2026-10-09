@@ -3,7 +3,16 @@
    The overlay sits on the game picture itself, so it keeps a fixed dark
    scrim in every theme; sizes and radii follow the Nextcloud variables. */
 
-.arcade-player-container { position: relative; }
+.arcade-player-container {
+	position: relative;
+	/* The chrome stacks down from the top, so each piece needs to know how
+	   tall the one above it is. A pill is a 34px button in its padding,
+	   rounded up to leave a theme room to set the padding larger, and the
+	   pieces are spaced by the same baseline as everything else. */
+	--arcade-pill-height: 48px;
+	--arcade-pill-gap: calc(var(--default-grid-baseline, 4px) * 2);
+	--arcade-chrome-top: calc(var(--default-grid-baseline, 4px) * 2 + env(safe-area-inset-top, 0px));
+}
 /* While a message is on screen the top-right cluster steps aside. The
    toaster hangs a toast in that same corner, and the chrome is z-index
    20100 against a toast's 9000, so the buttons paint over the words.
@@ -33,26 +42,23 @@
 	opacity: 0.4;
 	transition: opacity 200ms;
 }
+/* The bar used to run along the bottom, which on a phone is where the
+   thumbs are: it sat over START and SELECT and took their taps with it,
+   at z-index 20100 against the gamepad's 20090. Moving it only while the
+   pad was up meant keeping two layouts, and the one that moved landed on
+   the shoulder buttons instead.
+   So there is one layout, and the chrome keeps to the top: under the
+   top-right cluster rather than beside it, since side by side the two
+   would meet on a narrow phone. Everything below is the game's, and the
+   gamepad has it to itself. */
 .arcade-toolbar {
-	bottom: calc(var(--default-grid-baseline, 4px) * 2);
+	top: calc(var(--arcade-chrome-top) + var(--arcade-pill-height) + var(--arcade-pill-gap));
 	left: 50%;
 	transform: translateX(-50%);
 }
 .arcade-topbar {
-	top: calc(var(--default-grid-baseline, 4px) * 2 + env(safe-area-inset-top, 0px));
+	top: var(--arcade-chrome-top);
 	inset-inline-end: calc(var(--default-grid-baseline, 4px) * 2 + env(safe-area-inset-right, 0px));
-}
-/* With the virtual gamepad up, the bar moves out of its way. Every part
-   of that pad is along the bottom -- the D-pad and the face buttons at
-   70px, START and SELECT at 24px -- and the bar sat at 8px and 42px tall,
-   straight over the last two, taking their taps with it at z-index 20100
-   against the pad's 20090.
-   Below the line the top-right cluster occupies rather than beside it:
-   its own offset plus a 34px button in 4px of padding. Side by side they
-   would meet on a narrow phone, which is the only place this applies. */
-.arcade-player-container.arcade-touch-on .arcade-toolbar {
-	top: calc(var(--default-grid-baseline, 4px) * 4 + env(safe-area-inset-top, 0px) + 42px);
-	bottom: auto;
 }
 .arcade-toolbar:hover,
 .arcade-toolbar:focus-within,
@@ -94,7 +100,8 @@
 .arcade-states,
 .arcade-gallery {
 	position: absolute;
-	bottom: 56px;
+	/* Under the bar, which is what opens them. */
+	top: calc(var(--arcade-chrome-top) + var(--arcade-pill-height) * 2 + var(--arcade-pill-gap) * 2);
 	left: 50%;
 	transform: translateX(-50%);
 	background-color: rgba(0, 0, 0, 0.85);
@@ -107,15 +114,6 @@
 	min-width: 320px;
 }
 .arcade-gallery { max-width: 90%; }
-/* The panels open from whichever edge their buttons are on. With the
-   virtual gamepad up the bar is at the top, and a panel left at the
-   bottom would open half a screen from the button that opened it --
-   over the gamepad, which is the one thing down there. */
-.arcade-player-container.arcade-touch-on .arcade-states,
-.arcade-player-container.arcade-touch-on .arcade-gallery {
-	top: calc(var(--default-grid-baseline, 4px) * 4 + env(safe-area-inset-top, 0px) + 42px + 48px);
-	bottom: auto;
-}
 .arcade-states.hidden,
 .arcade-gallery.hidden { display: none; }
 .arcade-states h3,
@@ -171,11 +169,16 @@
 }
 .arcade-states-slot button.arcade-states-confirm { background-color: var(--color-error, #d91812); }
 .arcade-states-slot button.arcade-states-confirm:hover:not(:disabled) { background-color: var(--color-error-hover, #ea3c34); }
+/* The offer used to sit at the top, opposite a bar along the bottom.
+   With the chrome all at the top it would be under the bar and across
+   the panels, and it stays until it is answered rather than timing out,
+   so it takes the middle instead: the one band of the screen that the
+   chrome above and the gamepad below both leave alone. */
 .arcade-resume {
 	position: absolute;
-	top: calc(var(--default-grid-baseline, 4px) * 4);
+	top: 50%;
 	left: 50%;
-	transform: translateX(-50%);
+	transform: translate(-50%, -50%);
 	display: flex;
 	gap: calc(var(--default-grid-baseline, 4px) * 2);
 	align-items: center;
@@ -187,6 +190,12 @@
 	font-size: 13px;
 }
 .arcade-resume button.primary-action { background-color: rgba(255, 255, 255, 0.3); font-weight: bold; }
+/* The same narrowest-phone bucket the gamepad draws itself smaller in:
+   there the middle of the screen reaches the shoulder buttons, and the
+   offer paints over them, so it sits a little above centre instead. */
+@media (max-width: 359px) {
+	.arcade-resume { top: 42%; }
+}
 .arcade-gallery-grid {
 	display: grid;
 	grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));

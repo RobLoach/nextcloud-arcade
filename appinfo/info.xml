@@ -7,7 +7,7 @@
 	<description><![CDATA[Play retro console games straight from NextCloud.
 
 NextCloud Arcade runs RetroArch libretro cores in the browser. Seventeen systems are covered, from ColecoVision to the PlayStation, with a games library you can browse by keyboard, mouse, touch or gamepad.]]></description>
-	<version>0.47.10</version>
+	<version>0.47.12</version>
 	<licence>AGPL-3.0-or-later</licence>
 	<author homepage="https://robloach.net">Rob Loach</author>
 	<namespace>Arcade</namespace>
