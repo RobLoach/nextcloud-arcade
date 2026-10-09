@@ -17,6 +17,16 @@ const SRAM_SYNC_INTERVAL = 60 * 1000
 // takes a moment; a wedged one must not keep the player here.
 const SRAM_FINAL_WAIT = 5000
 
+// The most a request may carry and still be allowed to outlive its page.
+// The Fetch standard caps a keepalive body at 64 KiB and fails anything
+// larger outright, so asking for it unconditionally was not a nicety that
+// degraded: a Game Boy Advance flash save is 128 KiB, and every upload of
+// one -- on the timer as much as at the end -- failed before it was sent,
+// and said so only to the console. Below the cap with room for the
+// headers, since the real sizes are powers of two and none of them lands
+// between the two figures.
+const KEEPALIVE_LIMIT = 60 * 1024
+
 // The games whose battery save was just deleted. The emulator still holds
 // the old save in memory, and the next sync would write it right back, so
 // uploads stop until the game is opened anew — which starts clean, since
@@ -454,8 +464,12 @@ export function startSramSync(instance, romPath, canSave = true) {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/octet-stream' },
 				body: sram,
-				// So the final upload survives the page closing.
-				keepalive: true,
+				// So the final upload survives the page closing -- but only
+				// where it is allowed to, and a save too big to ask it for
+				// goes as an ordinary request instead. Closing the game
+				// waits for that one; a tab closed outright is the single
+				// case it cannot outlive, which beats never arriving.
+				keepalive: sram.size <= KEEPALIVE_LIMIT,
 			})
 		} catch (error) {
 			console.error('Could not save the SRAM', error)

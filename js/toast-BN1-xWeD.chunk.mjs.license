@@ -18,7 +18,7 @@ This file is generated from multiple sources. Included packages:
 	- version: 0.3.0
 	- license: GPL-3.0-or-later
 - @robloach/nextcloud-arcade
-	- version: 0.47.14
+	- version: 0.47.15
 	- license: AGPL-3.0-or-later
 - cancelable-promise
 	- version: 4.3.1
