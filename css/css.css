@@ -113,9 +113,18 @@
 	scroll-snap-type: x proximity;
 }
 
+/* A shelf is a dozen cards at most, so skipping the ones out of view
+   saves nothing -- and costs the look of the row. A card scrolled off the
+   right of the shelf is out of view like any other, so it is skipped and
+   drawn at the fallback height; the row then stretches every card beside
+   it to match, and the visible ones come out 220px tall around 144px of
+   picture and words. The dead space is under cards that are perfectly in
+   view, put there by cards that are not. */
 .arcade .arcade-library-shelf-row .arcade-library-game {
 	flex: 0 0 140px;
 	scroll-snap-align: start;
+	content-visibility: visible;
+	contain-intrinsic-size: none;
 }
 
 .arcade .arcade-library-shelf-row .arcade-library-thumbnail {
