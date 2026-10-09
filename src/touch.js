@@ -70,9 +70,26 @@ const STYLE = `
 }
 .arcade-touch-select { position: absolute; bottom: 24px; left: 50%; transform: translateX(-108%); }
 .arcade-touch-start { position: absolute; bottom: 24px; left: 50%; transform: translateX(8%); }
-/* Below the top-right chrome cluster, so the R shoulder stays tappable. */
-.arcade-touch-l { position: absolute; top: 60px; left: 20px; }
-.arcade-touch-r { position: absolute; top: 60px; right: 20px; }
+/* The shoulders used to sit in the top corners, below the chrome -- which
+   held only as long as the chrome stayed where it was measured. It does
+   not: the top-right cluster starts under the notch, and with the pad up
+   the control bar moves to the top as well, landing on both shoulders.
+   So the top belongs to the chrome and the bottom to the pad, with no
+   line drawn between them to be crossed. Each shoulder sits just above
+   the cluster the same thumb is already on -- 220px is the top edge of
+   the taller of the two, the face buttons. */
+.arcade-touch-l { position: absolute; bottom: 228px; left: 20px; }
+.arcade-touch-r { position: absolute; bottom: 228px; right: 20px; }
+/* The pad asks for 140 and 150 either side of 20px margins: 330px, which
+   the narrowest phones do not have, and the two clusters met in the
+   middle. Below that it is drawn a size smaller. */
+@media (max-width: 359px) {
+	.arcade-touch-dpad { left: 8px; width: 124px; height: 124px; }
+	.arcade-touch-buttons { right: 8px; width: 134px; height: 134px; }
+	.arcade-touch-button.face { width: 46px; height: 46px; }
+	.arcade-touch-l { left: 8px; }
+	.arcade-touch-r { right: 8px; }
+}
 `
 
 /**
