@@ -10,28 +10,6 @@ import { davUrl, fileIdOf } from './player.js'
 import { shortNameForPath } from './systems.js'
 import { UNTIL_DISMISSED } from './toast.js'
 import { attachTouchControls, isTouchDevice, isTouchPrimary } from './touch.js'
-import { waitAtMost } from './wait.js'
-
-// How long the save on the way out is given before the player leaves
-// anyway. Long enough for a healthy core, short enough to stay a door.
-const SAVE_BEFORE_LEAVING_WAIT = 5000
-
-// What a save that is merely slow answers with, as against the false a
-// save that actually failed answers with. The two used to arrive as the
-// same false, so a state still on its way up was reported as a state
-// that could not be written -- which is the one of the two that is
-// worth staying on the page for.
-const STILL_SAVING = Symbol('still saving')
-
-// How recently the save on a timer must have written the automatic slot
-// for the save on the way out to be skipped as a repeat of it.
-//
-// Short on purpose: it is the most play that can go unwritten, and the
-// whole point of saving on the way out is to keep where the player got
-// to. A second or two of a game nobody is playing any more -- the close
-// button is already pressed -- against a multi-megabyte state written
-// and uploaded twice over.
-const AUTO_SAVE_STAYS_CURRENT = 3000
 
 // Everything the player puts on top of the game. Keys pressed inside it
 // belong to whatever has the focus there, not to the emulator.
@@ -170,9 +148,6 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 	// so on a public share, or without a saves folder, there is none.
 	const canSave = getCurrentUser() !== null && romPath && (settings.saves_folder ?? '') !== ''
 	let autosaveTimer = null
-	// Set while the game is on its way out, so the autosave clock stops
-	// competing with the save that is seeing it off.
-	let leaving = false
 	let statesPanel = null
 	let statesButton = null
 	let galleryPanel = null
@@ -246,7 +221,7 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 		const interval = Number(settings.autosave_interval ?? 0)
 		if (interval > 0) {
 			autosaveTimer = setInterval(() => {
-				if (!leaving && !paused && !document.hidden) {
+				if (!paused && !document.hidden) {
 					// Quietly: nobody asked for this one, and a message
 					// every few minutes in the middle of a game -- taking
 					// the chrome with it -- is not worth the reassurance.
@@ -256,42 +231,18 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 		}
 	}
 
-	// Every way out of the game goes through here first, so the game is
-	// left where it was and can be picked up again. Nothing to save
-	// without a slot to save into, or when it was not asked for -- and
-	// nothing to save is as good as saved.
-	const saveBeforeLeaving = async () => {
-		if (settings.autosave_on_close !== true || statesPanel === null) {
-			return true
-		}
-		// No new tick of the autosave from here on: one starting now would
-		// write a slot this save is about to write anyway, and would take
-		// the turn this one is waiting for.
-		leaving = true
-		// For as long as the player is going to be kept waiting: this one
-		// explains a pause rather than confirming something done, so it
-		// outstays the three seconds a confirmation gets.
-		flash(t('arcade', 'Saving the game …'), 'info', { timeout: SAVE_BEFORE_LEAVING_WAIT })
-		// A tick of the autosave may already be in the air. Letting it land
-		// first means that if it wrote the automatic slot a moment ago there
-		// is nothing here to write: the close would otherwise make and
-		// upload a second copy of a game the slot already holds. It is given
-		// a deadline of its own -- it is somebody else's save, and waiting
-		// it out used to spend the time this one was about to need.
-		await waitAtMost(statesPanel.settled(), SAVE_BEFORE_LEAVING_WAIT, undefined)
-		let saved = true
-		if (!statesPanel.savedWithin(AUTO_SAVE_STAYS_CURRENT)) {
-			// Queueing rather than asking: this save is the last of the
-			// session, so being told no by whatever is still running is not
-			// an answer it can take -- that refusal is what used to be read
-			// out as "could not save the game".
-			saved = await waitAtMost(statesPanel.saveWhenFree(AUTO_SLOT), SAVE_BEFORE_LEAVING_WAIT, STILL_SAVING)
-		}
-		// A player told the save did not land stays on the game, so the
-		// clock that keeps it saved starts again along with them.
-		leaving = saved === true
-		return saved
-	}
+	// Leaving the game no longer writes a save state of its own. It used
+	// to, and it kept getting in its own way: the one slot it wrote was
+	// also the one the clock writes, so the two raced for the single
+	// state operation the core allows, and whichever lost came back as
+	// "could not save the game" -- a failure that had not happened, and
+	// that never reached the server to be looked up afterwards. A core
+	// that never finished answering saveState() held the same door shut
+	// for good. None of that was the player's doing, and all of it stood
+	// between them and the way out.
+	// So the way out is just the way out. What keeps a game is the Save
+	// states panel, the clock in the settings, and the game's own battery
+	// save, which the session still flushes on its way down.
 
 	// Virtual gamepad for touch play. It is offered wherever a finger
 	// could work it, but only put over the picture where a finger is how
@@ -513,23 +464,14 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 		item(ICONS.menu, t('arcade', 'RetroArch menu'), toggleRetroArchMenu)
 		item(ICONS.restart, t('arcade', 'Restart'), restartGame)
 		// Without the sidebar, the details live one page away: in the Files
-		// app, with the file's details pane open. Leaving the game is like
-		// closing it, so the game is left where it was first.
+		// app, with the file's details pane open. Going there ends the game
+		// the same way closing it does, and like closing it, what the game
+		// is worth keeping is the player's to have saved.
 		const openFilesDetails = async () => {
 			const missing = window.OCA === undefined
 				? 'OCA'
 				: window.OCA.Files === undefined ? 'OCA.Files' : 'OCA.Files.Sidebar'
 			console.warn(`arcade: cannot open the Files sidebar, window.${missing} is undefined; opening the Files app instead`)
-			const ready = await saveBeforeLeaving()
-			if (ready !== true) {
-				// Leaving this page ends the game, so a save that has not
-				// landed means staying put and saying so.
-				flash(ready === STILL_SAVING
-					? t('arcade', 'The game is still saving, so the details were not opened.')
-					: t('arcade', 'Could not save the game, so the details were not opened.'),
-				ready === STILL_SAVING ? 'warning' : 'error')
-				return
-			}
 			const absolute = romPath.startsWith('/') ? romPath : `/${romPath}`
 			const dir = absolute.replace(/\/[^/]*$/, '') || '/'
 			let target
@@ -607,39 +549,11 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 
 	let closeButton = null
 	if (closeUrl !== '') {
-		// A save that did not happen is not something to walk away from
-		// quietly, so the first press says so and the button comes back
-		// as what it now really is: leaving without the save.
-		let leaveUnsaved = false
+		// One press, and the game is left. The button used to stand in the
+		// way of that while it tried to write a save state of its own, and
+		// ask a second time when the write had not gone through.
 		closeButton = button(ICONS.close, t('arcade', 'Close'), async (element) => {
 			element.disabled = true
-			// Bounded: the save polls the core's file system for the file
-			// it wrote, and a core that never writes it would otherwise
-			// hold the page here for a minute with nothing to press.
-			const saved = leaveUnsaved || await saveBeforeLeaving()
-			if (saved !== true) {
-				leaveUnsaved = true
-				element.disabled = false
-				element.title = t('arcade', 'Close without saving')
-				element.setAttribute('aria-label', element.title)
-				element.focus()
-				// This one stays until it is dismissed. It is not news, it
-				// is the question the button is now asking, and that question
-				// has no deadline: a message that timed out would leave a
-				// button relabelled "Close without saving" with nothing on
-				// screen to say why. The toast comes with a close button of
-				// its own, and the next message replaces it, so nothing is
-				// left sitting on the game -- and pressing Close again leaves
-				// the page, which takes it away regardless.
-				flash(
-					saved === STILL_SAVING
-						? t('arcade', 'The game is still saving. Press Close again to leave without waiting.')
-						: t('arcade', 'Could not save the game. Press Close again to leave without saving.'),
-					saved === STILL_SAVING ? 'warning' : 'error',
-					{ timeout: UNTIL_DISMISSED },
-				)
-				return
-			}
 			// Closing is the session's to do, not the toolbar's: it waits
 			// for the battery save before it takes the core away.
 			await onClose?.()

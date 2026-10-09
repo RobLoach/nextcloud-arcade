@@ -251,7 +251,6 @@ class SettingsService {
 			'audio_latency' => 64,
 			'respond_to_global_events' => true,
 			'pause_when_hidden' => false,
-			'autosave_on_close' => false,
 			'autoload_on_start' => false,
 			'autosave_interval' => 0,
 			'library_folder' => '/Games',
@@ -502,7 +501,6 @@ class SettingsService {
 			'rewind_enabled',
 			'respond_to_global_events',
 			'pause_when_hidden',
-			'autosave_on_close',
 			'autoload_on_start',
 		] as $key) {
 			if (array_key_exists($key, $settings)) {

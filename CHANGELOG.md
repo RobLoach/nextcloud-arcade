@@ -6,6 +6,17 @@ All notable changes to NextCloud Arcade. The format follows
 
 ## [Unreleased]
 
+### Removed
+- The "Save the game automatically when closing the player" setting, and
+  the save it made. Closing wrote the same Auto slot the clock writes, and
+  the core allows one state operation at a time, so the two raced for it;
+  whichever lost came back as "Could not save the game", a failure that
+  had not happened and that never reached the server to be looked up. A
+  core that never finished answering held the door shut the same way.
+  Keeping a game is now the player's to do, through the Save states panel
+  or the clock in the settings, and Close just closes. The game's own
+  battery save is still flushed on the way out.
+
 ## [0.43.2] - 2026-10-01
 
 ### Added

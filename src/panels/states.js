@@ -13,10 +13,8 @@ import { createPanel } from './panel.js'
  *                                 the message and how it reads: success,
  *                                 info, warning or error
  * @param {Function} options.onDone called after a slot was saved or loaded
- * @return {{element: HTMLElement, refresh: Function, load: Function, save: Function, settled: Function, savedWithin: Function}}
- *         the panel; load and save answer whether they got through,
- *         settled waits out whichever of them is running, and savedWithin
- *         says whether the automatic slot is already current
+ * @return {{element: HTMLElement, refresh: Function, load: Function, save: Function}}
+ *         the panel; load and save answer whether they got through
  */
 export function createStatesPanel({ instance, romPath, flash, onDone }) {
 	const element = createPanel('arcade-states', t('arcade', 'Save states'))
@@ -82,22 +80,6 @@ export function createStatesPanel({ instance, romPath, flash, onDone }) {
 		})
 		return inFlight
 	}
-	// Lets whatever is in the air land. A caller that must not be turned
-	// away -- the save on the way out of the game -- waits its turn here
-	// rather than being told no by a tick of the autosave.
-	const settled = async () => {
-		try {
-			await inFlight
-		} catch {
-			// How it went is the business of whoever started it.
-		}
-	}
-
-	// When the automatic slot was last written, so that a second write of
-	// the same game can be skipped rather than repeated. Zero until one
-	// lands: never written is not the same as written long ago.
-	let autoSavedAt = 0
-
 	// A save the player asked for says so. The one the clock asks for
 	// does not: it arrives in the middle of the game, unbidden, and takes
 	// the top-right chrome with it while it shows. Going wrong is still
@@ -121,9 +103,6 @@ export function createStatesPanel({ instance, romPath, flash, onDone }) {
 					headers: { 'Content-Type': 'image/png' },
 					body: thumbnail,
 				}).catch(() => {})
-			}
-			if (slot === AUTO_SLOT) {
-				autoSavedAt = Date.now()
 			}
 			if (!quiet) {
 				flash(slot === AUTO_SLOT
@@ -352,36 +331,5 @@ export function createStatesPanel({ instance, romPath, flash, onDone }) {
 		}
 	}
 
-	/**
-	 * Whether the automatic slot was written within the last `ms`, and so
-	 * already holds this game closely enough to leave on.
-	 *
-	 * @param {number} ms how recent counts as current
-	 * @return {boolean} whether there is nothing worth writing again
-	 */
-	const savedWithin = (ms) => autoSavedAt !== 0 && Date.now() - autoSavedAt < ms
-
-	/**
-	 * Save a slot, waiting for a turn rather than being turned away.
-	 *
-	 * One state operation runs at a time, and the extra ones are answered
-	 * false -- which the save on the way out of the game then reported as
-	 * "could not save", a failure that never happened and that never even
-	 * reached the server. That save is not a repeat to be dropped: it is
-	 * the last one of the session, so it queues behind whatever is running
-	 * instead. The wait is the caller's to bound.
-	 *
-	 * @param {number} slot the slot to write
-	 * @return {Promise<boolean>} whether it got through
-	 */
-	const saveWhenFree = async (slot) => {
-		while (inFlight !== null) {
-			await settled()
-		}
-		// Nothing is awaited between the check and the claim, so the turn
-		// cannot be taken in between.
-		return await save(slot)
-	}
-
-	return { element, refresh, load, save, saveWhenFree, settled, savedWithin }
+	return { element, refresh, load, save }
 }

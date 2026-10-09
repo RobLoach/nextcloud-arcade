@@ -21,7 +21,6 @@ $thumbnailTypes = $_['thumbnailTypes'];
 			'arcade-scale-integer' => ['scale_integer', $l->t('Pixel-perfect scaling (whole pixels, with borders)')],
 			'arcade-rewind' => ['rewind_enabled', $l->t('Rewind support, going back while the rewind key is held (costs some performance)')],
 			'arcade-pause-hidden' => ['pause_when_hidden', $l->t('Pause the game while the tab is in the background')],
-			'arcade-autosave' => ['autosave_on_close', $l->t('Save the game automatically when closing the player')],
 			'arcade-autoload' => ['autoload_on_start', $l->t('Continue from the latest save when a game starts, without asking')],
 		] as $id => [$key, $label]): ?>
 			<p class="checkbox-radio-switch">

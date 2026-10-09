@@ -149,7 +149,6 @@ class SettingsServiceTest extends TestCase {
 		$this->assertSame(100, $settings['volume'], 'the game exactly as recorded');
 		$this->assertSame(64, $settings['audio_latency']);
 		$this->assertFalse($settings['pause_when_hidden'], 'a background tab does not pause unless asked');
-		$this->assertFalse($settings['autosave_on_close'], 'closing does not save the game unless asked');
 		$this->assertFalse($settings['autoload_on_start'], 'a game does not resume by itself unless asked');
 		$this->assertSame(0, $settings['autosave_interval'], 'and does not save by itself either');
 		$this->assertTrue($settings['respond_to_global_events']);
@@ -329,12 +328,12 @@ class SettingsServiceTest extends TestCase {
 			'scale_integer' => 'true',
 			'rewind_enabled' => 'true',
 			'pause_when_hidden' => '0',
-			'autosave_on_close' => false,
+			'autoload_on_start' => false,
 		]);
 		$this->assertTrue($saved['scale_integer']);
 		$this->assertTrue($saved['rewind_enabled']);
 		$this->assertFalse($saved['pause_when_hidden']);
-		$this->assertFalse($saved['autosave_on_close']);
+		$this->assertFalse($saved['autoload_on_start']);
 	}
 
 	public function testRunAheadTakesOnlyAFewFrames(): void {
