@@ -500,6 +500,59 @@ else
 	fail "occ arcade:bios refused GB_BIOS.BIN: $(head -c 200 "$BODY")"
 fi
 
+step 'Playing a shared game without logging in'
+# A game shared by link plays for a visitor with no account: the Viewer
+# opens it and the player takes the share's own URL as its source. That
+# only works while the Content Security Policy of the share page carries
+# what WebAssembly needs, which the app adds by recognising the token in
+# the path and looking inside the share for a ROM.
+#
+# Nothing else here covers it -- every other request in this run carries
+# a session -- and the whole path is one listener deciding, on a page
+# that belongs to the server rather than the app. It is exactly the sort
+# of thing that keeps working until it silently does not.
+SHARE_TOKEN=$(curl -sS -u "$ADMIN_USER:$ADMIN_PASS" -H 'OCS-APIRequest: true' \
+	-X POST "$BASE/ocs/v2.php/apps/files_sharing/api/v1/shares?format=json" \
+	--data-urlencode 'path=/Games/Super Nintendo/Chrono.sfc' --data-urlencode 'shareType=3' 2>/dev/null \
+	| python3 -c 'import json,sys; print(json.load(sys.stdin)["ocs"]["data"]["token"])' 2>/dev/null || true)
+if [ -z "$SHARE_TOKEN" ]; then
+	# The game this run seeds and then throws away is gone by now; the
+	# one shared here is the other one, which survives the whole run.
+	fail 'could not share a game by link'
+else
+	echo "ok: the game is shared as /s/$SHARE_TOKEN"
+	# No cookie jar and no token: this is a stranger with a link.
+	SHARE_CSP=$(curl -sSI "$BASE/s/$SHARE_TOKEN" | tr -d '\r' \
+		| sed -n 's/^[Cc]ontent-[Ss]ecurity-[Pp]olicy: *//p' | head -1)
+	case "$SHARE_CSP" in
+		*wasm-unsafe-eval*) echo 'ok: the share page allows WebAssembly' ;;
+		*) fail 'a shared game cannot start: its page forbids WebAssembly' ;;
+	esac
+	case "$SHARE_CSP" in
+		*worker-src*blob:*) echo 'ok: the share page allows the core workers' ;;
+		*) fail 'a shared game cannot start: its page forbids blob workers' ;;
+	esac
+fi
+
+# And the same page for a share that holds no game at all keeps the
+# policy the instance ships: the allowance follows the game, not the act
+# of sharing something.
+printf 'not a game' > "$WORKDIR/notes.txt"
+curl -sSf -o /dev/null -X PUT -b "$COOKIES" -H "requesttoken: $TOKEN" \
+	--data-binary "@$WORKDIR/notes.txt" "$BASE/remote.php/dav/files/$ADMIN_USER/notes.txt" || true
+PLAIN_TOKEN=$(curl -sS -u "$ADMIN_USER:$ADMIN_PASS" -H 'OCS-APIRequest: true' \
+	-X POST "$BASE/ocs/v2.php/apps/files_sharing/api/v1/shares?format=json" \
+	--data-urlencode 'path=/notes.txt' --data-urlencode 'shareType=3' 2>/dev/null \
+	| python3 -c 'import json,sys; print(json.load(sys.stdin)["ocs"]["data"]["token"])' 2>/dev/null || true)
+if [ -n "$PLAIN_TOKEN" ]; then
+	PLAIN_CSP=$(curl -sSI "$BASE/s/$PLAIN_TOKEN" | tr -d '\r' \
+		| sed -n 's/^[Cc]ontent-[Ss]ecurity-[Pp]olicy: *//p' | head -1)
+	case "$PLAIN_CSP" in
+		*wasm-unsafe-eval*) fail 'a share with no game in it is given the player policy anyway' ;;
+		*) echo 'ok: a share with no game in it keeps the default policy' ;;
+	esac
+fi
+
 step 'Serving an emulator core'
 # The app ships img/cores/.htaccess, and it is the whole reason this runs
 # against an Apache image. A core served as anything but application/wasm

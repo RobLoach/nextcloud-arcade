@@ -140,6 +140,15 @@
 	min-width: 320px;
 }
 .arcade-gallery { max-width: 90%; }
+/* The panels open from whichever edge their buttons are on. With the
+   virtual gamepad up the bar is at the top, and a panel left at the
+   bottom would open half a screen from the button that opened it --
+   over the gamepad, which is the one thing down there. */
+.arcade-player-container.arcade-touch-on .arcade-states,
+.arcade-player-container.arcade-touch-on .arcade-gallery {
+	top: calc(var(--default-grid-baseline, 4px) * 4 + env(safe-area-inset-top, 0px) + 42px + 48px);
+	bottom: auto;
+}
 .arcade-states.hidden,
 .arcade-gallery.hidden { display: none; }
 .arcade-states h3,
