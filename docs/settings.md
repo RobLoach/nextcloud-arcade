@@ -18,7 +18,6 @@ Personal settings → Arcade:
 | Pixel-perfect scaling | Off | Scale by whole pixels, with borders |
 | Rewind | Off | Go back through the game while the rewind key is held; costs some performance |
 | Pause in the background | Off | Stop the game while its tab is hidden |
-| Save when closing | Off | Write the Auto save state when the player is closed |
 | Continue on start | Off | Load the latest save as a game starts, without asking |
 | Save every | Never | Write the Auto save state while playing, from 30 seconds to 10 minutes |
 | Run-ahead | Off | Hide input lag, up to 3 frames, at the cost of CPU |

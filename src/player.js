@@ -4,7 +4,7 @@ import { getCurrentUser, getRequestToken } from '@nextcloud/auth'
 import { defaultRemoteURL, defaultRootPath } from '@nextcloud/files/dav'
 import { translate as t } from '@nextcloud/l10n'
 import { generateFilePath, generateUrl } from '@nextcloud/router'
-import { api } from './api.js'
+import { api, stateUrl } from './api.js'
 import { createCoreLog } from './corelog.js'
 import { inputConfig, retroarchKey } from './keys.js'
 import { volumeInDecibels } from './volume.js'
@@ -395,14 +395,6 @@ function report(romPath, seconds) {
 }
 
 /**
- * @param {string} romPath path identifying the game
- * @return {string} the SRAM endpoint URL
- */
-function sramUrl(romPath) {
-	return generateUrl('/apps/arcade/arcade/sram?file={file}', { file: romPath })
-}
-
-/**
  * Fetch the stored in-game battery save, if any.
  *
  * @param {string} romPath path identifying the game
@@ -414,13 +406,9 @@ async function fetchSram(romPath, signal = null) {
 		return null
 	}
 	try {
-		const response = await fetch(sramUrl(romPath), {
-			headers: { requesttoken: getRequestToken() ?? '' },
-			signal,
-		})
-		if (!response.ok) {
-			return null
-		}
+		// A game with no battery save yet answers 404, which api() throws
+		// on and the catch below reads as the same "nothing stored".
+		const response = await api(stateUrl('/sram', romPath), { signal })
 		const blob = await response.blob()
 		return blob.size > 0 ? blob : null
 	} catch (error) {
@@ -460,7 +448,7 @@ export function startSramSync(instance, romPath, canSave = true) {
 			if (sramSyncStopped.has(romPath)) {
 				return
 			}
-			await api(sramUrl(romPath), {
+			await api(stateUrl('/sram', romPath), {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/octet-stream' },
 				body: sram,

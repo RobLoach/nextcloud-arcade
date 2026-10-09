@@ -39,6 +39,21 @@ abstract class ArcadeController extends Controller {
 	 * big to fit, or shorter than the client said it would be.
 	 */
 	protected function readBody(int $maxSize): ?string {
+		// Absent on a chunked request, and not every client is honest, so
+		// it is taken as a claim rather than as the length.
+		$promised = $this->request->getHeader('Content-Length');
+		$announced = ctype_digit($promised) ? (int)$promised : null;
+		// Said to be too big: turned away before the body is read rather
+		// than after. A client announcing a gigabyte would otherwise have
+		// the whole ceiling pulled off the socket and held in memory
+		// first, only to be refused on the far side of it.
+		if ($announced !== null && $announced > $maxSize) {
+			return null;
+		}
+		// One byte past the ceiling, so a body over it without saying so
+		// is still caught. Not capped at what was announced: a body may
+		// honestly arrive longer than that, and capping would quietly
+		// truncate it to the claim.
 		$body = $this->rawBody($maxSize + 1);
 		if ($body === false || $body === '' || strlen($body) > $maxSize) {
 			return null;
@@ -53,8 +68,7 @@ abstract class ArcadeController extends Controller {
 		// means something between the two of us rewrote the request --
 		// decompressed it, say -- which is not the accident being guarded
 		// against, and not worth failing an honest save over.
-		$promised = $this->request->getHeader('Content-Length');
-		if ($promised !== '' && ctype_digit($promised) && (int)$promised > strlen($body)) {
+		if ($announced !== null && $announced > strlen($body)) {
 			return null;
 		}
 		return $body;

@@ -119,6 +119,19 @@ class StateControllerTest extends TestCase {
 		$this->assertSame(Http::STATUS_OK, $controller->save(self::GAME, 2)->getStatus());
 	}
 
+	/**
+	 * A body said to be past the ceiling is refused on the strength of
+	 * the claim, without reading the ceiling's worth of it first.
+	 */
+	public function testSavingRefusesALengthPastTheCeilingWithoutReadingIt(): void {
+		$controller = $this->controller(body: 'the state', contentLength: '99999999999');
+		$this->stateService->expects($this->never())->method('save');
+
+		$response = $controller->save(self::GAME, 2);
+
+		$this->assertSame(Http::STATUS_BAD_REQUEST, $response->getStatus());
+	}
+
 	public function testSavingTakesABodyWhenNoLengthWasPromised(): void {
 		$controller = $this->controller(body: 'the state', contentLength: '');
 		$this->stateService->expects($this->once())->method('save');

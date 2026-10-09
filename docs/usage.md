@@ -141,8 +141,7 @@ thumbnail; a filled slot is labeled with its date alone, since the
 screenshot already says which game it is. Saving or loading a slot closes
 the menu and returns to the game.
 
-Above the slots sits the Auto slot, which the player writes itself: when
-the player is closed, if that is turned on in the settings, and at an
+Above the slots sits the Auto slot, which the player writes itself, at an
 interval while playing if one is set. When a game has save states, the
 player offers to continue from the most recent one at launch — or loads it
 straight away, if that is turned on. A slot made from a different dump of

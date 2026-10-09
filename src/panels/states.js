@@ -1,7 +1,19 @@
 import { translate as t } from '@nextcloud/l10n'
-import { AUTO_SLOT, api, stateUrl } from '../api.js'
+import { AUTO_SLOT, api, deadline, stateUrl, wasGivenUpOn } from '../api.js'
 import { disableSramSync, enableSramSync } from '../player.js'
+import { waitAtMost } from '../wait.js'
 import { createPanel } from './panel.js'
+
+// How long the core is given to answer. Handing over a state is the work
+// of a moment, so ten seconds is already far past healthy -- and a core
+// that never answers used to take the panel down with it: the one
+// operation allowed at a time never ended, so every slot stayed shut for
+// the rest of the session with nothing on screen to say why.
+const CORE_ANSWER_WAIT = 10 * 1000
+
+// What a wait that ran out answers with, which nothing the core hands
+// back could be mistaken for.
+const TIMED_OUT = Symbol('timed out')
 
 /**
  * Build the save states panel.
@@ -14,7 +26,7 @@ import { createPanel } from './panel.js'
  *                                 info, warning or error
  * @param {Function} options.onDone called after a slot was saved or loaded
  * @return {{element: HTMLElement, refresh: Function, load: Function, save: Function}}
- *         the panel; load and save answer whether they got through
+ *         the panel
  */
 export function createStatesPanel({ instance, romPath, flash, onDone }) {
 	const element = createPanel('arcade-states', t('arcade', 'Save states'))
@@ -46,26 +58,22 @@ export function createStatesPanel({ instance, romPath, flash, onDone }) {
 		return buttonElement
 	}
 
-	// The buttons of each rendered slot, with the state they were rendered
-	// in, so the slot being worked on can be held and let go again.
-	const slotButtons = new Map()
-	// While one operation runs, none of the slots can be worked. Only the
-	// slot being written used to be held, so a press on any other reached
-	// a door that was already shut: it was turned away and answered false,
-	// with nothing on screen to say why -- the click simply did nothing.
-	// A button that cannot be pressed says it itself.
+	// The live buttons of every slot, held together while an operation
+	// runs. They were once held one slot at a time, which is what let a
+	// press on any other slot reach a door already shut: it was turned
+	// away with nothing on screen to say why, and the click did nothing.
+	const slotButtons = []
 	const setSlotsBusy = (working) => {
-		for (const entries of slotButtons.values()) {
-			for (const [element, disabled] of entries) {
-				element.disabled = working || disabled
-			}
+		for (const element of slotButtons) {
+			element.disabled = working
 		}
 	}
-	const addSlotButton = (slot, element) => {
-		if (!slotButtons.has(slot)) {
-			slotButtons.set(slot, [])
+	const addSlotButton = (element) => {
+		// One drawn disabled -- Load on an empty slot -- is not held and
+		// not let go: only the next render has anything to say about it.
+		if (!element.disabled) {
+			slotButtons.push(element)
 		}
-		slotButtons.get(slot).push([element, element.disabled])
 		return element
 	}
 
@@ -78,7 +86,7 @@ export function createStatesPanel({ instance, romPath, flash, onDone }) {
 	let inFlight = null
 	const alone = (work) => {
 		if (inFlight !== null) {
-			return Promise.resolve(false)
+			return Promise.resolve()
 		}
 		setSlotsBusy(true)
 		inFlight = work().finally(() => {
@@ -87,28 +95,64 @@ export function createStatesPanel({ instance, romPath, flash, onDone }) {
 		})
 		return inFlight
 	}
+	// Ask the core for something, and give up on it rather than wait out
+	// a core that has stopped answering. Nothing is cancelled -- there is
+	// nothing in the emulator to cancel it with -- but the caller stops
+	// holding the panel, and says what happened.
+	const askCore = async (promise, what, message) => {
+		const answer = await waitAtMost(promise, CORE_ANSWER_WAIT, TIMED_OUT)
+		if (answer === TIMED_OUT) {
+			console.error(`The core did not answer ${what}() within`, CORE_ANSWER_WAIT, 'ms')
+			flash(message, 'error')
+		}
+		return answer
+	}
+
+	// What went wrong, in the two kinds worth telling apart: the game or
+	// the line was too slow, or the server said no.
+	const report = (error, log, gaveUp, failed) => {
+		console.error(log, error)
+		flash(wasGivenUpOn(error) ? gaveUp : failed, 'error')
+	}
+
 	// A save the player asked for says so. The one the clock asks for
 	// does not: it arrives in the middle of the game, unbidden, and takes
 	// the top-right chrome with it while it shows. Going wrong is still
 	// worth saying either way.
 	const save = (slot, { quiet = false } = {}) => alone(async () => {
 		try {
-			let { state, thumbnail } = await instance.saveState()
+			// Nothing is uploaded until the core has answered, so a core
+			// that never does costs the slot nothing: what it already held
+			// is still there afterwards.
+			const written = await askCore(instance.saveState(), 'saveState',
+				t('arcade', 'The game did not hand over a save state, so the slot is unchanged'))
+			if (written === TIMED_OUT) {
+				return
+			}
+			let { state, thumbnail } = written
 			if (thumbnail === undefined) {
 				// Not every core provides a state thumbnail; fall back to a
-				// plain screenshot so the slot always has one.
-				thumbnail = await instance.screenshot().catch(() => undefined)
+				// plain screenshot so the slot always has one. A picture is
+				// the one part worth going without, so a core that will not
+				// answer for it holds nothing up.
+				thumbnail = await waitAtMost(
+					instance.screenshot().catch(() => undefined), CORE_ANSWER_WAIT, undefined)
 			}
+			// One budget for the pair: a deadline each would let a single
+			// save hold the panel for twice what either of them allows.
+			const budget = deadline()
 			await api(stateUrl('/state', romPath, slot), {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/octet-stream' },
 				body: state,
+				signal: budget,
 			})
 			if (thumbnail !== undefined) {
 				await api(stateUrl('/state/thumbnail', romPath, slot), {
 					method: 'POST',
 					headers: { 'Content-Type': 'image/png' },
 					body: thumbnail,
+					signal: budget,
 				}).catch(() => {})
 			}
 			if (!quiet) {
@@ -117,11 +161,13 @@ export function createStatesPanel({ instance, romPath, flash, onDone }) {
 					: t('arcade', 'State saved to slot {slot}', { slot }), 'success')
 			}
 			onDone()
-			return true
 		} catch (error) {
-			console.error('Could not save the state', error)
-			flash(t('arcade', 'Could not save the state'), 'error')
-			return false
+			// An upload given up on is cut off mid-body, and the server
+			// turns away a body shorter than it was promised rather than
+			// writing it, so this leaves the slot as it was too.
+			report(error, 'Could not save the state',
+				t('arcade', 'Saving took too long and was stopped, so the slot is unchanged'),
+				t('arcade', 'Could not save the state'))
 		}
 	})
 
@@ -134,18 +180,23 @@ export function createStatesPanel({ instance, romPath, flash, onDone }) {
 				// will never come -- a minute of nothing, and then a
 				// message about loading rather than about the file.
 				flash(t('arcade', 'That save state is empty, so there is nothing to load'), 'warning')
-				return false
+				return
 			}
-			await instance.loadState(state)
+			// A core can swallow a state the same way it can withhold one,
+			// and the game is left running either way.
+			const taken = await askCore(instance.loadState(state), 'loadState',
+				t('arcade', 'The game did not take the save state'))
+			if (taken === TIMED_OUT) {
+				return
+			}
 			flash(slot === AUTO_SLOT
 				? t('arcade', 'Game restored')
 				: t('arcade', 'State loaded from slot {slot}', { slot }), 'success')
 			onDone()
-			return true
 		} catch (error) {
-			console.error('Could not load the state', error)
-			flash(t('arcade', 'Could not load the state'), 'error')
-			return false
+			report(error, 'Could not load the state',
+				t('arcade', 'Loading took too long and was stopped'),
+				t('arcade', 'Could not load the state'))
 		}
 	})
 
@@ -218,7 +269,7 @@ export function createStatesPanel({ instance, romPath, flash, onDone }) {
 	const renderFailure = () => {
 		slotsContainer.innerHTML = ''
 		sramContainer.innerHTML = ''
-		slotButtons.clear()
+		slotButtons.length = 0
 		const row = document.createElement('div')
 		row.className = 'arcade-states-slot'
 		const label = document.createElement('span')
@@ -252,7 +303,7 @@ export function createStatesPanel({ instance, romPath, flash, onDone }) {
 		}
 
 		slotsContainer.innerHTML = ''
-		slotButtons.clear()
+		slotButtons.length = 0
 		for (const slot of slots) {
 			const state = bySlot.get(slot)
 			const row = document.createElement('div')
@@ -295,14 +346,14 @@ export function createStatesPanel({ instance, romPath, flash, onDone }) {
 			// The automatic slot is written by the player itself, and slots
 			// beyond the ones offered now are only there to be emptied.
 			if (slot !== AUTO_SLOT && slot <= slotCount) {
-				row.appendChild(addSlotButton(slot, smallButton(
+				row.appendChild(addSlotButton(smallButton(
 					t('arcade', 'Save'),
 					() => save(slot),
 					false,
 					t('arcade', 'Save to slot {slot}', { slot }),
 				)))
 			}
-			row.appendChild(addSlotButton(slot, smallButton(
+			row.appendChild(addSlotButton(smallButton(
 				t('arcade', 'Load'),
 				() => load(slot),
 				state === undefined,
@@ -311,7 +362,7 @@ export function createStatesPanel({ instance, romPath, flash, onDone }) {
 					: t('arcade', 'Load slot {slot}', { slot }),
 			)))
 			if (state !== undefined) {
-				row.appendChild(addSlotButton(slot, smallButton(
+				row.appendChild(addSlotButton(smallButton(
 					t('arcade', 'Delete'),
 					() => remove(slot),
 					false,

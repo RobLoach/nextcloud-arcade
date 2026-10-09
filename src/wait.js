@@ -1,10 +1,13 @@
 /**
  * Wait for something, but not past a deadline.
  *
- * Leaving a game waits for the save that goes with it, and a core that
- * has wedged would otherwise hold the player in a game they asked to
- * leave -- for a minute, with nothing to press. So the wait is bounded,
- * and the answer says which of the two it was.
+ * What it is mostly asked to bound is the emulator core: a core that has
+ * wedged never answers at all, and the one operation allowed at a time
+ * would never end. The answer says which of the two happened.
+ *
+ * It only stops waiting. Nothing is cancelled, so this is for promises
+ * whose result can be dropped -- a request is bounded with a signal
+ * instead, which actually ends it.
  *
  * @param {Promise} promise what to wait for
  * @param {number} ms how long to give it, in milliseconds

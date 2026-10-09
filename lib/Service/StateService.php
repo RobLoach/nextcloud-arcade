@@ -30,7 +30,7 @@ use OCP\Files\SimpleFS\ISimpleFolder;
 class StateService {
 	/** The slots a game can be saved into. */
 	public const SLOTS = 3;
-	/** The slot written when a game is closed, kept apart from the numbered ones. */
+	/** The slot the player writes by itself, kept apart from the numbered ones. */
 	public const AUTO_SLOT = 0;
 	/**
 	 * Earlier versions offered more slots. They are still listed, so what

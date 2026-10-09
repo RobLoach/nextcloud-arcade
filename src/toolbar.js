@@ -10,6 +10,12 @@ import { davUrl, fileIdOf } from './player.js'
 import { shortNameForPath } from './systems.js'
 import { UNTIL_DISMISSED } from './toast.js'
 import { attachTouchControls, isTouchDevice, isTouchPrimary } from './touch.js'
+import { waitAtMost } from './wait.js'
+
+// How long the core is given to answer, matching the save states panel:
+// handing over a picture is the work of a moment, and a core that never
+// does must not take the button with it.
+const CORE_ANSWER_WAIT = 10 * 1000
 
 // Everything the player puts on top of the game. Keys pressed inside it
 // belong to whatever has the focus there, not to the emulator.
@@ -231,19 +237,6 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 		}
 	}
 
-	// Leaving the game no longer writes a save state of its own. It used
-	// to, and it kept getting in its own way: the one slot it wrote was
-	// also the one the clock writes, so the two raced for the single
-	// state operation the core allows, and whichever lost came back as
-	// "could not save the game" -- a failure that had not happened, and
-	// that never reached the server to be looked up afterwards. A core
-	// that never finished answering saveState() held the same door shut
-	// for good. None of that was the player's doing, and all of it stood
-	// between them and the way out.
-	// So the way out is just the way out. What keeps a game is the Save
-	// states panel, the clock in the settings, and the game's own battery
-	// save, which the session still flushes on its way down.
-
 	// Virtual gamepad for touch play. It is offered wherever a finger
 	// could work it, but only put over the picture where a finger is how
 	// the device is pointed at in the first place.
@@ -321,7 +314,16 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 		}
 		shooting = true
 		try {
-			const blob = await instance.screenshot()
+			// Bounded, because the flag above is only ever cleared by this
+			// finishing: a core that never answers would leave the button
+			// dead for the rest of the session with nothing to say why,
+			// which is the trap the save states panel was just dug out of.
+			const blob = await waitAtMost(instance.screenshot(), CORE_ANSWER_WAIT, undefined)
+			if (blob === undefined) {
+				console.error('The core did not answer screenshot() within', CORE_ANSWER_WAIT, 'ms')
+				flash(t('arcade', 'The game did not hand over a picture'), 'error')
+				return
+			}
 			const stem = (romName || 'nostalgist').replace(/\.[^.]+$/, '')
 			const folder = settings.screenshots_folder
 			if (folder && getCurrentUser() !== null) {

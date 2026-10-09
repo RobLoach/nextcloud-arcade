@@ -220,7 +220,7 @@ class StateController extends ArcadeController {
 			// Saves live in the files of the user, so there has to be a
 			// folder to put them in.
 			&& $this->settingsService->getUserSettings($this->userId)['saves_folder'] !== ''
-			// Slot 0 is the one written when a game is closed.
+			// Slot 0 is the one the player writes by itself.
 			&& $slot >= StateService::AUTO_SLOT
 			&& $slot <= StateService::HIGHEST_SLOT;
 	}
