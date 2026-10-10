@@ -153,7 +153,10 @@ export function systemFromBytes(bytes) {
 	} else if ((bytes[0] === 0xAA && bytes[1] === 0x55) || (bytes[0] === 0x55 && bytes[1] === 0xAA)) {
 		id = 'coleco'
 	} else if (at(0x100, 'SEGA')) {
-		id = ascii(bytes, 0x100, 16).includes('32X') ? 'sega32x' : 'genesis'
+		// A 32X cartridge is a Sega cartridge too, and nothing here runs
+		// one, so it is left unclaimed rather than taken for a Mega Drive
+		// game that would start and go nowhere.
+		id = ascii(bytes, 0x100, 16).includes('32X') ? null : 'genesis'
 	} else if (bytes[0x104] === 0xCE && bytes[0x105] === 0xED && bytes[0x106] === 0x66 && bytes[0x107] === 0x66) {
 		id = [0x80, 0xC0].includes(bytes[0x143]) ? 'gbc' : 'gb'
 	} else if (bytes[0x04] === 0x24 && bytes[0x05] === 0xFF && bytes[0x06] === 0xAE && bytes[0x07] === 0x51) {

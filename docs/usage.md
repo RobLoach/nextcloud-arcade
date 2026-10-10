@@ -26,7 +26,7 @@ runs — see [Troubleshooting](settings.md#troubleshooting).
 
 In the background, the app also reads what a cartridge says about itself.
 Game Boy, Game Boy Color, Game Boy Advance, Super Nintendo, Mega Drive,
-32X, Atari Lynx, Neo Geo Pocket and Virtual Boy headers carry the name the
+Atari Lynx, Neo Geo Pocket and Virtual Boy headers carry the name the
 console shows; Super Nintendo and Mega Drive carry the region the game was
 sold in as well. That name is what box art is matched on when the file name
 finds nothing, so a ROM called `rom1.gb` still gets the cover of Super

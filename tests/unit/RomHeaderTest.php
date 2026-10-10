@@ -48,7 +48,7 @@ class RomHeaderTest extends TestCase {
 		return [
 			'a Mega Drive cartridge' => [[0x100 => 'SEGA MEGA DRIVE '], 'genesis'],
 			'a Genesis cartridge' => [[0x100 => 'SEGA GENESIS    '], 'genesis'],
-			'a 32X cartridge, which needs the other core' => [[0x100 => 'SEGA 32X        '], 'sega32x'],
+			'a 32X cartridge, which nothing here runs' => [[0x100 => 'SEGA 32X        '], null],
 			'an iNES file' => [[0 => "NES\x1a"], 'nes'],
 			'a Lynx file' => [[0 => 'LYNX'], 'lynx'],
 			'a first-party Neo Geo Pocket cartridge' => [[0 => 'COPYRIGHT BY SNK CORPORATION'], 'ngp'],

@@ -24,6 +24,8 @@
 !/img/cores/gambatte_libretro.wasm
 !/img/cores/gearcoleco_libretro.js
 !/img/cores/gearcoleco_libretro.wasm
+!/img/cores/gearsystem_libretro.js
+!/img/cores/gearsystem_libretro.wasm
 !/img/cores/genesis_plus_gx_libretro.js
 !/img/cores/genesis_plus_gx_libretro.wasm
 !/img/cores/handy_libretro.js
@@ -40,8 +42,6 @@
 !/img/cores/mgba_libretro.wasm
 !/img/cores/pcsx_rearmed_libretro.js
 !/img/cores/pcsx_rearmed_libretro.wasm
-!/img/cores/picodrive_libretro.js
-!/img/cores/picodrive_libretro.wasm
 !/img/cores/snes9x_libretro.js
 !/img/cores/snes9x_libretro.wasm
 !/img/cores/vecx_libretro.js

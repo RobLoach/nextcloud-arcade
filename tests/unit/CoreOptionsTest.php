@@ -26,7 +26,6 @@ class CoreOptionsTest extends TestCase {
 		'gambatte' => 'gambatte_',
 		'mgba' => 'mgba_',
 		'genesis_plus_gx' => 'genesis_plus_gx_',
-		'picodrive' => 'picodrive_',
 		'mednafen_pce_fast' => 'pce_',
 		'handy' => 'handy_',
 		'mednafen_ngp' => 'ngp_',

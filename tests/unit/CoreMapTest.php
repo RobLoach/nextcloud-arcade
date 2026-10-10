@@ -16,7 +16,6 @@ class CoreMapTest extends TestCase {
 			['snes', 'snes'],
 			['Super Nintendo', 'snes'],
 			['Game Boy Color', 'gbc'],
-			['32X', 'sega32x'],
 			['PSX', 'psx'],
 			['PS1', 'psx'],
 			['PlayStation', 'psx'],
@@ -64,6 +63,24 @@ class CoreMapTest extends TestCase {
 	#[DataProvider('folderNames')]
 	public function testSystemForFolderName(string $folder, ?string $expected): void {
 		$this->assertSame($expected, CoreMap::systemForFolderName($folder));
+	}
+
+	public function testMasterSystemAndGameGearShareACoreThatCanBeRedistributed(): void {
+		// They used to run on the Mega Drive's core, which is free for
+		// everything but selling. This one is GPL-3.0, like the sibling
+		// core the ColecoVision already uses.
+		$this->assertSame('gearsystem', CoreMap::SYSTEMS['sms']['core']);
+		$this->assertSame('gearsystem', CoreMap::SYSTEMS['gamegear']['core']);
+	}
+
+	public function testThe32XIsNotOfferedAtAll(): void {
+		// Its core was the other one that could not be redistributed, and
+		// nothing left here runs a 32X game.
+		$this->assertArrayNotHasKey('sega32x', CoreMap::SYSTEMS);
+		$this->assertNull(CoreMap::systemForPath('/Games/Some Game.32x'));
+		foreach (CoreMap::SYSTEMS as $id => $system) {
+			$this->assertNotSame('picodrive', $system['core'], "$id still asks for picodrive");
+		}
 	}
 
 	public function testEverySystemIsComplete(): void {

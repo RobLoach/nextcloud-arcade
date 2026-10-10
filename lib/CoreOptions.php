@@ -276,38 +276,6 @@ class CoreOptions {
 				'values' => ['disabled' => 'No', 'enabled' => 'Yes'],
 			],
 		],
-		'picodrive' => [
-			'picodrive_region' => [
-				'label' => 'Region',
-				'values' => [
-					'Auto' => 'Auto',
-					'US' => 'US',
-					'Europe' => 'Europe',
-					'Japan NTSC' => 'Japan NTSC',
-					'Japan PAL' => 'Japan PAL',
-				],
-			],
-			'picodrive_sprlim' => [
-				'label' => 'Remove sprite limit',
-				'values' => ['disabled' => 'No', 'enabled' => 'Yes'],
-			],
-			'picodrive_input1' => [
-				'label' => 'Controller, player 1',
-				'values' => ['3 button pad' => '3 button pad', '6 button pad' => '6 button pad'],
-			],
-			'picodrive_input2' => [
-				'label' => 'Controller, player 2',
-				'values' => ['3 button pad' => '3 button pad', '6 button pad' => '6 button pad'],
-			],
-			'picodrive_renderer' => [
-				'label' => 'Renderer',
-				'values' => ['accurate' => 'Accurate', 'good' => 'Good', 'fast' => 'Fast'],
-			],
-			'picodrive_audio_filter' => [
-				'label' => 'Audio filter',
-				'values' => ['off' => 'No', 'low-pass' => 'Low pass'],
-			],
-		],
 		'mednafen_pce_fast' => [
 			'pce_nospritelimit' => [
 				'label' => 'Remove sprite limit',

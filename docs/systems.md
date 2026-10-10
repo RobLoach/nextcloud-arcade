@@ -14,9 +14,8 @@ app, so there is nothing to choose or install.
 | Game Boy Color | gambatte | `gbc` | `gbc_bios.bin` |
 | Game Boy Advance | mgba | `gba` | `gba_bios.bin` |
 | Sega Genesis / Mega Drive | genesis_plus_gx | `md`, `gen`, `smd` | `bios_MD.bin` |
-| Sega Master System | genesis_plus_gx | `sms` | `bios.sms` |
-| Sega Game Gear | genesis_plus_gx | `gg` | `bios.gg` |
-| Sega 32X | picodrive | `32x` | `32X_G_BIOS.BIN`, `32X_M_BIOS.BIN`, `32X_S_BIOS.BIN` |
+| Sega Master System | gearsystem | `sms` | `bios.sms` |
+| Sega Game Gear | gearsystem | `gg` | `bios.gg` |
 | PC Engine / TurboGrafx-16 | mednafen_pce_fast | `pce` | `syscard3.pce` |
 | Atari Lynx | handy | `lnx` | `lynxboot.img` |
 | Neo Geo Pocket | mednafen_ngp | `ngp`, `ngc` | — |
@@ -51,7 +50,7 @@ the maker in front and with a word like "ROMs" hung off the end, so
 recognized as Super Nintendo.
 
 **`.bin` and `.rom`** say nothing about which machine they are for: a
-`.bin` is a Mega Drive game, a 32X game, a ColecoVision game, a track of
+`.bin` is a Mega Drive game, a ColecoVision game, a track of
 a disc or firmware, so no system can claim the extension the way `.sfc`
 is claimed. Those files are placed by the first of these that answers:
 the folder they are in, and then the file itself, whose first bytes on a

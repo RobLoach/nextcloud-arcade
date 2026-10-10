@@ -27,8 +27,7 @@ exist without any of this.
   | [snes9x](https://github.com/libretro/snes9x) | Super Nintendo | Snes9x, non-commercial |
   | [gambatte](https://github.com/libretro/gambatte-libretro) | Game Boy, Game Boy Color | GPL-2.0 |
   | [mgba](https://github.com/libretro/mgba) | Game Boy Advance | MPL-2.0 |
-  | [genesis_plus_gx](https://github.com/libretro/Genesis-Plus-GX) | Mega Drive, Master System, Game Gear | Non-commercial |
-  | [picodrive](https://github.com/libretro/picodrive) | Sega 32X | MAME-like, non-commercial |
+  | [genesis_plus_gx](https://github.com/libretro/Genesis-Plus-GX) | Mega Drive | Non-commercial |
   | [mednafen_pce_fast](https://github.com/libretro/beetle-pce-fast-libretro) | PC Engine / TurboGrafx-16 | GPL-2.0 |
   | [handy](https://github.com/libretro/libretro-handy) | Atari Lynx | Zlib |
   | [mednafen_ngp](https://github.com/libretro/beetle-ngp-libretro) | Neo Geo Pocket | GPL-2.0 |
@@ -36,6 +35,7 @@ exist without any of this.
   | [mednafen_vb](https://github.com/libretro/beetle-vb-libretro) | Virtual Boy | GPL-2.0 |
   | [vecx](https://github.com/libretro/libretro-vecx) | Vectrex | GPL-3.0 |
   | [gearcoleco](https://github.com/libretro/gearcoleco) | ColecoVision | GPL-3.0 |
+  | [gearsystem](https://github.com/libretro/gearsystem) | Master System, Game Gear | GPL-3.0 |
   | [pcsx_rearmed](https://github.com/libretro/pcsx_rearmed) | PlayStation | GPL-2.0 |
 
   Some of those cores are not free for commercial use. The licence of each

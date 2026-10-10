@@ -23,7 +23,7 @@ class RomHeader {
 	public const TAIL_BYTES = 0x220;
 
 	/** The systems whose files carry something worth opening them for. */
-	private const READABLE = ['gb', 'gbc', 'gba', 'snes', 'genesis', 'sega32x', 'lynx', 'ngp', 'nes', 'vb'];
+	private const READABLE = ['gb', 'gbc', 'gba', 'snes', 'genesis', 'lynx', 'ngp', 'nes', 'vb'];
 
 	/** How every Neo Geo Pocket cartridge opens, first or third party. */
 	private const SNK_LICENSES = [
@@ -66,8 +66,10 @@ class RomHeader {
 		}
 		if (substr($data, 0x100, 4) === 'SEGA') {
 			// Both are Sega cartridges; the console they name is the
-			// difference, and a 32X game will not run without the 32X.
-			return str_contains(substr($data, 0x100, 16), '32X') ? 'sega32x' : 'genesis';
+			// difference. The 32X is not one of them any more, and a 32X
+			// game will not run without the 32X -- so it is left unclaimed
+			// rather than offered as the Mega Drive game it is not.
+			return str_contains(substr($data, 0x100, 16), '32X') ? null : 'genesis';
 		}
 		if (substr($data, 0x104, 4) === "\xCE\xED\x66\x66") {
 			// The colour flag of the cartridge, at the end of its title.
@@ -90,7 +92,7 @@ class RomHeader {
 			'gb', 'gbc' => self::gameBoy($data),
 			'gba' => self::gameBoyAdvance($data),
 			'snes' => self::superNintendo($data),
-			'genesis', 'sega32x' => self::megaDrive($data),
+			'genesis' => self::megaDrive($data),
 			'lynx' => self::lynx($data),
 			'ngp' => self::neoGeoPocket($data),
 			default => null,

@@ -170,7 +170,7 @@ class BiosServiceTest extends TestCase {
 
 	public function testTheCanonicalSpellingIsFoundWhateverTheCase(): void {
 		$this->assertSame('gb_bios.bin', BiosService::canonicalName('GB_Bios.BIN'));
-		$this->assertSame('32X_G_BIOS.BIN', BiosService::canonicalName('32x_g_bios.bin'));
+		$this->assertSame('bios_MD.bin', BiosService::canonicalName('BIOS_md.BIN'));
 		$this->assertNull(BiosService::canonicalName('anything.bin'));
 	}
 
