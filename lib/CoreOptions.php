@@ -276,6 +276,56 @@ class CoreOptions {
 				'values' => ['disabled' => 'No', 'enabled' => 'Yes'],
 			],
 		],
+		'gearsystem' => [
+			'gearsystem_system' => [
+				'label' => 'Machine',
+				'values' => [
+					'Auto' => 'Whatever the game is for',
+					'Master System / Mark III' => 'Master System',
+					'Game Gear' => 'Game Gear',
+					'SG-1000 / Multivision' => 'SG-1000',
+				],
+			],
+			'gearsystem_region' => [
+				'label' => 'Region',
+				'values' => [
+					'Auto' => 'Auto',
+					'Master System Japan' => 'Master System, Japan',
+					'Master System Export' => 'Master System, export',
+					'Game Gear Japan' => 'Game Gear, Japan',
+					'Game Gear Export' => 'Game Gear, export',
+				],
+			],
+			'gearsystem_timing' => [
+				'label' => 'Refresh rate',
+				'values' => ['Auto' => 'Auto', 'NTSC (60 Hz)' => 'NTSC, 60 Hz', 'PAL (50 Hz)' => 'PAL, 50 Hz'],
+			],
+			// The FM chip some Japanese Master System games write richer
+			// music for. Auto turns it on for the games that ask.
+			'gearsystem_ym2413' => [
+				'label' => 'FM sound chip',
+				'values' => ['Auto' => 'When the game uses it', 'Disabled' => 'Never'],
+			],
+			'gearsystem_overscan' => [
+				'label' => 'Borders',
+				'values' => [
+					'Disabled' => 'Hide',
+					'Top+Bottom' => 'Top and bottom',
+					'Full (284 width)' => 'All, 284 wide',
+					'Full (320 width)' => 'All, 320 wide',
+				],
+			],
+			// Booting through the console's own firmware, where the player
+			// has put bios.sms or bios.gg in their System folder.
+			'gearsystem_bios_sms' => [
+				'label' => 'Boot the Master System BIOS',
+				'values' => ['Disabled' => 'No', 'Enabled' => 'Yes'],
+			],
+			'gearsystem_bios_gg' => [
+				'label' => 'Boot the Game Gear BIOS',
+				'values' => ['Disabled' => 'No', 'Enabled' => 'Yes'],
+			],
+		],
 		'mednafen_pce_fast' => [
 			'pce_nospritelimit' => [
 				'label' => 'Remove sprite limit',
