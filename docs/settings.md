@@ -22,7 +22,7 @@ Personal settings → Arcade:
 | Save every | Never | Write the Auto save state while playing, from 30 seconds to 10 minutes |
 | Run-ahead | Off | Hide input lag, up to 3 frames, at the cost of CPU |
 | Fast-forward speed | 3× | Speed of the fast-forward button, 1× to 5× |
-| Volume | 0 dB | Gain in decibels, -20 to 10 |
+| Volume | 100% | How loud the game plays, 0 to 100 |
 | Audio latency | 64 ms | Raise it if the sound crackles |
 | Controls | [see the usage guide](usage.md#the-keyboard) | The key of every button and of the player itself |
 | Games library folder | `/Games` | Scanned for the games library page |

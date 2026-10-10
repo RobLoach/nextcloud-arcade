@@ -1,7 +1,7 @@
-import { getCurrentUser, getRequestToken } from '@nextcloud/auth'
+import { getCurrentUser } from '@nextcloud/auth'
 import { translate as t } from '@nextcloud/l10n'
 import { generateUrl } from '@nextcloud/router'
-import { AUTO_SLOT } from './api.js'
+import { AUTO_SLOT, dav } from './api.js'
 import { ICONS, icon } from './icons.js'
 import { createGalleryPanel } from './panels/gallery.js'
 import { offerResume } from './panels/resume.js'
@@ -770,23 +770,15 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 async function saveScreenshot(folder, stem, blob) {
 	const timestamp = new Date().toISOString().replace(/[:T]/g, '-').slice(0, 19)
 	const url = davUrl(`${folder}/${stem} ${timestamp}.png`)
-	const put = () => fetch(url, {
+	const put = () => dav(url, {
 		method: 'PUT',
-		headers: {
-			'Content-Type': 'image/png',
-			requesttoken: getRequestToken() ?? '',
-		},
+		headers: { 'Content-Type': 'image/png' },
 		body: blob,
-		credentials: 'same-origin',
 	})
 	let response = await put()
 	if (response.status === 404 || response.status === 409) {
 		// The folder does not exist yet; create it and retry.
-		await fetch(davUrl(folder), {
-			method: 'MKCOL',
-			headers: { requesttoken: getRequestToken() ?? '' },
-			credentials: 'same-origin',
-		})
+		await dav(davUrl(folder), { method: 'MKCOL' })
 		response = await put()
 	}
 	if (!response.ok) {

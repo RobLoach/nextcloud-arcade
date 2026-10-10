@@ -119,10 +119,13 @@ on.
 
 ### The control bar
 
-A control bar overlays the bottom of the player with pause/resume, a save
-state menu, mute, fast-forward, screenshot, and fullscreen. On touch
-devices it also toggles a virtual gamepad: an eight-way D-pad, so diagonals
-work with one thumb, with A/B/X/Y, L/R, Start and Select.
+A control bar sits along the top of the player with pause/resume, a save
+state menu, mute, fast-forward, a screenshots panel, and fullscreen. On a
+wide enough screen it shares that line with the buttons in the corner;
+narrower, it sits just below them. The whole of the bottom is left to the
+game, and to the virtual gamepad the bar also toggles on touch devices: an
+eight-way D-pad, so diagonals work with one thumb, with A/B/X/Y, L/R,
+Start and Select.
 
 A plugged-in controller works in the player through RetroArch, which reads
 gamepads itself; its buttons can be remapped in the RetroArch menu.
@@ -180,14 +183,16 @@ them for.
 A top bar holds a close button and a three-dots actions menu:
 
 - **Full screen**
+- **Screenshot** — saves a picture of the game as it stands
 - **RetroArch menu** — core options, control remapping and more
 - **Restart**
 - **Open sidebar** — or **Details**, where no sidebar can be had
 - **Settings** — the personal Arcade settings, in a new tab
 - **Download**
 
-Inside the Files viewer, which brings chrome of its own, the RetroArch
-menu and Restart stay as buttons of the control bar instead.
+Inside the Files viewer, which brings chrome of its own, there is no menu
+of ours: Screenshot, the RetroArch menu and Restart stay as buttons of the
+control bar instead.
 
 All of the chrome fades away over an idle game and comes back at a touch
 of the mouse, a key or the screen; it stays while the game is paused or a

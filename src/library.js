@@ -1,8 +1,7 @@
-import { getRequestToken } from '@nextcloud/auth'
 import { loadState } from '@nextcloud/initial-state'
 import { translate as t, translatePlural as n } from '@nextcloud/l10n'
 import { generateUrl } from '@nextcloud/router'
-import { api } from './api.js'
+import { api, dav } from './api.js'
 import { formatDuration, formatPlayTime, formatSize } from './format.js'
 import { ICONS, icon } from './icons.js'
 import { attachLibraryGamepad } from './librarypad.js'
@@ -789,11 +788,7 @@ async function loadSuggestions(status, reload) {
  * @param {string} path the folder to make, relative to the user's files
  */
 async function createFolder(path) {
-	const response = await fetch(davUrl(path), {
-		method: 'MKCOL',
-		headers: { requesttoken: getRequestToken() ?? '' },
-		credentials: 'same-origin',
-	})
+	const response = await dav(davUrl(path), { method: 'MKCOL' })
 	if (!response.ok && response.status !== 405) {
 		throw new Error(`${response.status} ${response.statusText}`)
 	}

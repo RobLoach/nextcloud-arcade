@@ -78,6 +78,39 @@ export function shortNameForPath(path) {
 /** Extensions that may hold a ROM without saying whose. */
 const AMBIGUOUS = ['bin', 'rom', 'zip']
 
+/** How every Neo Geo Pocket cartridge opens, first or third party. */
+const SNK_LICENSES = [
+	'COPYRIGHT BY SNK CORPORATION',
+	'LICENSED BY SNK CORPORATION',
+]
+
+/**
+ * A run of bytes read as the plain ASCII a cartridge mark is written in.
+ *
+ * @param {Uint8Array} bytes the file
+ * @param {number} offset where to start
+ * @param {number} length how many bytes
+ * @return {string} the text
+ */
+function ascii(bytes, offset, length) {
+	return String.fromCharCode(...bytes.slice(offset, offset + length))
+}
+
+/**
+ * Trim the way the server's trim() does, padding bytes included.
+ *
+ * The shorter of the two licence lines is 27 characters of a 28 character
+ * read, so what follows it decides whether the mark is recognised at all.
+ * PHP strips NUL along with the whitespace; JavaScript's own trim does
+ * not, and the line would go unmatched here while matching there.
+ *
+ * @param {string} value the text to trim
+ * @return {string} the text without padding at either end
+ */
+function trimmed(value) {
+	return value.replace(/^[\s\0]+|[\s\0]+$/g, '')
+}
+
 /**
  * @param {string} basename the file name
  * @return {boolean} whether the name says nothing about the system
@@ -112,17 +145,51 @@ export function systemFromBytes(bytes) {
 		id = 'nes'
 	} else if (at(0, 'LYNX')) {
 		id = 'lynx'
+	} else if (SNK_LICENSES.includes(trimmed(ascii(bytes, 0, 28)))) {
+		// Ahead of the ColecoVision, as on the server: that one is a mark
+		// two bytes long, and the shorter the mark the more readily
+		// something else happens to carry it.
+		id = 'ngp'
 	} else if ((bytes[0] === 0xAA && bytes[1] === 0x55) || (bytes[0] === 0x55 && bytes[1] === 0xAA)) {
 		id = 'coleco'
 	} else if (at(0x100, 'SEGA')) {
-		const console_ = String.fromCharCode(...bytes.slice(0x100, 0x110))
-		id = console_.includes('32X') ? 'sega32x' : 'genesis'
+		id = ascii(bytes, 0x100, 16).includes('32X') ? 'sega32x' : 'genesis'
 	} else if (bytes[0x104] === 0xCE && bytes[0x105] === 0xED && bytes[0x106] === 0x66 && bytes[0x107] === 0x66) {
 		id = [0x80, 0xC0].includes(bytes[0x143]) ? 'gbc' : 'gb'
 	} else if (bytes[0x04] === 0x24 && bytes[0x05] === 0xFF && bytes[0x06] === 0xAE && bytes[0x07] === 0x51) {
 		id = 'gba'
+	} else if (isSuperNintendo(bytes)) {
+		// Last, being the only one of these that is a sum rather than a
+		// mark, and so the only one that could come out right by chance.
+		id = 'snes'
 	}
 	return id === null ? null : systemById(id)
+}
+
+/**
+ * Whether the bytes carry a Super Nintendo header.
+ *
+ * The header is at one of two places, depending on how the cartridge maps
+ * its memory, and either may be pushed along by the 512 bytes a copier put
+ * in front. The checksum and its complement tell which one is the real
+ * header: the two are written to cancel each other out, so a header that
+ * is really there says so arithmetically.
+ *
+ * @param {Uint8Array} bytes the front of the file
+ * @return {boolean} whether one of the four places holds a header
+ */
+function isSuperNintendo(bytes) {
+	for (const offset of [0x7FC0, 0xFFC0, 0x7FC0 + 0x200, 0xFFC0 + 0x200]) {
+		if (bytes.length < offset + 32) {
+			continue
+		}
+		const complement = bytes[offset + 0x1C] | (bytes[offset + 0x1D] << 8)
+		const checksum = bytes[offset + 0x1E] | (bytes[offset + 0x1F] << 8)
+		if (((complement ^ checksum) & 0xFFFF) === 0xFFFF) {
+			return true
+		}
+	}
+	return false
 }
 
 /**

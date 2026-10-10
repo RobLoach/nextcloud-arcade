@@ -54,6 +54,22 @@ export function wasGivenUpOn(error) {
 }
 
 /**
+ * The caller's own signal, if any, under a deadline either way.
+ *
+ * Every request gets one, because a stalled socket is not an error that
+ * arrives late -- it is an answer that never comes, and whatever the
+ * caller was holding while it waited is held for as long: a panel's
+ * one-operation-at-a-time gate, or a battery save sync switched off for
+ * the length of a delete.
+ *
+ * @param {?AbortSignal} [signal] what the caller wants to abort on
+ * @return {AbortSignal} that, and the deadline
+ */
+function bounded(signal) {
+	return signal == null ? deadline() : AbortSignal.any([signal, deadline()])
+}
+
+/**
  * @param {string} url endpoint to call
  * @param {object} [options] extra fetch options
  * @return {Promise<Response>} the response, always ok
@@ -65,17 +81,42 @@ export async function api(url, options = {}) {
 			requesttoken: getRequestToken() ?? '',
 			...(options.headers ?? {}),
 		},
-		// Every request gets a deadline, because a stalled socket is not
-		// an error that arrives late -- it is an answer that never comes,
-		// and whatever the caller was holding while it waited is held for
-		// as long: a panel's one-operation-at-a-time gate, or a battery
-		// save sync switched off for the length of a delete.
-		signal: options.signal == null
-			? deadline()
-			: AbortSignal.any([options.signal, deadline()]),
+		signal: bounded(options.signal),
 	})
 	if (!response.ok) {
-		throw new Error(`${response.status} ${response.statusText}`)
+		// The status rides along, because a refusal is not always a fault:
+		// asking for a battery save a game has never written answers 404,
+		// and the caller wants to tell that apart from a server that broke.
+		const refused = new Error(`${response.status} ${response.statusText}`)
+		refused.status = response.status
+		throw refused
 	}
 	return response
+}
+
+/**
+ * A request to the user's own files over WebDAV, rather than to one of
+ * the app's own routes.
+ *
+ * Hands the response back as it came rather than throwing on a refusal
+ * the way api() does, because every caller reads the status itself: a
+ * MKCOL answering "already there", a PUT answering "no such folder yet".
+ * Those are answers, not failures. What it does share with api() is the
+ * session token and the deadline, which each of these used to carry its
+ * own copy of -- or go without.
+ *
+ * @param {string} url the WebDAV URL, from davUrl()
+ * @param {object} [options] extra fetch options
+ * @return {Promise<Response>} the response, whatever it says
+ */
+export async function dav(url, options = {}) {
+	return await fetch(url, {
+		...options,
+		headers: {
+			requesttoken: getRequestToken() ?? '',
+			...(options.headers ?? {}),
+		},
+		credentials: 'same-origin',
+		signal: bounded(options.signal),
+	})
 }

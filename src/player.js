@@ -1,6 +1,6 @@
 import { unzipSync } from 'fflate'
 import { Nostalgist } from 'nostalgist'
-import { getCurrentUser, getRequestToken } from '@nextcloud/auth'
+import { getCurrentUser } from '@nextcloud/auth'
 import { defaultRemoteURL, defaultRootPath } from '@nextcloud/files/dav'
 import { translate as t } from '@nextcloud/l10n'
 import { generateFilePath, generateUrl } from '@nextcloud/router'
@@ -167,6 +167,11 @@ export async function launchRom({ element, romUrl, romName, settings = {}, syste
 	// Fetch the ROM here so the request carries the Nextcloud session.
 	// Every fetch of the launch takes the signal: a game closed while it
 	// is still loading should stop downloading, not finish in the dark.
+	//
+	// Not through api(): this is the one request with no business having a
+	// deadline. A disc image is hundreds of megabytes, and a slow line is
+	// not a fault -- giving up on it two minutes in would end the game
+	// that was loading. Closing the game is what stops it.
 	const response = await fetch(romUrl, { credentials: 'same-origin', signal })
 	if (!response.ok) {
 		throw new Error(`Could not fetch the ROM: ${response.status} ${response.statusText}`)
@@ -308,6 +313,10 @@ async function fetchBios(systemId, signal = null) {
 	const files = await Promise.all(names.map(async (name) => {
 		try {
 			const url = generateUrl('/apps/arcade/arcade/bios?name={name}', { name })
+			// Not through api(): a BIOS that is not there answers 404, and
+			// that is the ordinary answer for most games rather than a
+			// failure to report. api() would raise it, and the catch below
+			// would write a console error on every launch without one.
 			const response = await fetch(url, { credentials: 'same-origin', signal })
 			if (response.ok) {
 				return new File([await response.blob()], name)
@@ -328,6 +337,9 @@ async function fetchBios(systemId, signal = null) {
  */
 function prefetchCore(core, signal = null) {
 	for (const file of [`${core}_libretro.js`, `${core}_libretro.wasm`]) {
+		// Not through api(): a static file under the app's own img/, not a
+		// route, and nothing waits on it -- only a warm cache is at stake,
+		// so there is no caller for a deadline to release.
 		fetch(coreUrl(file), { credentials: 'same-origin', priority: 'high', signal })
 			.catch(() => {
 				// Only a warm cache was at stake.
@@ -382,12 +394,13 @@ export function recordRecent(romPath) {
  * @param {number} seconds how long it was played, 0 when starting
  */
 function report(romPath, seconds) {
-	fetch(generateUrl('/apps/arcade/arcade/recent?file={file}&seconds={seconds}', {
+	api(generateUrl('/apps/arcade/arcade/recent?file={file}&seconds={seconds}', {
 		file: romPath,
 		seconds,
 	}), {
 		method: 'POST',
-		headers: { requesttoken: getRequestToken() ?? '' },
+		// It carries no body, so it is nowhere near the size a request is
+		// allowed to outlive its page at.
 		keepalive: true,
 	}).catch((error) => {
 		console.error('Could not record the game as played', error)
@@ -412,7 +425,11 @@ async function fetchSram(romPath, signal = null) {
 		const blob = await response.blob()
 		return blob.size > 0 ? blob : null
 	} catch (error) {
-		console.error('Could not fetch the SRAM', error)
+		// A game that has never written one answers 404, which is an
+		// answer rather than a fault: it starts with a fresh cartridge.
+		if (error?.status !== 404) {
+			console.error('Could not fetch the SRAM', error)
+		}
 		return null
 	}
 }

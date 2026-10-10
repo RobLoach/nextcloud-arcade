@@ -27,8 +27,8 @@
    that way the chrome stays put, and yields the corner as soon as the
    focus moves on. */
 .arcade-player-container.arcade-message-up .arcade-topbar:not(:focus-within) { display: none; }
-/* The two chrome clusters: the control bar along the bottom and the
-   leave-the-game cluster in the top corner share one pill dress. */
+/* The two chrome clusters: the control bar and the leave-the-game cluster
+   beside or below it share one pill dress. */
 .arcade-toolbar,
 .arcade-topbar {
 	position: absolute;
@@ -109,7 +109,7 @@
 .arcade-topbar > button.active { background-color: rgba(255, 255, 255, 0.35); }
 .arcade-toolbar > button svg,
 .arcade-topbar > button svg { width: 20px; height: 20px; fill: #fff; }
-/* The two panels above the toolbar -- save states and screenshots --
+/* The two panels under the toolbar -- save states and screenshots --
    share one dress; the gallery only adds a width cap for its grid. */
 .arcade-states,
 .arcade-gallery {

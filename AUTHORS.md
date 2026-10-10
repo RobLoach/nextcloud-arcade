@@ -36,6 +36,7 @@ exist without any of this.
   | [mednafen_vb](https://github.com/libretro/beetle-vb-libretro) | Virtual Boy | GPL-2.0 |
   | [vecx](https://github.com/libretro/libretro-vecx) | Vectrex | GPL-3.0 |
   | [gearcoleco](https://github.com/libretro/gearcoleco) | ColecoVision | GPL-3.0 |
+  | [pcsx_rearmed](https://github.com/libretro/pcsx_rearmed) | PlayStation | GPL-2.0 |
 
   Some of those cores are not free for commercial use. The licence of each
   is in `img/cores/license`, as it comes from the build.
