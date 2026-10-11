@@ -2,6 +2,7 @@ import { loadState } from '@nextcloud/initial-state'
 import { davUrl, launchRom, recordRecent, startSramSync } from './player.js'
 import { systemForFolderPath } from './systems.js'
 import { createFlash } from './toast.js'
+import { oneAtATime } from './corequeue.js'
 import { attachToolbar } from './toolbar.js'
 
 const settings = loadState('arcade', 'settings', {})
@@ -40,7 +41,11 @@ export async function startSession({ canvas, container, filename, basename, sour
 		onMessage: flash,
 		signal,
 	})
-	const stopSramSync = startSramSync(instance, filename, (settings.saves_folder ?? '') !== '')
+	// Everything that asks the core for a file goes through the one queue
+	// from here on: the panel, the screenshot button and the battery save
+	// each had a gate of their own and none could see the others.
+	const core = oneAtATime(instance)
+	const stopSramSync = startSramSync(core, filename, (settings.saves_folder ?? '') !== '')
 	const stopPlayTime = recordRecent(filename)
 
 	// The one way out, wherever it is asked for -- the close button, the
@@ -69,7 +74,7 @@ export async function startSession({ canvas, container, filename, basename, sour
 
 	detachToolbar = attachToolbar({
 		container,
-		instance,
+		instance: core,
 		romPath: filename,
 		romName: basename,
 		settings,
