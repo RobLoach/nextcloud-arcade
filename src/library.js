@@ -573,7 +573,7 @@ function renderFilters(systems, tags, reload) {
 	//
 	// One control for both halves of the answer. Asking for the field and
 	// the direction separately would mean two selects to say "most
-	// played", and "played, ascending" is not a thing anybody wants.
+	// played", where the pairs worth having are few enough to name.
 	if (state.view !== 'table') {
 		const orders = [
 			['name/asc', t('arcade', 'Name, A to Z')],
@@ -582,16 +582,27 @@ function renderFilters(systems, tags, reload) {
 			['mtime/desc', t('arcade', 'Newest first')],
 			['mtime/asc', t('arcade', 'Oldest first')],
 			['playtime/desc', t('arcade', 'Most played')],
-			['size/desc', t('arcade', 'Largest first')],
+			// Among the games played: the sort keeps the ones never
+			// started behind them either way, so this is not a list of
+			// everything untouched.
+			['playtime/asc', t('arcade', 'Least played')],
 		]
 		const sortBy = focusable(document.createElement('select'), 'filters/sort')
 		sortBy.className = 'arcade-library-sort'
 		sortBy.setAttribute('aria-label', t('arcade', 'Sort games'))
+		// The table sorts by columns this list does not offer -- by size,
+		// say -- and the choice is remembered across views. Landing here
+		// with one of those, the select would show its first option while
+		// the games stayed in the other order, so it says so instead.
+		const current = `${state.sort}/${state.order}`
+		if (!orders.some(([value]) => value === current)) {
+			orders.push([current, t('arcade', 'Sorted by the table')])
+		}
 		for (const [value, label] of orders) {
 			const option = document.createElement('option')
 			option.value = value
 			option.textContent = label
-			option.selected = value === `${state.sort}/${state.order}`
+			option.selected = value === current
 			sortBy.appendChild(option)
 		}
 		sortBy.addEventListener('change', () => {
@@ -1053,7 +1064,7 @@ export async function renderLibrary(container, onError) {
 		}
 		if (plainPage && (data.continuePlaying ?? []).length > 0) {
 			container.appendChild(renderRow(
-				t('arcade', 'Continue Playing'),
+				t('arcade', 'Continue playing'),
 				'arcade-library-continue',
 				data.continuePlaying,
 				load,
@@ -1065,7 +1076,7 @@ export async function renderLibrary(container, onError) {
 		// is anything to play.
 		if (plainPage && (data.recentlyAdded ?? []).length > 0) {
 			container.appendChild(renderRow(
-				t('arcade', 'Recently Added'),
+				t('arcade', 'Recently added'),
 				'arcade-library-added',
 				data.recentlyAdded,
 				load,
