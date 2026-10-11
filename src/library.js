@@ -1,11 +1,11 @@
 import { loadState } from '@nextcloud/initial-state'
 import { translate as t, translatePlural as n } from '@nextcloud/l10n'
 import { generateUrl } from '@nextcloud/router'
-import { api, dav } from './api.js'
+import { api } from './api.js'
 import { formatDuration, formatPlayTime, formatSize } from './format.js'
 import { ICONS, icon } from './icons.js'
 import { attachLibraryGamepad } from './librarypad.js'
-import { davUrl } from './player.js'
+import { davUrl, makeFolder } from './player.js'
 import { playUrl, previewUrl } from './play.js'
 import { systemLabel } from './systems.js'
 import { showError, showInfo } from './toast.js'
@@ -791,21 +791,6 @@ async function loadSuggestions(status, reload) {
 }
 
 /**
- * Make a folder in the user's own files.
- *
- * MKCOL answers 405 when the folder is already there, which is the
- * outcome being asked for either way, so only a real refusal is raised.
- *
- * @param {string} path the folder to make, relative to the user's files
- */
-async function createFolder(path) {
-	const response = await dav(davUrl(path), { method: 'MKCOL' })
-	if (!response.ok && response.status !== 405) {
-		throw new Error(`${response.status} ${response.statusText}`)
-	}
-}
-
-/**
  * The first-run panel, shown when the library folder is missing or holds
  * no games: what the app looks for, the folders that already hold ROMs,
  * and the way to pick one by hand.
@@ -846,7 +831,7 @@ function renderOnboarding(data, reload, status) {
 		make.addEventListener('click', async () => {
 			make.disabled = true
 			try {
-				await createFolder(data.folder)
+				await makeFolder(data.folder)
 				showInfo(t('arcade', 'Created {folder}. Put some games in it and rescan.', { folder: data.folder }))
 				reload(true)
 			} catch (error) {

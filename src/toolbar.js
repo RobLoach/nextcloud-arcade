@@ -6,7 +6,7 @@ import { ICONS, icon } from './icons.js'
 import { createGalleryPanel } from './panels/gallery.js'
 import { offerResume } from './panels/resume.js'
 import { createStatesPanel } from './panels/states.js'
-import { davUrl, fileIdOf } from './player.js'
+import { davUrl, fileIdOf, makeFolder } from './player.js'
 import { shortNameForPath } from './systems.js'
 import { UNTIL_DISMISSED } from './toast.js'
 import { attachTouchControls, isTouchDevice, isTouchPrimary } from './touch.js'
@@ -777,8 +777,9 @@ async function saveScreenshot(folder, stem, blob) {
 	})
 	let response = await put()
 	if (response.status === 404 || response.status === 409) {
-		// The folder does not exist yet; create it and retry.
-		await dav(davUrl(folder), { method: 'MKCOL' })
+		// Nothing of the folder exists yet; make the whole way down to it
+		// and retry.
+		await makeFolder(folder)
 		response = await put()
 	}
 	if (!response.ok) {

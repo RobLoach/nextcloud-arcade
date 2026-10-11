@@ -4,7 +4,7 @@ import { getCurrentUser } from '@nextcloud/auth'
 import { defaultRemoteURL, defaultRootPath } from '@nextcloud/files/dav'
 import { translate as t } from '@nextcloud/l10n'
 import { generateFilePath, generateUrl } from '@nextcloud/router'
-import { api, stateUrl } from './api.js'
+import { api, dav, stateUrl } from './api.js'
 import { createCoreLog } from './corelog.js'
 import { inputConfig, retroarchKey } from './keys.js'
 import { volumeInDecibels } from './volume.js'
@@ -64,6 +64,32 @@ export function davUrl(path) {
 	// endpoint and user id otherwise.
 	const encoded = path.replace(/^\/+/, '').split('/').map(encodeURIComponent).join('/')
 	return `${defaultRemoteURL}${defaultRootPath}/${encoded}`
+}
+
+/**
+ * Make a folder in the user's own files, and every folder above it that
+ * is missing too.
+ *
+ * MKCOL makes one level at a time: asked for a folder whose parent is
+ * not there either, the server answers 409 and nothing is made. That is
+ * the ordinary case the first time a game is played -- a screenshot goes
+ * to a folder named after its system, inside a screenshots folder the
+ * player has never created -- and it left the screenshot nowhere to go.
+ *
+ * 405 is the folder already being there, which is the outcome asked for
+ * either way.
+ *
+ * @param {string} path the folder to make, relative to the user's files
+ */
+export async function makeFolder(path) {
+	let walked = ''
+	for (const part of path.split('/').filter(Boolean)) {
+		walked += `/${part}`
+		const response = await dav(davUrl(walked), { method: 'MKCOL' })
+		if (!response.ok && response.status !== 405) {
+			throw new Error(`${response.status} ${response.statusText}`)
+		}
+	}
 }
 
 /**

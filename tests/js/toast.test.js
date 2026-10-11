@@ -72,29 +72,57 @@ describe('toastsIn', () => {
 		vi.restoreAllMocks()
 	})
 
-	test('hands the toaster the element itself, never a selector for it', () => {
-		// Toastify reads a string as an element id and throws when it finds
-		// none, which cost a whole session's messages. A node cannot be
-		// looked up wrongly.
+	test('names the element by an id the toaster can look up', () => {
+		// This server resolves the option with querySelector, where a node
+		// stringifies to "[object HTMLDivElement]" and throws, taking the
+		// message and its caller with it.
 		toastsIn(container).success('saved')
 
 		const [, options] = toast.success.mock.calls[0]
-		expect(options.selector).toBe(container)
-		expect(typeof options.selector).not.toBe('string')
+		expect(options.selector).toBe(`#${container.id}`)
+		expect(container.id).not.toBe('')
+	})
+
+	test('gives two players ids of their own', () => {
+		const other = { nodeType: 1, className: 'arcade-player-container' }
+		toastsIn(container).success('one')
+		toastsIn(other).success('two')
+
+		expect(container.id).not.toBe(other.id)
+	})
+
+	test('keeps an id the element already had', () => {
+		const named = { nodeType: 1, id: 'already-named' }
+		toastsIn(named).success('saved')
+
+		expect(toast.success.mock.calls[0][1].selector).toBe('#already-named')
+	})
+
+	test('offers the element itself when the selector is refused', () => {
+		// The server before this one read a string as an element id and
+		// took a node as itself, so the node is the second thing tried.
+		toast.success.mockImplementationOnce(() => {
+			throw new Error('Root element is not defined')
+		})
+
+		toastsIn(container).success('saved')
+
+		expect(toast.success).toHaveBeenCalledTimes(2)
+		expect(toast.success.mock.calls[1][1].selector).toBe(container)
 	})
 
 	test('keeps how each kind reads', () => {
 		const toasts = toastsIn(container)
 		toasts.error('broke')
 		toasts.info('working')
-		expect(toast.error.mock.calls[0][1]).toMatchObject({ ariaLive: 'assertive', selector: container })
-		expect(toast.info.mock.calls[0][1]).toMatchObject({ ariaLive: 'polite', selector: container })
+		expect(toast.error.mock.calls[0][1]).toMatchObject({ ariaLive: 'assertive', selector: `#${container.id}` })
+		expect(toast.info.mock.calls[0][1]).toMatchObject({ ariaLive: 'polite', selector: `#${container.id}` })
 	})
 
 	test('lets the caller pass the rest of the options through', () => {
 		toastsIn(container).warning('no BIOS', { timeout: -1 })
 
-		expect(toast.warning.mock.calls[0][1]).toMatchObject({ timeout: -1, selector: container })
+		expect(toast.warning.mock.calls[0][1]).toMatchObject({ timeout: -1, selector: `#${container.id}` })
 	})
 
 	test('still says it somewhere when the element will not hold a toast', () => {
@@ -103,12 +131,15 @@ describe('toastsIn', () => {
 		toast.success.mockImplementationOnce(() => {
 			throw new Error('Root element is not defined')
 		})
+		toast.success.mockImplementationOnce(() => {
+			throw new Error('nor the node')
+		})
 		vi.spyOn(console, 'error').mockImplementation(() => {})
 
 		expect(() => toastsIn(container).success('saved')).not.toThrow()
-		expect(toast.success).toHaveBeenCalledTimes(2)
-		// The second try is the plain one, with nowhere of our own asked for.
-		expect(toast.success.mock.calls[1][1]).not.toHaveProperty('selector')
+		expect(toast.success).toHaveBeenCalledTimes(3)
+		// The last try is the plain one, with nowhere of our own asked for.
+		expect(toast.success.mock.calls[2][1]).not.toHaveProperty('selector')
 	})
 
 	test('falls back to the console when even that fails', () => {

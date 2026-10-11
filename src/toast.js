@@ -50,22 +50,39 @@ function say(kind, message, ariaLive, log, options) {
 		log(message)
 		return null
 	}
-	// A message that cannot be shown must not take down whatever was
-	// trying to say it. Hanging a toast somewhere of our own is the only
-	// part of this that can fail, so a second attempt drops that and lets
-	// the toast go where toasts go by default.
-	try {
-		return toast[kind](message, { ariaLive, ...options })
-	} catch (error) {
-		console.error('Arcade could not show a toast', error)
+	// Servers disagree about what `selector` is, and the disagreement
+	// throws rather than degrades. The dialogs this one carries resolve
+	// it with querySelector, so it wants a selector and a node handed
+	// over stringifies to "[object HTMLDivElement]"; the one before read
+	// a string as an element id and took a node as itself. Neither value
+	// suits both, so each is tried in turn.
+	//
+	// Hanging a toast somewhere of our own is the only part of this that
+	// can fail, and a message that cannot be hung there is still worth
+	// showing, so the last attempt asks for nothing of the kind.
+	const { root, ...rest } = options
+	const attempts = root === undefined
+		? [rest]
+		: [rest, { ...rest, selector: root }, withoutSelector(rest)]
+	for (const attempt of attempts) {
+		try {
+			return toast[kind](message, { ariaLive, ...attempt })
+		} catch {
+			// The next shape, or none at all.
+		}
 	}
-	try {
-		return toast[kind](message, { ariaLive })
-	} catch {
-		// Not even that: the console still has it.
-		log(message)
-		return null
-	}
+	// Not even that: the console still has it.
+	log(message)
+	return null
+}
+
+/**
+ * @param {object} options the toast's options
+ * @return {object} them, less the one the toaster may refuse
+ */
+function withoutSelector(options) {
+	const { selector, ...rest } = options
+	return rest
 }
 
 /**
@@ -78,22 +95,16 @@ function say(kind, message, ariaLive, log, options) {
  * fixed-positioned, so from in here a toast still lands where the app's
  * toasts always land, with nothing to ask about the fullscreen state.
  *
- * The element itself is passed, never a selector for it. The toaster the
- * server ships reads a string as an element **id**:
+ * Both a selector for the element and the element itself are handed
+ * over, because servers disagree about which one `selector` means and
+ * say so by throwing. The dialogs of this server resolve it with
+ * querySelector; the ones before read a string as an element **id** and
+ * took a node as itself. say() tries them in turn, so the player's
+ * messages land inside it on either -- and on neither, they still show,
+ * from the body, seen everywhere except fullscreen.
  *
- *   string ? getElementById(selector)
- *          : selector instanceof HTMLElement ? selector : document.body
- *   if (!root) throw "Root element is not defined"
- *
- * so a CSS selector finds nothing and throws, taking down not just the
- * message but whatever was saying it -- which is how a whole session's
- * worth of player messages went missing. A node is taken as it is.
- *
- * The newer @nextcloud/dialogs, which a later server will carry, resolves
- * the same option with querySelector instead and would throw on a node.
- * Neither value suits both, so the throw is caught below and the message
- * said the ordinary way: on such a server the player's toasts go back to
- * the body, seen everywhere except fullscreen, and nothing breaks.
+ * An id rather than a class, so a page carrying two players does not
+ * send the messages of one to the other.
  *
  * @param {HTMLElement} element what to hang the toasts inside
  * @return {{error: Function, warning: Function, info: Function, success: Function}}
@@ -101,7 +112,7 @@ function say(kind, message, ariaLive, log, options) {
  */
 export function toastsIn(element) {
 	const inside = (show) => (message, options = {}) =>
-		show(message, { selector: element, ...options })
+		show(message, { selector: `#${escaped(named(element))}`, root: element, ...options })
 	return {
 		error: inside(showError),
 		warning: inside(showWarning),
@@ -117,6 +128,36 @@ export function toastsIn(element) {
  * against a toast's 9000, would paint over the words.
  */
 export const MESSAGE_UP = 'arcade-message-up'
+
+// Enough to tell two players apart, should a page ever carry two.
+let roots = 0
+
+/**
+ * An id as it has to be written inside a selector.
+ *
+ * The ids made here need nothing done to them, but an element that
+ * arrived with one of its own may carry anything a developer typed.
+ * CSS.escape belongs to the browser, and the tests run without one.
+ *
+ * @param {string} id the id to write
+ * @return {string} it, safe to put after a hash
+ */
+function escaped(id) {
+	return globalThis.CSS?.escape ? globalThis.CSS.escape(id) : id
+}
+
+/**
+ * The id of an element, given one where it has none to be named by.
+ *
+ * @param {HTMLElement} element the element to name
+ * @return {string} its id
+ */
+function named(element) {
+	if (!element.id) {
+		element.id = `arcade-toast-root-${++roots}`
+	}
+	return element.id
+}
 
 // What the toaster gives a message that does not ask for a length.
 const DEFAULT_TIMEOUT = 7000
