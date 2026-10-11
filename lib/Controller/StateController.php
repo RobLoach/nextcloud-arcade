@@ -31,6 +31,10 @@ class StateController extends ArcadeController {
 	private const MAX_STATE_SIZE = 64 * 1024 * 1024;
 	private const MAX_THUMBNAIL_SIZE = 4 * 1024 * 1024;
 
+	// A day. The URL carries the slot's mtime, so the only thing this
+	// holds on to is a picture that is still the right one.
+	private const THUMBNAIL_CACHE_SECONDS = 86400;
+
 	public function __construct(
 		string $appName,
 		IRequest $request,
@@ -104,7 +108,16 @@ class StateController extends ArcadeController {
 		if ($thumbnail === null) {
 			return new JSONResponse([], Http::STATUS_NOT_FOUND);
 		}
-		return new DataDownloadResponse($thumbnail, 'thumbnail.png', 'image/png');
+		$response = new DataDownloadResponse($thumbnail, 'thumbnail.png', 'image/png');
+		// The panel asks for every slot's picture each time it opens, and
+		// the answer never changes: the caller hangs the slot's mtime on
+		// the URL, so a rewritten slot is a different one to ask for.
+		// Without this the response says no-store and each open costs the
+		// round trip and the file read again, for bytes already held.
+		//
+		// Privately: these are one user's save states, not the instance's.
+		$response->cacheFor(self::THUMBNAIL_CACHE_SECONDS, false, true);
+		return $response;
 	}
 
 	// Every state save is followed by at most one thumbnail, so the same

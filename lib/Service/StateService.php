@@ -64,6 +64,16 @@ class StateService {
 	 * @var array<string, array<string, Folder|false>>
 	 */
 	private array $resolvedGameFolders = [];
+	/**
+	 * The file id of each game already looked up this request, by user
+	 * then ROM path. Writing one save asks twice over -- once for the
+	 * name it is filed under, once for the checksum beside it -- and the
+	 * answer is a folder walk each time. A false means looked for and
+	 * not there.
+	 *
+	 * @var array<string, array<string, int|false>>
+	 */
+	private array $fileIds = [];
 
 	public function __construct(
 		private IAppDataFactory $appDataFactory,
@@ -208,8 +218,8 @@ class StateService {
 		$folder = $this->getGameFolder($userId, $romPath, false);
 		if ($folder !== null) {
 			$folder->delete();
-			// Or the memo would hand the deleted folder back later on.
-			unset($this->resolvedGameFolders[$userId][$romPath]);
+			// Or the memos would hand the deleted game back later on.
+			unset($this->resolvedGameFolders[$userId][$romPath], $this->fileIds[$userId][$romPath]);
 		}
 	}
 
@@ -529,7 +539,7 @@ class StateService {
 		string $romPath,
 		string $path,
 	): ?Folder {
-		$id = Folders::fileId($this->rootFolder, $userId, $romPath);
+		$id = $this->fileIdOf($userId, $romPath);
 		$was = $id === null ? null : ($this->gamesOf($userId)[(string)$id] ?? null);
 		if ($was === null || $was === $romPath) {
 			return null;
@@ -583,15 +593,31 @@ class StateService {
 	 * instance works them out.
 	 */
 	private function checksumOf(string $userId, string $romPath): string {
-		$id = Folders::fileId($this->rootFolder, $userId, $romPath);
+		$id = $this->fileIdOf($userId, $romPath);
 		if ($id === null) {
 			return '';
 		}
 		try {
+			// Read each time, never kept: this is the figure that says a
+			// game was re-dumped, and a memo of it would be a memo of the
+			// answer it exists to notice changing.
 			return $this->metadataManager->getMetadata($id)->getString(MetadataListener::CHECKSUM);
 		} catch (\Throwable) {
 			return '';
 		}
+	}
+
+	/**
+	 * The file id of a game, looked up once per request.
+	 *
+	 * @return int|null null when there is no such file
+	 */
+	private function fileIdOf(string $userId, string $romPath): ?int {
+		if (!isset($this->fileIds[$userId][$romPath])) {
+			$this->fileIds[$userId][$romPath] = Folders::fileId($this->rootFolder, $userId, $romPath) ?? false;
+		}
+		$id = $this->fileIds[$userId][$romPath];
+		return $id === false ? null : $id;
 	}
 
 	/**
@@ -837,7 +863,7 @@ class StateService {
 	 * left behind is still found and removed.
 	 */
 	private function key(string $userId, string $romPath): string {
-		$id = Folders::fileId($this->rootFolder, $userId, $romPath);
+		$id = $this->fileIdOf($userId, $romPath);
 		return $id === null ? $this->pathKey($romPath) : (string)$id;
 	}
 
