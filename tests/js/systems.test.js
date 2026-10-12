@@ -59,6 +59,7 @@ const fixture = vi.hoisted(() => ({
 			aliases: ['gameboyadvance'],
 		},
 	},
+	ambiguous: ['bin', 'rom'],
 	folderWords: {
 		noise: ['games', 'roms'],
 		vendors: ['nintendo'],
@@ -69,7 +70,7 @@ vi.mock('@nextcloud/initial-state', () => ({
 	loadState: (app, key, fallback) => fixture[key] ?? fallback,
 }))
 
-const { biosForSystem, romMimes, systemForFolderPath, systemFromBytes } = await import('../../src/systems.js')
+const { biosForSystem, isPlayable, romMimes, systemForFolderPath, systemFromBytes } = await import('../../src/systems.js')
 
 describe('romMimes', () => {
 	test('lists every mimetype once', () => {
@@ -185,5 +186,27 @@ describe('systemFromBytes', () => {
 		bytes[0x06] = 0xAE
 		bytes[0x07] = 0x51
 		expect(systemFromBytes(bytes)?.id).toBe('gba')
+	})
+})
+
+// The browser used to keep its own copy of this list, and the copy had
+// grown a zip the server's had not.
+describe('isPlayable', () => {
+	test('takes the extensions the server calls ambiguous', () => {
+		expect(isPlayable('Some Game.bin')).toBe(true)
+		expect(isPlayable('Some Game.rom')).toBe(true)
+	})
+
+	test('takes a zip, which the player opens to find out', () => {
+		expect(isPlayable('Some Game.zip')).toBe(true)
+	})
+
+	test('takes a file whose extension names its system', () => {
+		expect(isPlayable('Mario.nes')).toBe(true)
+	})
+
+	test('leaves anything else alone', () => {
+		expect(isPlayable('notes.txt')).toBe(false)
+		expect(isPlayable('song.mp3')).toBe(false)
 	})
 })

@@ -8,7 +8,6 @@ use OCA\Arcade\CoreMap;
 use OCA\Arcade\Listener\MetadataListener;
 use OCA\Arcade\Service\RecentService;
 use OCA\Arcade\Service\StateService;
-use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\FrontpageRoute;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
@@ -27,7 +26,7 @@ use OCP\IRequest;
  * @psalm-suppress UnusedClass
  */
 #[OpenAPI(OpenAPI::SCOPE_IGNORE)]
-class GameController extends Controller {
+class GameController extends ArcadeController {
 	/** Enough of a checksum to compare by eye; the full one is a mouthful. */
 	private const CHECKSUM_CHARS = 8;
 
@@ -38,7 +37,7 @@ class GameController extends Controller {
 		private IFilesMetadataManager $metadataManager,
 		private RecentService $recentService,
 		private StateService $stateService,
-		private ?string $userId,
+		protected ?string $userId,
 	) {
 		parent::__construct($appName, $request);
 	}

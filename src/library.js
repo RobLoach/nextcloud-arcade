@@ -128,14 +128,60 @@ function readCache(key) {
 }
 
 /**
+ * Drop the pages that are no longer worth keeping.
+ *
+ * Every page written gets a key of its own, and the key carries the
+ * search box, so typing one word mints a page per letter. Nothing read
+ * them back after the minute was up, but nothing threw them away either,
+ * and they sat there for as long as the tab did.
+ *
+ * @param {boolean} [everything] clear ours outright, not only the stale
+ */
+function forgetPages(everything = false) {
+	try {
+		const now = Date.now()
+		for (const key of Object.keys(sessionStorage)) {
+			if (!key.startsWith(CACHE_PREFIX)) {
+				continue
+			}
+			if (everything) {
+				sessionStorage.removeItem(key)
+				continue
+			}
+			// An entry that cannot be read is an entry worth losing.
+			let kept = null
+			try {
+				kept = JSON.parse(sessionStorage.getItem(key) ?? 'null')
+			} catch (error) {
+				kept = null
+			}
+			if (kept === null || now - kept.time >= CACHE_TTL) {
+				sessionStorage.removeItem(key)
+			}
+		}
+	} catch (error) {
+		// An unavailable session storage has nothing to forget.
+	}
+}
+
+/**
  * @param {string} key the cache key
  * @param {object} data the page to cache
  */
 function writeCache(key, data) {
+	const entry = JSON.stringify({ time: Date.now(), data })
+	forgetPages()
 	try {
-		sessionStorage.setItem(key, JSON.stringify({ time: Date.now(), data }))
+		sessionStorage.setItem(key, entry)
 	} catch (error) {
-		// A full or unavailable session storage only costs us the cache.
+		// Full: what is ours goes, and the page being written is the one
+		// worth having. Beyond that a missing cache only costs a request.
+		forgetPages(true)
+		try {
+			sessionStorage.setItem(key, entry)
+		} catch (retried) {
+			// A full or unavailable session storage only costs us the cache.
+		}
 	}
 }
 

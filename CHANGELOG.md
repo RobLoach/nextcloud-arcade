@@ -7,6 +7,9 @@ All notable changes to NextCloud Arcade. The format follows
 ## [Unreleased]
 
 ### Added
+- "Least played", alongside "Most played", for the games you have started
+  and not come back to. The ones never started stay behind them either
+  way, so it is not a list of everything untouched.
 - An empty library now says what to do about it: where the app is looking,
   what it found there, and a way to point it somewhere else — instead of
   an empty page.
@@ -19,6 +22,11 @@ All notable changes to NextCloud Arcade. The format follows
   would do next.
 
 ### Changed
+- The Master System and the Game Gear now run on gearsystem, which is free
+  to pass on, where they ran on the Mega Drive's core, which is not.
+- The shelves above the library are "Continue playing" and "Recently
+  added", and "Largest first" is no longer offered as a sort — the table
+  still sorts by its own Size column.
 - The player's chrome is along the top. It used to run along the bottom,
   which on a phone is where the thumbs and the virtual gamepad are: the
   bar sat over START and SELECT and took their taps with it. Given the
@@ -44,6 +52,25 @@ All notable changes to NextCloud Arcade. The format follows
   what each limit is currently set to.
 
 ### Fixed
+- A game the library listed could be one the player then refused to open.
+  The browser read fewer cartridge marks than the server did, missing the
+  Super Nintendo and the Neo Geo Pocket, so a headerless dump of either
+  was listed with its system and then turned away as an unsupported ROM.
+- A screenshot went nowhere the first time one was taken, when the folder
+  it belongs in had never been made: only one level was created at a
+  time, so a folder inside a folder that did not exist failed — and the
+  message saying so could not be shown either, which is why it looked
+  like nothing happened at all.
+- Messages from the player are shown inside the player again, so they can
+  be read in fullscreen. This server resolves where to put a message with
+  a CSS selector, where the one before took the element itself, and the
+  mismatch threw rather than degraded.
+- The pictures beside each save state are kept by the browser instead of
+  being fetched again every time the panel opens.
+- An upload carrying a save is given five minutes rather than two, so a
+  large save state on a slow line is no longer cut off — an upload cut
+  off is a save that was asked for and not made. Everything else is held
+  to a minute.
 - Battery saves larger than 64 KiB never reached the server. Every upload
   asked to outlive the page, which the Fetch standard refuses above that
   size, so the request failed before it was sent and said so only in the
@@ -53,9 +80,11 @@ All notable changes to NextCloud Arcade. The format follows
 - A save state or battery save cut short by a client that went away
   mid-upload is refused rather than written over the save that worked.
 - A core that stops answering no longer takes the save states panel with
-  it. Saving and loading are given a deadline, and so is every request,
-  so an operation that cannot finish ends and says so instead of leaving
-  every slot shut for the rest of the session.
+  it. Saving and loading are given a deadline, and so is every request, so
+  an operation that cannot finish ends and says so instead of leaving every
+  slot shut for the rest of the session. The one emulator now answers one
+  call at a time as well: the panel, the screenshot button and the battery
+  save each had a gate of their own and none could see the others.
 - Pressing Save or Load on one slot while another was working did
   nothing, silently. Every slot is now held while an operation runs.
 - Cards in the Favorites and Continue Playing shelves were drawn around
@@ -64,6 +93,7 @@ All notable changes to NextCloud Arcade. The format follows
   stretched every card beside it to match.
 
 ### Removed
+- The Sega 32X, whose core could not be passed on freely either.
 - The "Save the game automatically when closing the player" setting, and
   the save it made. Closing wrote the same Auto slot the clock writes, and
   the core allows one state operation at a time, so the two raced for it;
@@ -660,7 +690,7 @@ All notable changes to NextCloud Arcade. The format follows
 ### Added
 - The first version.
 
-[Unreleased]: https://github.com/robloach/nextcloud-arcade/compare/v0.39.5...HEAD
+[Unreleased]: https://github.com/robloach/nextcloud-arcade/compare/v0.43.2...HEAD
 [0.39.5]: https://github.com/robloach/nextcloud-arcade/releases/tag/v0.39.5
 [0.39.4]: https://github.com/robloach/nextcloud-arcade/releases/tag/v0.39.4
 [0.39.3]: https://github.com/robloach/nextcloud-arcade/releases/tag/v0.39.3

@@ -6,7 +6,6 @@ namespace OCA\Arcade\Controller;
 
 use OCA\Arcade\Service\Folders;
 use OCA\Arcade\Service\RecentService;
-use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\FrontpageRoute;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
@@ -22,13 +21,13 @@ use OCP\IRequest;
  * @psalm-suppress UnusedClass
  */
 #[OpenAPI(OpenAPI::SCOPE_IGNORE)]
-class RecentController extends Controller {
+class RecentController extends ArcadeController {
 	public function __construct(
 		string $appName,
 		IRequest $request,
 		private RecentService $recentService,
 		private IRootFolder $rootFolder,
-		private ?string $userId,
+		protected ?string $userId,
 	) {
 		parent::__construct($appName, $request);
 	}

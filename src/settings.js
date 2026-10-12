@@ -1,6 +1,6 @@
 import { translate as t } from '@nextcloud/l10n'
 import { generateUrl } from '@nextcloud/router'
-import { api } from './api.js'
+import { UPLOAD_WAIT, api, deadline } from './api.js'
 import { formatSize } from './format.js'
 import { UNBOUND, keyLabel, retroarchKey } from './keys.js'
 
@@ -472,6 +472,9 @@ async function uploadBios(input) {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/octet-stream' },
 			body: file,
+			// A BIOS is a file the admin picked off their disk, so it moves
+			// like a save rather than like a listing.
+			signal: deadline(UPLOAD_WAIT),
 		})
 		status.textContent = t('arcade', 'Saved')
 	} catch (error) {

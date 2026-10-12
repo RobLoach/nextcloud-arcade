@@ -17,12 +17,27 @@ export function stateUrl(route, romPath, slot = null) {
 		: generateUrl(`/apps/arcade/arcade${route}?file={file}&slot={slot}`, { file: romPath, slot })
 }
 
-// How long a request is given. Generous on purpose: a save state runs to
-// several megabytes, a slow line is not a fault, and an upload cut off
-// here is a save the player asked for and did not get. It is bounded at
-// all only so a stalled socket cannot hold its caller for the several
-// minutes the browser would otherwise allow.
-const REQUEST_WAIT = 120 * 1000
+// How long an ordinary request is given. These carry a listing or a
+// handful of fields, so a minute is already far past a working server,
+// and the point of the bound is that a stalled socket should not hold
+// its caller for the several minutes the browser would otherwise allow.
+const REQUEST_WAIT = 60 * 1000
+
+/**
+ * How long a request carrying a save is given instead.
+ *
+ * One figure for both was wrong at both ends. A save state is several
+ * megabytes and the server will take up to 64, so on a slow line the
+ * ordinary bound would cut off an upload that was working -- and an
+ * upload cut off is a save the player asked for and did not get, which
+ * is worse than waiting. Meanwhile a stalled listing was held for two
+ * minutes for the sake of a size it never carries.
+ *
+ * Five minutes is about where the browser gives up on a stalled
+ * connection anyway, so for the big ones this is no longer the shorter
+ * limit of the two.
+ */
+export const UPLOAD_WAIT = 300 * 1000
 
 /**
  * A signal that gives up after a while.

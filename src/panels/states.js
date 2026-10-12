@@ -1,5 +1,5 @@
 import { translate as t } from '@nextcloud/l10n'
-import { AUTO_SLOT, api, deadline, stateUrl, wasGivenUpOn } from '../api.js'
+import { AUTO_SLOT, api, deadline, stateUrl, UPLOAD_WAIT, wasGivenUpOn } from '../api.js'
 import { disableSramSync, enableSramSync } from '../player.js'
 import { waitAtMost } from '../wait.js'
 import { createPanel } from './panel.js'
@@ -140,7 +140,8 @@ export function createStatesPanel({ instance, romPath, flash, onDone }) {
 			}
 			// One budget for the pair: a deadline each would let a single
 			// save hold the panel for twice what either of them allows.
-			const budget = deadline()
+			// The long one, this being the request that carries megabytes.
+			const budget = deadline(UPLOAD_WAIT)
 			await api(stateUrl('/state', romPath, slot), {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/octet-stream' },
@@ -173,7 +174,7 @@ export function createStatesPanel({ instance, romPath, flash, onDone }) {
 
 	const load = (slot) => alone(async () => {
 		try {
-			const response = await api(stateUrl('/state', romPath, slot))
+			const response = await api(stateUrl('/state', romPath, slot), { signal: deadline(UPLOAD_WAIT) })
 			const state = await response.blob()
 			if (state.size === 0) {
 				// Handed an empty file, RetroArch waits for a state that

@@ -7,7 +7,6 @@ namespace OCA\Arcade\Controller;
 use OCA\Arcade\Service\Folders;
 use OCA\Arcade\Service\SettingsService;
 use OCA\Arcade\Service\ThumbnailService;
-use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\FrontpageRoute;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
@@ -25,14 +24,14 @@ use OCP\IRequest;
  * @psalm-suppress UnusedClass
  */
 #[OpenAPI(OpenAPI::SCOPE_IGNORE)]
-class ScreenshotController extends Controller {
+class ScreenshotController extends ArcadeController {
 	public function __construct(
 		string $appName,
 		IRequest $request,
 		private SettingsService $settingsService,
 		private ThumbnailService $thumbnailService,
 		private IRootFolder $rootFolder,
-		private ?string $userId,
+		protected ?string $userId,
 	) {
 		parent::__construct($appName, $request);
 	}

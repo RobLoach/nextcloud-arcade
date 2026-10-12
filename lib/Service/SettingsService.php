@@ -302,6 +302,10 @@ class SettingsService {
 			'noise' => CoreMap::NOISE,
 			'vendors' => CoreMap::VENDORS,
 		]);
+		// The extensions that name no system, so the browser asks the same
+		// question of a file as the server does rather than keeping a
+		// second list of its own -- which drifted once already.
+		$initialState->provideInitialState('ambiguous', CoreMap::AMBIGUOUS);
 		$initialState->provideInitialState('settings', $this->forUser($userId));
 	}
 

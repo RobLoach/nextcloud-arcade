@@ -75,8 +75,25 @@ export function shortNameForPath(path) {
 	return system?.short ?? ''
 }
 
-/** Extensions that may hold a ROM without saying whose. */
-const AMBIGUOUS = ['bin', 'rom', 'zip']
+/**
+ * Extensions that may hold a ROM without saying whose, from CoreMap, so
+ * there is one list and not two. It held a copy once, and the copy had
+ * grown a `zip` the server's had not.
+ */
+// The fallback is what the server's list held when this was written, not
+// a second source of truth: a page that somehow carries no state should
+// still play a .bin, and an empty list here would quietly make the one
+// extension most games arrive as unplayable.
+const AMBIGUOUS = loadState('arcade', 'ambiguous', ['bin', 'rom'])
+
+/**
+ * What the player will have a go at: the ones above, and a zip, which it
+ * opens to find out. The server draws the same line in the same place --
+ * see CoreMap::libraryExtensions, which lists `[...AMBIGUOUS, 'zip']` --
+ * and keeps them apart because only the first lot are worth reading the
+ * bytes of.
+ */
+const TRY_ANYWAY = [...AMBIGUOUS, 'zip']
 
 /** How every Neo Geo Pocket cartridge opens, first or third party. */
 const SNK_LICENSES = [
@@ -116,7 +133,7 @@ function trimmed(value) {
  * @return {boolean} whether the name says nothing about the system
  */
 function isAmbiguous(basename) {
-	return AMBIGUOUS.includes((basename || '').split('.').pop().toLowerCase())
+	return TRY_ANYWAY.includes((basename || '').split('.').pop().toLowerCase())
 }
 
 /**

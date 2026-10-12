@@ -4,7 +4,7 @@ import { getCurrentUser } from '@nextcloud/auth'
 import { defaultRemoteURL, defaultRootPath } from '@nextcloud/files/dav'
 import { translate as t } from '@nextcloud/l10n'
 import { generateFilePath, generateUrl } from '@nextcloud/router'
-import { api, dav, stateUrl } from './api.js'
+import { api, dav, deadline, stateUrl, UPLOAD_WAIT } from './api.js'
 import { createCoreLog } from './corelog.js'
 import { inputConfig, retroarchKey } from './keys.js'
 import { volumeInDecibels } from './volume.js'
@@ -495,6 +495,7 @@ export function startSramSync(instance, romPath, canSave = true) {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/octet-stream' },
 				body: sram,
+				signal: deadline(UPLOAD_WAIT),
 				// So the final upload survives the page closing -- but only
 				// where it is allowed to, and a save too big to ask it for
 				// goes as an ordinary request instead. Closing the game

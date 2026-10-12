@@ -412,6 +412,26 @@ expect_status 'a state is saved' 200 -X POST \
 	-H 'Content-Type: application/octet-stream' \
 	--data-binary 'not a real save state' "$STATE_URL" || true
 
+# The panel asks for every slot's picture each time it opens, and the URL
+# it asks with carries the slot's mtime -- so the answer is good until the
+# slot is written again, and saying so is the difference between one fetch
+# and one per open. The response type cannot be built in a unit test (it
+# wants Symfony's HeaderUtils, which the app does not vendor), so the
+# header is checked here, against a real server.
+THUMB_URL="$BASE/index.php/apps/arcade/arcade/state/thumbnail?file=$GAME&slot=1"
+expect_status 'a state thumbnail is saved' 200 -X POST \
+	-H 'Content-Type: image/png' \
+	--data-binary 'not a real png' "$THUMB_URL" || true
+if assert_status 'the thumbnail comes back' "$THUMB_URL"; then
+	THUMB_CACHE=$(curl -sSI -b "$COOKIES" "$THUMB_URL" | tr -d '\r' \
+		| sed -n 's/^[Cc]ache-[Cc]ontrol: *//p' | head -1 || true)
+	case "$THUMB_CACHE" in
+		*no-store*|'') fail "a state thumbnail is served as '$THUMB_CACHE', so every panel open fetches it again" ;;
+		*private*) echo "ok: the thumbnail is kept by the browser ($THUMB_CACHE)" ;;
+		*) fail "a state thumbnail is served as '$THUMB_CACHE', which is not private to the one user it belongs to" ;;
+	esac
+fi
+
 if assert_status 'states are listed' "$BASE/index.php/apps/arcade/arcade/states?file=$GAME"; then
 	assert_json 'the saved state is there' '
 slots = [s.get("slot") for s in data.get("states", [])]
