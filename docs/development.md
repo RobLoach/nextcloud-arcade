@@ -19,11 +19,15 @@ composer psalm    # static analysis
 ```
 
 Every push and pull request runs the same through GitHub Actions: PHP
-linting on 8.3 and 8.4, the test suite, static analysis, and a check that
-`appinfo/info.xml` validates against the app store schema and agrees with
-`package.json` on the version. The heavy jobs — the JavaScript build and
-the server smoke test — run only on alpha, beta and rc tags, since the
-committed bundles change rarely and a container install takes minutes.
+linting on 8.3 and 8.4, the PHP and JavaScript test suites, static
+analysis, a check that `appinfo/info.xml` validates against the app store
+schema and agrees with `package.json` on the version, and a rebuild of
+the bundles that fails if what is committed in `js/` differs from it.
+
+That last one runs on every push rather than at release: `js/` is what a
+`git pull` installs, so a bundle left behind a change to `src/` is one
+that ships. The chunk names carry a content hash, so any change to `src/`
+renames files, and a rename is easy to leave unstaged.
 
 `build/smoke-test.sh` is that smoke test, and it runs locally too: it
 starts a real Nextcloud container (or uses one it is given), installs the

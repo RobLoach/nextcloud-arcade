@@ -99,9 +99,13 @@ jobs:
 
   build:
     name: JavaScript build
-    # Only on pre-release tags: the committed bundles change rarely, and
-    # rebuilding them on every push costs more than it catches.
-    if: startsWith(github.ref, 'refs/tags/')
+    # On every push. The bundles in js/ are committed and are what a
+    # `git pull` installs, so one left behind a change to src/ is one
+    # that ships: the browser gets the old code and nothing says so.
+    # That is not rare either -- the chunk names carry a content hash,
+    # so any change to src/ renames files, and the rename is easy to
+    # leave unstaged. This was gated on tags, and no tag has ever been
+    # pushed, so it had never run.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
