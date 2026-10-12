@@ -52,6 +52,13 @@ All notable changes to NextCloud Arcade. The format follows
   what each limit is currently set to.
 
 ### Fixed
+- Nothing read of a ROM reached the library if any one game in it had a
+  header giving a system and no title — a `.bin` that names its machine
+  and not itself, which is the ordinary kind. Reading the title of such a
+  file raised an error that carried off the whole lookup, so every game
+  in the library lost its title, its region and its system together, and
+  the `.bin` files fell back to being placed by the folder they sat in,
+  or not at all.
 - A game the library listed could be one the player then refused to open.
   The browser read fewer cartridge marks than the server did, missing the
   Super Nintendo and the Neo Geo Pocket, so a headerless dump of either

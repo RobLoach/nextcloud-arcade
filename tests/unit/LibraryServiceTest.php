@@ -13,7 +13,9 @@ use OCP\Files\NotFoundException;
 use OCP\Files\Search\ISearchBinaryOperator;
 use OCP\Files\Search\ISearchComparison;
 use OCP\Files\Search\ISearchQuery;
+use OCP\FilesMetadata\Exceptions\FilesMetadataNotFoundException;
 use OCP\FilesMetadata\IFilesMetadataManager;
+use OCP\FilesMetadata\Model\IFilesMetadata;
 use OCP\ICache;
 use OCP\ICacheFactory;
 use OCP\SystemTag\ISystemTag;
@@ -368,6 +370,112 @@ class LibraryServiceTest extends TestCase {
 	public function testFilteringKeepsAListWithoutGaps(): void {
 		$filtered = $this->service->filterGames($this->games(), '', 'genesis');
 		$this->assertSame([0], array_keys($filtered), 'the keys are renumbered for the JSON response');
+	}
+
+	/**
+	 * A file's metadata as the server hands it over: only the keys that
+	 * were written, and a refusal for any other -- which is what makes
+	 * reading a ROM's title something that has to be allowed to fail.
+	 *
+	 * @param array<string, string> $values what was written for this file
+	 */
+	private function metadata(array $values): IFilesMetadata {
+		$metadata = $this->createStub(IFilesMetadata::class);
+		$metadata->method('asArray')->willReturn($values);
+		$metadata->method('getKeys')->willReturn(array_keys($values));
+		$metadata->method('getString')->willReturnCallback(
+			static function (string $key) use ($values): string {
+				if (!isset($values[$key])) {
+					throw new FilesMetadataNotFoundException($key);
+				}
+				return $values[$key];
+			},
+		);
+		return $metadata;
+	}
+
+	/**
+	 * @param array<int, IFilesMetadata> $byId
+	 */
+	private function serviceReading(array $byId): LibraryService {
+		$manager = $this->createStub(IFilesMetadataManager::class);
+		$manager->method('getMetadataForFiles')->willReturnCallback(
+			static fn (array $ids): array => array_intersect_key($byId, array_flip($ids)),
+		);
+		return new LibraryService(
+			$this->createStub(ICacheFactory::class),
+			new ThumbnailService(),
+			$this->stateService,
+			$manager,
+			$this->tagManager,
+			$this->tagObjectMapper,
+		);
+	}
+
+	/**
+	 * @param list<array<string, mixed>> $games
+	 * @return list<array<string, mixed>>
+	 */
+	private function whatWasRead(LibraryService $service, array $games): array {
+		$method = new \ReflectionMethod($service, 'addWhatWasRead');
+		$method->invokeArgs($service, [&$games]);
+		return $games;
+	}
+
+	public function testABinIsGivenTheSystemItsHeaderNamed(): void {
+		$service = $this->serviceReading([
+			78 => $this->metadata(['arcade-system' => 'genesis']),
+		]);
+
+		$games = $this->whatWasRead($service, [
+			['id' => 78, 'path' => '/Games/Sonic.bin', 'basename' => 'Sonic.bin', 'system' => ''],
+		]);
+
+		$this->assertSame('genesis', $games[0]['system'], 'the header said so where the name could not');
+	}
+
+	public function testAromThatNamesItsMachineButNotItselfLeavesTheRestOfTheLibraryAlone(): void {
+		// Each of these keys is written only when the header gave it, so a
+		// ROM with a system and no title is ordinary. Asking such a file
+		// for its title throws, and that used to carry off the whole loop:
+		// every game in the library came back with nothing read of it.
+		$service = $this->serviceReading([
+			78 => $this->metadata(['arcade-system' => 'genesis']),
+			79 => $this->metadata(['arcade-system' => 'snes', 'arcade-title' => 'Super Mario World']),
+		]);
+
+		$games = $this->whatWasRead($service, [
+			['id' => 78, 'path' => '/Games/Sonic.bin', 'basename' => 'Sonic.bin', 'system' => ''],
+			['id' => 79, 'path' => '/Games/Mario.sfc', 'basename' => 'Mario.sfc', 'system' => 'snes'],
+		]);
+
+		$this->assertSame('genesis', $games[0]['system'], 'the titleless ROM is still placed');
+		$this->assertSame('Super Mario World', $games[1]['title'], 'and the one behind it keeps its title');
+	}
+
+	public function testWhatWasReadOfAnAmbiguousNameWinsOverTheFolderItSatIn(): void {
+		$service = $this->serviceReading([
+			78 => $this->metadata(['arcade-system' => 'genesis']),
+		]);
+
+		$games = $this->whatWasRead($service, [
+			// Filed under Mega Drive, but the header says otherwise.
+			['id' => 78, 'path' => '/Games/SNES/Sonic.bin', 'basename' => 'Sonic.bin', 'system' => 'snes'],
+		]);
+
+		$this->assertSame('genesis', $games[0]['system'], 'the file itself settles a .bin');
+	}
+
+	public function testAnUnambiguousNameIsNotOverruledByWhatWasRead(): void {
+		$service = $this->serviceReading([
+			79 => $this->metadata(['arcade-system' => 'genesis']),
+		]);
+
+		$games = $this->whatWasRead($service, [
+			['id' => 79, 'path' => '/Games/Mario.sfc', 'basename' => 'Mario.sfc', 'system' => 'snes'],
+		]);
+
+		$this->assertSame('snes', $games[0]['system'], '.sfc says whose game it is on its own');
 	}
 
 	private function buildService(ICacheFactory $cacheFactory): LibraryService {

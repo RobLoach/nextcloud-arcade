@@ -541,10 +541,11 @@ class LibraryService {
 		try {
 			foreach (array_chunk($ids, self::ID_CHUNK) as $chunk) {
 				foreach ($this->metadataManager->getMetadataForFiles($chunk) as $id => $metadata) {
+					$read = $metadata->asArray();
 					$known[(int)$id] = [
-						'title' => $metadata->getString(MetadataListener::TITLE),
-						'region' => $metadata->getString(MetadataListener::REGION),
-						'system' => $metadata->getString(MetadataListener::SYSTEM),
+						'title' => self::said($read, MetadataListener::TITLE),
+						'region' => self::said($read, MetadataListener::REGION),
+						'system' => self::said($read, MetadataListener::SYSTEM),
 					];
 				}
 			}
@@ -553,6 +554,25 @@ class LibraryService {
 			// go without the thumbnails that do match.
 		}
 		return $known;
+	}
+
+	/**
+	 * One field of what was read of a ROM, or '' where it says nothing.
+	 *
+	 * Deliberately not getString(), which throws on a key the file has
+	 * never carried -- and carrying only some of these is the ordinary
+	 * case, because each is written only when the header gave it. A .bin
+	 * that names its machine but not itself has a system and no title,
+	 * and asking it for the title threw clear of the whole loop: one such
+	 * file left every game in the library with nothing read of it, the
+	 * .bin it came from included.
+	 *
+	 * @param array<string, mixed> $read the file's metadata as stored
+	 * @param string $key which field to take
+	 * @return string that field, or '' if it was never written
+	 */
+	private static function said(array $read, string $key): string {
+		return is_string($read[$key] ?? null) ? $read[$key] : '';
 	}
 
 	/**
