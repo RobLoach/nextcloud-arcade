@@ -13,6 +13,7 @@ use OCP\BackgroundJob\IJobList;
 use OCP\Files\Folder;
 use OCP\Files\IRootFolder;
 use OCP\Files\Node;
+use OCP\FilesMetadata\Exceptions\FilesMetadataNotFoundException;
 use OCP\FilesMetadata\IFilesMetadataManager;
 use OCP\FilesMetadata\Model\IFilesMetadata;
 use PHPUnit\Framework\TestCase;
@@ -35,6 +36,30 @@ class RefreshMetadataTest extends TestCase {
 	private array $queued = [];
 	/** Ids whose file is no longer there. */
 	private array $gone = [];
+	/** Ids holding a row that no part of this app wrote. */
+	private array $foreign = [];
+
+	/**
+	 * A file's metadata as the server hands it over: the keys that were
+	 * written, and a refusal for any other.
+	 *
+	 * @param array<string, string> $values what was written for this file
+	 */
+	private function metadata(array $values): IFilesMetadata {
+		$metadata = $this->createStub(IFilesMetadata::class);
+		$metadata->method('hasKey')->willReturnCallback(
+			static fn (string $key): bool => isset($values[$key]),
+		);
+		$metadata->method('getString')->willReturnCallback(
+			static function (string $key) use ($values): string {
+				if (!isset($values[$key])) {
+					throw new FilesMetadataNotFoundException($key);
+				}
+				return $values[$key];
+			},
+		);
+		return $metadata;
+	}
 
 	private function job(): RefreshMetadata {
 		$settingsService = $this->createStub(SettingsService::class);
@@ -56,9 +81,14 @@ class RefreshMetadataTest extends TestCase {
 			function (array $ids): array {
 				$found = [];
 				foreach ($ids as $id) {
-					$metadata = $this->createStub(IFilesMetadata::class);
-					$metadata->method('getString')->willReturn(isset($this->known[$id]) ? 'nes' : '');
-					$found[$id] = $metadata;
+					if (isset($this->known[$id])) {
+						$found[$id] = $this->metadata([MetadataListener::SYSTEM => 'nes']);
+					} elseif (isset($this->foreign[$id])) {
+						$found[$id] = $this->metadata(['photos-original_date_time' => '2020']);
+					}
+					// Anything else holds no row at all, and the server
+					// leaves it out of the answer rather than handing
+					// back an empty one.
 				}
 				return $found;
 			},
@@ -108,6 +138,21 @@ class RefreshMetadataTest extends TestCase {
 		$this->runJob();
 
 		$this->assertCount(2, $this->refreshed, 'the two that were never looked at');
+	}
+
+	public function testARowThisAppDidNotWriteDoesNotStopTheSearchForWorkToDo(): void {
+		// Anything on the instance may file something against a file, so a
+		// ROM can hold metadata with none of this app's keys in it. Asking
+		// such a row for the system raises rather than answering empty, and
+		// unguarded that carried off the whole search: nothing was found to
+		// read, and the indexing stopped for the library without a word.
+		$this->library(4);
+		$this->known = [2 => true];
+		$this->foreign = [3 => true];
+
+		$this->runJob();
+
+		$this->assertCount(3, $this->refreshed, 'the foreign row counts as never looked at, and 1 and 4 still come through');
 	}
 
 	public function testTheFileItselfIsLeftToAJobOfItsOwn(): void {

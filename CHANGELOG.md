@@ -52,6 +52,13 @@ All notable changes to NextCloud Arcade. The format follows
   what each limit is currently set to.
 
 ### Fixed
+- The background reading of ROM headers could stop for a whole library
+  and stay stopped. Working out which games had never been looked at
+  asked each one for its system, and a ROM carrying metadata that no part
+  of this app wrote — anything on the instance may file something
+  against a file — answered that with an error rather than an empty
+  string. One such file was enough to end the search, so no game was ever
+  handed over to be read.
 - Nothing read of a ROM reached the library if any one game in it had a
   header giving a system and no title — a `.bin` that names its machine
   and not itself, which is the ordinary kind. Reading the title of such a

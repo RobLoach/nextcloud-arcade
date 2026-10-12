@@ -118,7 +118,17 @@ class RefreshMetadata extends QueuedJob {
 			foreach ($this->metadataManager->getMetadataForFiles($chunk) as $id => $metadata) {
 				// The system is set the moment a game is looked at, so a
 				// game without it has never been looked at.
-				if ($metadata->getString(MetadataListener::SYSTEM) !== '') {
+				//
+				// Asked for a key it has never carried, a file's metadata
+				// raises rather than answering empty -- and a ROM can hold
+				// a row that no part of this app wrote, since anything on
+				// the instance may file something against a file. Without
+				// the guard, one of those in a chunk carried off the whole
+				// search for work to do: run() logs it, but every run ends
+				// the same way, so the library is never indexed and the
+				// log is the only sign of it.
+				if ($metadata->hasKey(MetadataListener::SYSTEM)
+					&& $metadata->getString(MetadataListener::SYSTEM) !== '') {
 					$known[(int)$id] = true;
 				}
 			}
