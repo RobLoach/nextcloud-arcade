@@ -1,11 +1,22 @@
+import { getCurrentUser } from '@nextcloud/auth'
 import { loadState } from '@nextcloud/initial-state'
+import { uploadFailed } from './panels/states.js'
 import { davUrl, launchRom, recordRecent, startSramSync } from './player.js'
+import { showLoading } from './progress.js'
+import { createStateCache } from './statecache.js'
 import { systemForFolderPath } from './systems.js'
 import { createFlash } from './toast.js'
 import { oneAtATime } from './corequeue.js'
 import { attachToolbar } from './toolbar.js'
+import { waitAtMost } from './wait.js'
 
 const settings = loadState('arcade', 'settings', {})
+
+// How long a closing game waits for the save states still on their way to
+// the server. They were saved, as far as the player knows, so this is far
+// longer than the battery save is given -- but a line that has stopped
+// altogether must not keep the player in a game they closed.
+const STATES_FINAL_WAIT = 60 * 1000
 
 /**
  * Start a game and everything that goes with it: the save data, the
@@ -31,22 +42,40 @@ export async function startSession({ canvas, container, filename, basename, sour
 	// launch can say what it went without -- a missing BIOS, a complaint
 	// from the core -- before there is any chrome to say it on.
 	const { flash, stop: stopMessages } = createFlash(container)
-	const instance = await launchRom({
-		element: canvas,
-		romUrl: source ?? davUrl(filename),
-		romName: basename,
-		settings,
-		systemHint: systemForFolderPath(filename),
-		romPath: filename,
-		onMessage: flash,
-		signal,
-	})
+	// The bar lays itself over the player, which the toolbar would only
+	// make the frame of everything later.
+	container.classList.add('arcade-player-container')
+	const loading = showLoading(container, basename)
+	let instance
+	try {
+		instance = await launchRom({
+			element: canvas,
+			romUrl: source ?? davUrl(filename),
+			romName: basename,
+			settings,
+			systemHint: systemForFolderPath(filename),
+			romPath: filename,
+			onMessage: flash,
+			signal,
+			onProgress: loading.update,
+		})
+	} finally {
+		loading.remove()
+	}
 	// Everything that asks the core for a file goes through the one queue
 	// from here on: the panel, the screenshot button and the battery save
 	// each had a gate of their own and none could see the others.
 	const core = oneAtATime(instance)
-	const stopSramSync = startSramSync(core, filename, (settings.saves_folder ?? '') !== '')
+	const canSave = getCurrentUser() !== null && filename !== '' && (settings.saves_folder ?? '') !== ''
+	const stopSramSync = startSramSync(core, filename, canSave)
 	const stopPlayTime = recordRecent(filename)
+	// The save states of the game, held for the session so a slot loads
+	// and saves at once. Saving needs a logged-in user and somewhere of
+	// their own to put it, so on a public share, or without a saves
+	// folder, there are none to hold.
+	const stateCache = canSave
+		? createStateCache({ romPath: filename, onUploadFailed: uploadFailed(flash) })
+		: null
 
 	// The one way out, wherever it is asked for -- the close button, the
 	// Viewer being torn down, a new game taking this one's place. The
@@ -62,6 +91,13 @@ export async function startSession({ canvas, container, filename, basename, sour
 		stopPlayTime()
 		await stopSramSync()
 		detachToolbar?.()
+		// The states saved last went to the server in the background, and
+		// a close that leaves the page would cut them off. The core is not
+		// needed for that, but the page is.
+		if (stateCache !== null) {
+			await waitAtMost(stateCache.flush(), STATES_FINAL_WAIT, undefined)
+			stateCache.dispose()
+		}
 		// Nothing left to say it to, and a core on its way out is often
 		// at its most talkative.
 		stopMessages()
@@ -81,6 +117,7 @@ export async function startSession({ canvas, container, filename, basename, sour
 		closeUrl,
 		onClose: stop,
 		flash,
+		stateCache,
 	})
 
 	return stop

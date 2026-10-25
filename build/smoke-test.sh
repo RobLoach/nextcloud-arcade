@@ -458,11 +458,27 @@ if 1 not in slots:
 '
 fi
 
+# The saves folder is what RetroArch's Cloud Sync syncs with, and all it
+# reads to know what changed is manifest.server -- over WebDAV, as here.
+# A save written without a word in it is one RetroArch never fetches.
+if curl -sSf -o "$BODY" -b "$COOKIES" -H "requesttoken: $TOKEN" \
+	"$BASE/remote.php/dav/files/$ADMIN_USER/Saves/manifest.server"; then
+	assert_json 'the save is recorded for RetroArch, under the core' '
+import hashlib
+entries = {entry.get("path"): entry.get("hash") for entry in data}
+want = hashlib.md5(b"not a real save state").hexdigest()
+if entries.get("states/Gambatte/Tetris.state1") != want:
+    raise SystemExit(f"states/Gambatte/Tetris.state1 is not recorded as {want}: {entries}")
+'
+else
+	fail 'manifest.server cannot be read over WebDAV'
+fi
+
 # From here the game itself goes away, and the endpoint that lists states
 # turns away a request naming a game the user does not have -- so the save
 # is watched where it actually lives: in the user's own files.
 SAVES_DIR=/var/www/html/data/admin/files/Saves
-SAVE_FILE=$(docker exec "$CONTAINER" find "$SAVES_DIR" -name '*.state' | head -1 || true)
+SAVE_FILE=$(docker exec "$CONTAINER" find "$SAVES_DIR" -name 'Tetris.state1' | head -1 || true)
 if [ -z "$SAVE_FILE" ]; then
 	die "nothing was written under $SAVES_DIR ($(docker exec "$CONTAINER" find "$SAVES_DIR" | head -5 | tr '\n' ' '))"
 fi

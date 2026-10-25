@@ -7,7 +7,6 @@ namespace OCA\Arcade\Tests\Unit;
 use OCA\Arcade\Db\GameMapper;
 use OCA\Arcade\Db\PlayMapper;
 use OCA\Arcade\Migration\ConvertLegacyStorage;
-use OCA\Arcade\Service\SettingsService;
 use OCP\Config\IUserConfig;
 use OCP\Files\AppData\IAppDataFactory;
 use OCP\Files\File;
@@ -49,8 +48,6 @@ class ConvertLegacyStorageTest extends TestCase {
 	private array $configs = [];
 	/** The file ids each user has starred in Files. */
 	private array $starred = [];
-	/** The saves folder each user configured, if any. */
-	private array $savesFolders = [];
 
 	private function convert(): void {
 		$step = new ConvertLegacyStorage(
@@ -59,7 +56,6 @@ class ConvertLegacyStorageTest extends TestCase {
 			$this->userManager(),
 			$this->userConfig(),
 			$this->tagManager(),
-			$this->settingsService(),
 			$this->gameMapper(),
 			$this->playMapper(),
 		);
@@ -121,14 +117,6 @@ class ConvertLegacyStorageTest extends TestCase {
 			},
 		);
 		return $manager;
-	}
-
-	private function settingsService(): SettingsService {
-		$settings = $this->createStub(SettingsService::class);
-		$settings->method('getUserSettings')->willReturnCallback(
-			fn (string $userId): array => ['saves_folder' => $this->savesFolders[$userId] ?? ''],
-		);
-		return $settings;
 	}
 
 	private function gameMapper(): GameMapper {
@@ -476,39 +464,6 @@ class ConvertLegacyStorageTest extends TestCase {
 			'occ arcade:cleanup is the one that removes those',
 		);
 	}
-
-	// Saves folders of the old layout move under the system of the game.
-
-	public function testAnOldSavesFolderMovesUnderTheSystem(): void {
-		$this->savesFolders[self::USER] = '/Saves';
-		$this->appData['states'] = [];
-		$this->appData[$this->stateFolderOf(self::USER)] = [];
-		$this->games[self::USER]['101'] = ['file_id' => 101, 'path' => self::GAME, 'md5' => ''];
-		$this->files['Saves/Mario/Slot 1.state'] = 'an old save';
-		$this->files['Saves/Mario/Mario.srm'] = 'a battery save';
-
-		$this->convert();
-
-		$this->assertSame('an old save', $this->files['Saves/Nintendo/Mario/Slot 1.state'] ?? null);
-		$this->assertSame('a battery save', $this->files['Saves/Nintendo/Mario/Mario.srm'] ?? null);
-		$this->assertArrayNotHasKey('Saves/Mario/Slot 1.state', $this->files);
-	}
-
-	public function testAnOldSavesFolderStaysWhenTheNewPlaceIsTaken(): void {
-		$this->savesFolders[self::USER] = '/Saves';
-		$this->appData['states'] = [];
-		$this->appData[$this->stateFolderOf(self::USER)] = [];
-		$this->games[self::USER]['101'] = ['file_id' => 101, 'path' => self::GAME, 'md5' => ''];
-		$this->files['Saves/Mario/Slot 1.state'] = 'an old save';
-		$this->files['Saves/Nintendo/Mario/Slot 1.state'] = 'saved since';
-
-		$this->convert();
-
-		$this->assertSame('an old save', $this->files['Saves/Mario/Slot 1.state'] ?? null);
-		$this->assertSame('saved since', $this->files['Saves/Nintendo/Mario/Slot 1.state'] ?? null);
-	}
-
-	// The play records and the favorites of the user config.
 
 	public function testThePlaysAndFavoritesAreImportedAndTheBlobsGo(): void {
 		$this->configs[self::USER] = [

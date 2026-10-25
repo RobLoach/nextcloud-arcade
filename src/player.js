@@ -6,6 +6,7 @@ import { translate as t } from '@nextcloud/l10n'
 import { generateFilePath, generateUrl } from '@nextcloud/router'
 import { api, dav, deadline, stateUrl, UPLOAD_WAIT } from './api.js'
 import { createCoreLog } from './corelog.js'
+import { createProgressTracker, lengthOf, readWithProgress } from './progress.js'
 import { inputConfig, retroarchKey } from './keys.js'
 import { volumeInDecibels } from './volume.js'
 import { biosForSystem, coreForSystem, systemForFile, systemFromBytes, systemLabel } from './systems.js'
@@ -178,17 +179,22 @@ async function resolveRom(blob, romName, systemHint) {
  *   with how they read, about anything the launch went without and
  *   anything the core itself has to say
  * @param {?AbortSignal} [options.signal] abandons the launch when it fires
+ * @param {?Function} [options.onProgress] told how the launch is getting
+ *   on: {phase: 'download', loaded, total} as the game and its core come
+ *   in, with total null while a length is unknown, then {phase: 'start'}
+ *   once all that is left is starting the core
  * @return {Promise<Nostalgist>} the running emulator
  */
-export async function launchRom({ element, romUrl, romName, settings = {}, systemHint = null, romPath = '', onMessage = null, signal = null }) {
+export async function launchRom({ element, romUrl, romName, settings = {}, systemHint = null, romPath = '', onMessage = null, signal = null, onProgress = null }) {
 	const canSave = (settings.saves_folder ?? '') !== ''
-	// The core is a few megabytes of its own. Warming it in the browser
-	// cache now means it is there when Nostalgist asks, instead of being
-	// fetched after the ROM.
+	const tell = typeof onProgress === 'function' ? onProgress : () => {}
+	// The game and the core come in side by side, and the bar follows
+	// them both: the core alone is a few megabytes, as big as most games.
+	const progress = createProgressTracker((snapshot) => tell({ phase: 'download', ...snapshot }))
+	// Warming the core in the browser cache now means it is there when
+	// Nostalgist asks, instead of being fetched after the ROM.
 	const core = coreForSystem(systemForFile(romName)?.id ?? systemHint?.id ?? '')
-	if (core !== null) {
-		prefetchCore(core, signal)
-	}
+	const coreFetched = core === null ? Promise.resolve() : prefetchCore(core, signal, progress)
 
 	// Fetch the ROM here so the request carries the Nextcloud session.
 	// Every fetch of the launch takes the signal: a game closed while it
@@ -202,7 +208,9 @@ export async function launchRom({ element, romUrl, romName, settings = {}, syste
 	if (!response.ok) {
 		throw new Error(`Could not fetch the ROM: ${response.status} ${response.statusText}`)
 	}
-	const { rom, system } = await resolveRom(await response.blob(), romName, systemHint)
+	progress.track('rom', lengthOf(response))
+	const blob = await readWithProgress(response, (bytes) => progress.advance('rom', bytes))
+	const { rom, system } = await resolveRom(blob, romName, systemHint)
 	if (system === null) {
 		throw new Error(t('arcade', 'Unsupported ROM type: {file}', { file: romName }))
 	}
@@ -216,11 +224,16 @@ export async function launchRom({ element, romUrl, romName, settings = {}, syste
 			system: systemLabel(system.id),
 		}), 'warning')
 	}
+	// The core has to be in before it can start, and on a slow line it
+	// takes longer than the game: the bar keeps counting until it is,
+	// rather than saying the emulator is starting while it is not.
+	await coreFetched
 	if (signal?.aborted === true) {
 		// Closed while the files were still coming in: no core is started
 		// for a game nobody is waiting for any more.
 		throw new DOMException('The launch was abandoned', 'AbortError')
 	}
+	tell({ phase: 'start' })
 	const runahead = Number(settings.runahead_frames ?? 0)
 
 	return await Nostalgist.launch({
@@ -358,19 +371,30 @@ async function fetchBios(systemId, signal = null) {
 /**
  * Ask for the files of a core without waiting for them.
  *
+ * They are read through to the end, which is what puts them in the
+ * cache anyway, so the progress bar can count them on the way.
+ *
  * @param {string} core name of the libretro core
  * @param {?AbortSignal} [signal] abandons the requests when it fires
+ * @param {?object} [progress] the tracker to count the bytes into
+ * @return {Promise<void>} answers once both are in, or have failed
  */
-function prefetchCore(core, signal = null) {
-	for (const file of [`${core}_libretro.js`, `${core}_libretro.wasm`]) {
+function prefetchCore(core, signal = null, progress = null) {
+	return Promise.all([`${core}_libretro.js`, `${core}_libretro.wasm`].map((file) =>
 		// Not through api(): a static file under the app's own img/, not a
-		// route, and nothing waits on it -- only a warm cache is at stake,
-		// so there is no caller for a deadline to release.
+		// route, and nothing depends on it arriving -- only a warm cache is
+		// at stake, so there is no caller for a deadline to release.
 		fetch(coreUrl(file), { credentials: 'same-origin', priority: 'high', signal })
+			.then(async (response) => {
+				if (!response.ok || progress === null) {
+					return
+				}
+				progress.track(file, lengthOf(response))
+				await readWithProgress(response, (bytes) => progress.advance(file, bytes))
+			})
 			.catch(() => {
 				// Only a warm cache was at stake.
-			})
-	}
+			})))
 }
 
 /**

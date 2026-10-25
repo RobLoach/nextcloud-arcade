@@ -27,22 +27,69 @@ Personal settings → Arcade:
 | Controls | [see the usage guide](usage.md#the-keyboard) | The key of every button and of the player itself |
 | Games library folder | `/Games` | Scanned for the games library page |
 | Thumbnails folder | empty | Images used as game thumbnails, and where fetched box art lands |
-| Saves folder | empty | Save states and battery saves, in your own files. Without one, a game cannot be saved |
+| Saves folder | empty | Save states and battery saves, in your own files, in RetroArch's layout. Without one, a game cannot be saved |
 | System folder | empty | Where BIOS files are read from |
 | Screenshots folder | empty | Where the screenshot button saves images; left empty, they are downloaded |
 
 ## Where saves are kept
 
-With a saves folder set, saves are written to your own files, filed under
-the system and the game, so a `Mario.sfc` saves into
-`Saves/Super Nintendo/Mario/Slot 1.state` with `Slot 1.png` next to it,
-the automatic one as `Auto.state`, and the battery save as `Mario.srm`.
-They sync to your devices like anything else. Without a saves folder, a
-game cannot be saved at all, and the player says so.
+With a saves folder set, saves are written to your own files, laid out
+the way RetroArch keeps its own: battery saves under `saves/`, save
+states and their screenshots under `states/`, each filed under the name
+of the core that plays the game. So a `Mario.sfc` saves into
 
-Versions before 0.19 kept saves in the app's internal storage when no
-folder was set; those are still read and still cleaned up with their
-game. Changing the saves folder does not move existing saves.
+```
+Saves/manifest.server
+Saves/saves/Snes9x/Mario.srm
+Saves/states/Snes9x/Mario.state1
+Saves/states/Snes9x/Mario.state1.png
+Saves/states/Snes9x/Mario.state.auto
+```
+
+with slots 1 to 3 as `.state1` to `.state3`, and the automatic one as
+`.state.auto`. They sync to your devices like anything else. Without a
+saves folder, a game cannot be saved at all, and the player says so.
+
+Games played on the same core share its folder, so two games of the same
+name on it — a `Tetris.gb` and a `Tetris.gbc` — share their saves, as they
+do in RetroArch. A game whose system cannot be told from its name or its
+folder saves straight into `saves/` and `states/`.
+
+Saves from versions before 0.48.8, in `Saves/<System>/<Game>/` or the
+app's internal storage, are not read any more. Changing the saves folder
+does not move existing saves.
+
+### RetroArch Cloud Sync
+
+The saves folder is what RetroArch's
+[Cloud Sync](https://docs.libretro.com/guides/retroarch-cloud-sync/) syncs
+with: every save and delete made in Arcade is recorded in
+`manifest.server`, which is all RetroArch reads to know what changed. To
+play the same games with the same saves in RetroArch:
+
+1. Set a saves folder.
+2. Create an app password for RetroArch under Personal settings →
+   Security.
+3. In RetroArch, open Settings → Saving → Cloud Sync, turn on Cloud Sync,
+   and choose the `webdav` backend.
+4. Set the Cloud Storage URL to the saves folder over WebDAV, with the
+   trailing slash — the personal settings show yours, under the saves
+   folder: `https://cloud.example.com/remote.php/dav/files/USERNAME/Saves/`
+5. Enter your user name and the app password, keep Sync Saves on, and
+   restart RetroArch.
+
+Keep RetroArch's "Sort Saves into Folders by Core Name" and "Sort Save
+States into Folders by Core Name" on, as they are by default; saves it
+already filed without them, straight in `saves/` or `states/`, are read
+and written where they are. Arcade offers slots 1 to 3 and the automatic
+slot, and lists any other slot RetroArch saved into — slot 0, or 990 — to
+be loaded or deleted.
+
+A save state belongs to the core that made it, at the version that made
+it. The cores Arcade runs are RetroArch's own, built for the browser, so
+a state usually loads on either side; one from a much older or newer
+build of the core may not. Battery saves are plain files, and always
+carry over.
 
 ## Administration settings
 

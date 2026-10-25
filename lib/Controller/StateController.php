@@ -198,8 +198,8 @@ class StateController extends ArcadeController {
 	}
 
 	/**
-	 * Slots of earlier versions can still be read and removed, so that what
-	 * they hold is not stranded.
+	 * Slots RetroArch saved into can be read and removed, even the ones the
+	 * player does not offer, so that what they hold is not stranded.
 	 *
 	 * On top of the shape of the request, the game itself has to be among
 	 * the user's files: saves are keyed by the ROM's path, and a path that
@@ -220,10 +220,8 @@ class StateController extends ArcadeController {
 	 *
 	 * This is all the DELETE routes ask, and deliberately so: they clean
 	 * up after games that are already gone, where isValidRequest would
-	 * turn them away. deleteSram and delete both fall back to a hash of
-	 * the path when the file id is gone, and the per-game saves folder
-	 * outlives the ROM, so removing what a deleted game left behind must
-	 * still go through.
+	 * turn them away. Saves are named after the game and outlive the ROM,
+	 * so removing what a deleted game left behind must still go through.
 	 *
 	 * @psalm-assert-if-true string $this->userId
 	 */
@@ -233,15 +231,19 @@ class StateController extends ArcadeController {
 			// Saves live in the files of the user, so there has to be a
 			// folder to put them in.
 			&& $this->settingsService->getUserSettings($this->userId)['saves_folder'] !== ''
-			// Slot 0 is the one the player writes by itself.
+			// The automatic slot, or one RetroArch could have saved into.
 			&& $slot >= StateService::AUTO_SLOT
 			&& $slot <= StateService::HIGHEST_SLOT;
 	}
 
 	/**
+	 * Only the automatic slot and the numbered ones the player offers are
+	 * written; the rest are RetroArch's, to be loaded and removed.
+	 *
 	 * @psalm-assert-if-true string $this->userId
 	 */
 	private function isWritableSlot(string $file, int $slot): bool {
-		return $this->isValidRequest($file, $slot) && $slot <= StateService::SLOTS;
+		return $this->isValidRequest($file, $slot)
+			&& ($slot === StateService::AUTO_SLOT || ($slot >= 1 && $slot <= StateService::SLOTS));
 	}
 }

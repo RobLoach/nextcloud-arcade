@@ -7,9 +7,9 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 
 const api = vi.hoisted(() => vi.fn())
 vi.mock('../../src/api.js', () => ({
-	AUTO_SLOT: 0,
+	AUTO_SLOT: -1,
 	api,
-	deadline: () => undefined,
+	deadline: () => new AbortController().signal,
 	stateUrl: (route, romPath, slot = null) => `${route}?file=${romPath}&slot=${slot}`,
 	UPLOAD_WAIT: 1000,
 	wasGivenUpOn: (error) => error?.name === 'TimeoutError',
@@ -161,5 +161,47 @@ describe('the save states panel', () => {
 		expect(panel.element.textContent).toContain('Could not read the save states')
 		expect([...panel.element.querySelectorAll('button')]
 			.some((button) => button.textContent === 'Retry')).toBe(true)
+	})
+
+	test('says a save is made as soon as the core hands it over, not once it is uploaded', async () => {
+		const { calls, instance } = heldCore()
+		const { panel, flash } = panelWith(instance)
+		await panel.refresh()
+		// An upload that never finishes.
+		api.mockImplementation((url, options = {}) => (options.method === 'POST'
+			? new Promise(() => {})
+			: Promise.resolve(listing())))
+
+		panel.save(2)
+		await vi.advanceTimersByTimeAsync(0)
+		calls[0].resolve({ state: new Blob(['bytes']), thumbnail: new Blob(['png']) })
+		await vi.advanceTimersByTimeAsync(0)
+
+		expect(flash).toHaveBeenCalledWith('State saved to slot 2', 'success')
+		// And it loads from what is held, without asking the server.
+		const asked = api.mock.calls.length
+		panel.load(2)
+		await vi.advanceTimersByTimeAsync(0)
+		expect(calls[1].name).toBe('loadState')
+		expect(api.mock.calls.length).toBe(asked)
+	})
+
+	test('lists the slots RetroArch saved into beyond the ones offered', async () => {
+		const { panel } = panelWith(heldCore().instance)
+		api.mockResolvedValue({
+			json: async () => ({
+				slots: 3,
+				states: [{ slot: 0, mtime: 1, size: 5 }, { slot: 990, mtime: 1, size: 5 }],
+				hasSram: false,
+			}),
+		})
+
+		await panel.refresh()
+
+		const labels = [...panel.element.querySelectorAll('.arcade-states-label')]
+			.map((node) => node.textContent)
+		expect(labels[0]).toContain('Slot 1')
+		expect(labels[3]).toContain('Slot 0')
+		expect(labels[4]).toContain('Slot 990')
 	})
 })

@@ -83,6 +83,8 @@ src/player.js               Launcher, ROM fetching, zip extraction, SRAM
 src/toolbar.js              Player control bar
 src/panels/                 Save states, screenshots and resume panels
 src/api.js                  Save state endpoints shared by the panels
+src/statecache.js           The save states of a game, held for the session
+src/progress.js             The progress bar of a game on its way
 src/toast.js                Everything the app says, said the one way
 src/corelog.js              What the core prints, filtered down to what a player can act on
 src/play.js                 Where a game opens from, shared by the Files entry points
@@ -177,7 +179,7 @@ Outside of the files of a user, the app writes:
 | `oc_jobs` | A queued box art lookup while one is running, and the weekly save state cleanup sweep |
 | `oc_mimetypes`, `oc_filecache` | The ROM mimetypes, and the files given them |
 | `oc_files_metadata` | The system, title, region, MD5 and CRC32 of each ROM, by file id |
-| `appdata_*/arcade/` | Save states and battery saves, for as long as no saves folder is set; the BIOS store of the instance |
+| `appdata_*/arcade/` | Save states and battery saves of versions before 0.48.8, only ever removed now; the BIOS store of the instance |
 
 Favorites are not in that list: they are the favorites of the Files app,
 kept in its own tables under the file id. `occ arcade:uninstall` leaves

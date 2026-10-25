@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace OCA\Arcade\Tests\Unit;
 
 use OCA\Arcade\Db\GameMapper;
+use OCA\Arcade\Service\CloudSyncManifest;
 use OCA\Arcade\Service\SettingsService;
 use OCA\Arcade\Service\StateService;
 use OCP\Files\AppData\IAppDataFactory;
@@ -15,6 +16,7 @@ use OCP\Files\IRootFolder;
 use OCP\Files\NotFoundException;
 use OCP\Files\SimpleFS\ISimpleFile;
 use OCP\FilesMetadata\IFilesMetadataManager;
+use OCP\Lock\ILockingProvider;
 use OCP\FilesMetadata\Model\IFilesMetadata;
 use OCP\Files\SimpleFS\ISimpleFolder;
 use PHPUnit\Framework\TestCase;
@@ -34,10 +36,12 @@ class StateServiceTest extends TestCase {
 	private array $ids = [];
 	/** What each file id hashes to, for the ROMs that have been read. */
 	private array $checksums = [];
+	/** When each file of the user was written, for the ones the tests say. */
+	private array $mtimes = [];
 	/** The rows of the games table, by user then key, as the mapper keeps them. */
 	private array $games = [];
 
-	private function service(string $savesFolder = ''): StateService {
+	private function service(string $savesFolder = '/Saves'): StateService {
 		$settings = $this->createStub(SettingsService::class);
 		$settings->method('getUserSettings')->willReturn(['saves_folder' => $savesFolder]);
 
@@ -47,6 +51,10 @@ class StateServiceTest extends TestCase {
 			$settings,
 			$this->metadataManager(),
 			$this->gameMapper(),
+			new CloudSyncManifest(
+				$this->createStub(ILockingProvider::class),
+				$this->createStub(LoggerInterface::class),
+			),
 			$this->createStub(LoggerInterface::class),
 		);
 	}
@@ -223,6 +231,8 @@ class StateServiceTest extends TestCase {
 	private function userFolder(string $prefix): Folder {
 		$folder = $this->createStub(Folder::class);
 		$folder->method('getName')->willReturn($prefix === '' ? 'files' : basename($prefix));
+		$folder->method('getPath')->willReturn('/' . self::USER . '/files' . ($prefix === '' ? '' : '/' . $prefix));
+		$folder->method('getId')->willReturn(crc32($prefix));
 		$folder->method('nodeExists')->willReturnCallback(
 			fn (string $name): bool => isset($this->files[$this->join($prefix, $name)])
 				|| $this->hasChildren($this->join($prefix, $name)),
@@ -297,10 +307,11 @@ class StateServiceTest extends TestCase {
 	private function userFile(string $path): File {
 		$file = $this->createStub(File::class);
 		$file->method('getName')->willReturn(basename($path));
+		$file->method('getPath')->willReturn('/' . self::USER . '/files/' . $path);
 		$file->method('getId')->willReturnCallback(fn (): int => $this->ids[$path] ?? 0);
 		$file->method('getContent')->willReturnCallback(fn (): string => $this->files[$path]);
 		$file->method('getSize')->willReturnCallback(fn (): int => strlen($this->files[$path]));
-		$file->method('getMTime')->willReturn(2000);
+		$file->method('getMTime')->willReturnCallback(fn (): int => $this->mtimes[$path] ?? 2000);
 		$file->method('putContent')->willReturnCallback(
 			function ($content) use ($path): void {
 				$this->files[$path] = (string)$content;
@@ -309,6 +320,14 @@ class StateServiceTest extends TestCase {
 		$file->method('delete')->willReturnCallback(
 			function () use ($path): void {
 				unset($this->files[$path]);
+			},
+		);
+		$file->method('move')->willReturnCallback(
+			function (string $target) use ($path): File {
+				$to = substr($target, strlen('/' . self::USER . '/files/'));
+				$this->files[$to] = $this->files[$path];
+				unset($this->files[$path]);
+				return $this->userFile($to);
 			},
 		);
 		return $file;
@@ -327,375 +346,336 @@ class StateServiceTest extends TestCase {
 		return false;
 	}
 
-	// What the states are for.
+	// Where things go.
 
-	public function testAStateIsSavedAndReadBack(): void {
+	private const STATES = 'Saves/states/FCEUmm';
+	private const SAVES = 'Saves/saves/FCEUmm';
+
+	/** What the manifest says, by path. */
+	private function manifest(): array {
+		return CloudSyncManifest::parse($this->files['Saves/manifest.server'] ?? '') ?? [];
+	}
+
+	public function testAStateIsSavedUnderTheCoreTheWayRetroArchNamesIt(): void {
 		$service = $this->service();
 		$service->save(self::USER, self::GAME, 1, 'the state');
+		$this->assertSame('the state', $this->files[self::STATES . '/Mario.state1']);
 		$this->assertSame('the state', $service->load(self::USER, self::GAME, 1));
 	}
 
-	public function testStatesOfDifferentUsersAndGamesDoNotMix(): void {
+	public function testTheSlotsAreNamedAsRetroArchNamesThem(): void {
 		$service = $this->service();
-		$service->save(self::USER, self::GAME, 1, 'of alice');
-		$service->save('bob', self::GAME, 1, 'of bob');
-		$service->save(self::USER, '/Games/Zelda.sfc', 1, 'another game');
-
-		$this->assertSame('of alice', $service->load(self::USER, self::GAME, 1));
-		$this->assertSame('of bob', $service->load('bob', self::GAME, 1));
-		$this->assertSame('another game', $service->load(self::USER, '/Games/Zelda.sfc', 1));
+		$service->save(self::USER, self::GAME, StateService::AUTO_SLOT, 'auto');
+		$service->save(self::USER, self::GAME, 3, 'three');
+		$service->saveThumbnail(self::USER, self::GAME, 3, 'picture');
+		$service->saveThumbnail(self::USER, self::GAME, StateService::AUTO_SLOT, 'auto picture');
+		$this->assertSame('auto', $this->files[self::STATES . '/Mario.state.auto']);
+		$this->assertSame('three', $this->files[self::STATES . '/Mario.state3']);
+		$this->assertSame('picture', $this->files[self::STATES . '/Mario.state3.png']);
+		$this->assertSame('auto picture', $this->files[self::STATES . '/Mario.state.auto.png']);
+		$this->assertSame('picture', $service->loadThumbnail(self::USER, self::GAME, 3));
 	}
 
-	public function testSlotsDoNotMix(): void {
+	public function testTheBatterySaveGoesUnderSaves(): void {
 		$service = $this->service();
-		$service->save(self::USER, self::GAME, StateService::AUTO_SLOT, 'automatic');
-		$service->save(self::USER, self::GAME, 2, 'second');
-
-		$this->assertSame('automatic', $service->load(self::USER, self::GAME, StateService::AUTO_SLOT));
-		$this->assertSame('second', $service->load(self::USER, self::GAME, 2));
-		$this->assertNull($service->load(self::USER, self::GAME, 3), 'an empty slot holds nothing');
+		$service->saveSram(self::USER, self::GAME, 'sram');
+		$this->assertSame('sram', $this->files[self::SAVES . '/Mario.srm']);
+		$this->assertSame('sram', $service->loadSram(self::USER, self::GAME));
+		$this->assertTrue($service->hasSram(self::USER, self::GAME));
 	}
 
-	public function testSavesFollowAGameThatIsRenamed(): void {
-		$this->files[ltrim(self::GAME, '/')] = 'the rom';
-		$this->ids[ltrim(self::GAME, '/')] = 101;
-		$service = $this->service('/Saves');
-		$service->save(self::USER, self::GAME, 1, 'a save');
-		$service->saveSram(self::USER, self::GAME, 'a battery save');
-
-		// The same file, under another name, in another folder.
-		$renamed = '/Games/NES/Super Mario Bros.nes';
-		unset($this->files[ltrim(self::GAME, '/')], $this->ids[ltrim(self::GAME, '/')]);
-		$this->files[ltrim($renamed, '/')] = 'the rom';
-		$this->ids[ltrim($renamed, '/')] = 101;
-
-		$this->assertSame('a save', $service->load(self::USER, $renamed, 1), 'the save is found again');
-		$this->assertSame('a battery save', $service->loadSram(self::USER, $renamed));
-		$this->assertSame([1], array_column($service->list(self::USER, $renamed), 'slot'));
-	}
-
-	public function testGamesThatShareANameAreNotConfused(): void {
-		$this->files['Games/NES/Mario.nes'] = 'one';
-		$this->ids['Games/NES/Mario.nes'] = 101;
-		$this->files['Games/SNES/Mario.nes'] = 'another';
-		$this->ids['Games/SNES/Mario.nes'] = 202;
-
+	public function testStatesOfDifferentGamesAndSlotsDoNotMix(): void {
 		$service = $this->service();
-		$service->save(self::USER, '/Games/NES/Mario.nes', 1, 'the nes save');
-		$service->save(self::USER, '/Games/SNES/Mario.nes', 1, 'the snes save');
-
-		$this->assertSame('the nes save', $service->load(self::USER, '/Games/NES/Mario.nes', 1));
-		$this->assertSame('the snes save', $service->load(self::USER, '/Games/SNES/Mario.nes', 1));
+		$service->save(self::USER, self::GAME, 1, 'mario');
+		$service->save(self::USER, '/Games/NES/Zelda.nes', 1, 'zelda');
+		$service->save(self::USER, self::GAME, 2, 'mario two');
+		$this->assertSame('mario', $service->load(self::USER, self::GAME, 1));
+		$this->assertSame('zelda', $service->load(self::USER, '/Games/NES/Zelda.nes', 1));
+		$this->assertSame('mario two', $service->load(self::USER, self::GAME, 2));
+		$this->assertNull($service->load(self::USER, self::GAME, 3));
 	}
 
-	public function testTheScreenshotOfASaveIsFoundUnderTheSystemOfTheGame(): void {
-		// Saves are filed under the system, so the folders of the saves
-		// folder are systems holding games, not games.
-		$this->files[ltrim(self::GAME, '/')] = 'the rom';
-		$this->ids[ltrim(self::GAME, '/')] = 101;
-		$service = $this->service('/Saves');
-		$service->save(self::USER, self::GAME, 1, 'a save');
-		$service->saveThumbnail(self::USER, self::GAME, 1, 'a picture');
-
-		$found = $service->thumbnailIndex(self::USER, [self::GAME]);
-		$this->assertSame(1, $found[self::GAME]['slot'] ?? null, 'the slot the picture belongs to');
-	}
-
-	public function testTheScreenshotOfAGameSavedBeforeSystemsAreFoundToo(): void {
-		$service = $this->service('/Saves');
-		// As an older version would have left it: straight in the folder.
-		$this->files['Saves/Mario/Slot 1.state'] = 'a save';
-		$this->files['Saves/Mario/Slot 1.png'] = 'a picture';
-
-		$found = $service->thumbnailIndex(self::USER, ['/Games/Mario.nes']);
-		$this->assertSame(1, $found['/Games/Mario.nes']['slot'] ?? null);
-	}
-
-	public function testASaveIsMarkedWhenTheRomIsNoLongerTheOneItWasMadeFrom(): void {
-		$this->files[ltrim(self::GAME, '/')] = 'the rom';
-		$this->ids[ltrim(self::GAME, '/')] = 101;
-		$this->checksums[101] = 'the first dump';
-
+	public function testEveryWriteIsRecordedInTheManifest(): void {
 		$service = $this->service();
-		$service->save(self::USER, self::GAME, 1, 'a save');
-		$this->assertArrayNotHasKey('stale', $service->list(self::USER, self::GAME)[0]);
-
-		// The same game, a different dump of it.
-		$this->checksums[101] = 'another dump';
-		$this->assertTrue($service->list(self::USER, self::GAME)[0]['stale'] ?? false);
+		$service->save(self::USER, self::GAME, 1, 'the state');
+		$service->saveSram(self::USER, self::GAME, 'sram');
+		$this->assertSame([
+			'saves/FCEUmm/Mario.srm' => md5('sram'),
+			'states/FCEUmm/Mario.state1' => md5('the state'),
+		], $this->manifest());
 	}
 
-	public function testASaveIsNotMarkedWhenNothingIsKnownOfTheRom(): void {
-		$this->files[ltrim(self::GAME, '/')] = 'the rom';
-		$this->ids[ltrim(self::GAME, '/')] = 101;
-
-		$service = $this->service();
-		$service->save(self::USER, self::GAME, 1, 'a save');
-		$this->checksums[101] = 'worked out later';
-
-		$this->assertArrayNotHasKey(
-			'stale',
-			$service->list(self::USER, self::GAME)[0],
-			'a checksum that arrived after the save says nothing about it',
+	public function testTheManifestIsWrittenTheWayRetroArchWritesIt(): void {
+		$this->service()->saveSram(self::USER, self::GAME, 'sram');
+		$this->assertSame(
+			"[\n  {\n    \"path\": \"saves/FCEUmm/Mario.srm\",\n    \"hash\": \"" . md5('sram') . "\"\n  }\n]\n",
+			$this->files['Saves/manifest.server'],
 		);
 	}
 
-	public function testTheStatesOfAUserAreFoundAsAFolderOfTheirOwn(): void {
-		// What the cleanup command walks: a folder per user, told apart
-		// from the flat files older versions left in the same place.
-		$service = $this->service();
-		$service->save(self::USER, self::GAME, 1, 'a save');
-
-		$folders = $service->userFolders();
-		$this->assertSame([$service->folderKeyOf(self::USER)], array_keys($folders));
-		$this->assertSame(0, $service->countLegacyFiles(), 'nothing flat was left behind');
+	public function testWhatRetroArchRecordedIsKept(): void {
+		$this->files['Saves/manifest.server'] = CloudSyncManifest::render([
+			'config/FCEUmm/FCEUmm.opt' => 'abc',
+			'states/Zelda.state' => 'def',
+		]);
+		$this->service()->save(self::USER, self::GAME, 1, 'the state');
+		$this->assertSame([
+			'config/FCEUmm/FCEUmm.opt' => 'abc',
+			'states/FCEUmm/Mario.state1' => md5('the state'),
+			'states/Zelda.state' => 'def',
+		], $this->manifest());
 	}
 
-	public function testThumbnailsAndBatterySavesLiveAlongsideTheStates(): void {
+	public function testAManifestThatCannotBeReadIsLeftAloneAndTheSaveStillHappens(): void {
+		$this->files['Saves/manifest.server'] = 'not a manifest';
 		$service = $this->service();
-		$service->saveThumbnail(self::USER, self::GAME, 1, 'a picture');
-		$service->saveSram(self::USER, self::GAME, 'a battery save');
-
-		$this->assertSame('a picture', $service->loadThumbnail(self::USER, self::GAME, 1));
-		$this->assertSame('a battery save', $service->loadSram(self::USER, self::GAME));
+		$service->save(self::USER, self::GAME, 1, 'the state');
+		$this->assertSame('the state', $service->load(self::USER, self::GAME, 1));
+		$this->assertSame('not a manifest', $this->files['Saves/manifest.server']);
 	}
 
-	public function testTheSlotsOfAGameAreListedWithWhatIsKnownOfThem(): void {
+	public function testADeleteIsRecordedSoRetroArchDeletesItsCopyToo(): void {
 		$service = $this->service();
-		$service->save(self::USER, self::GAME, StateService::AUTO_SLOT, 'automatic');
-		$service->save(self::USER, self::GAME, 2, 'second');
-		$service->saveThumbnail(self::USER, self::GAME, 2, 'a picture');
-
-		$states = $service->list(self::USER, self::GAME);
-		$this->assertSame([StateService::AUTO_SLOT, 2], array_column($states, 'slot'));
-		$this->assertFalse($states[0]['hasThumbnail']);
-		$this->assertTrue($states[1]['hasThumbnail']);
-		$this->assertSame(strlen('second'), $states[1]['size']);
+		$service->save(self::USER, self::GAME, 1, 'the state');
+		$service->saveThumbnail(self::USER, self::GAME, 1, 'picture');
+		$this->assertTrue($service->delete(self::USER, self::GAME, 1));
+		$this->assertArrayNotHasKey(self::STATES . '/Mario.state1', $this->files);
+		$this->assertArrayNotHasKey(self::STATES . '/Mario.state1.png', $this->files);
+		$this->assertSame([
+			'states/FCEUmm/Mario.state1' => '',
+			'states/FCEUmm/Mario.state1.png' => '',
+		], $this->manifest());
+		$this->assertFalse($service->delete(self::USER, self::GAME, 1));
 	}
 
 	public function testDeletingASlotLeavesTheOthersAlone(): void {
 		$service = $this->service();
-		$service->save(self::USER, self::GAME, 1, 'first');
-		$service->saveThumbnail(self::USER, self::GAME, 1, 'a picture');
-		$service->save(self::USER, self::GAME, 2, 'second');
-
-		$this->assertTrue($service->delete(self::USER, self::GAME, 1));
+		$service->save(self::USER, self::GAME, 1, 'one');
+		$service->save(self::USER, self::GAME, 2, 'two');
+		$service->delete(self::USER, self::GAME, 1);
 		$this->assertNull($service->load(self::USER, self::GAME, 1));
-		$this->assertNull($service->loadThumbnail(self::USER, self::GAME, 1), 'the picture goes too');
-		$this->assertSame('second', $service->load(self::USER, self::GAME, 2));
-		$this->assertFalse($service->delete(self::USER, self::GAME, 1), 'and once is enough');
+		$this->assertSame('two', $service->load(self::USER, self::GAME, 2));
 	}
 
-	public function testTheBatterySaveCanBeDeletedFromTheAppData(): void {
+	// What RetroArch put there.
+
+	public function testWhatRetroArchFiledWithoutTheCoreIsReadAndWrittenInPlace(): void {
+		$this->files['Saves/saves/Mario.srm'] = 'from retroarch';
+		$this->files['Saves/states/Mario.state1'] = 'from retroarch';
 		$service = $this->service();
-		$service->saveSram(self::USER, self::GAME, 'a battery save');
-		$this->assertTrue($service->hasSram(self::USER, self::GAME));
+		$this->assertSame('from retroarch', $service->loadSram(self::USER, self::GAME));
+		$this->assertSame('from retroarch', $service->load(self::USER, self::GAME, 1));
 
-		$this->assertTrue($service->deleteSram(self::USER, self::GAME));
-
-		$this->assertNull($service->loadSram(self::USER, self::GAME));
-		$this->assertFalse($service->hasSram(self::USER, self::GAME));
-		$this->assertFalse($service->deleteSram(self::USER, self::GAME), 'and once is enough');
+		$service->saveSram(self::USER, self::GAME, 'from arcade');
+		$this->assertSame('from arcade', $this->files['Saves/saves/Mario.srm']);
+		$this->assertArrayNotHasKey(self::SAVES . '/Mario.srm', $this->files);
+		$this->assertSame(['saves/Mario.srm' => md5('from arcade')], $this->manifest());
 	}
 
-	public function testTheBatterySaveCanBeDeletedFromTheSavesFolder(): void {
-		$service = $this->service('/Saves');
-		$service->saveSram(self::USER, self::GAME, 'a battery save');
-		$this->assertTrue($service->hasSram(self::USER, self::GAME));
-
-		$this->assertTrue($service->deleteSram(self::USER, self::GAME));
-
-		$this->assertArrayNotHasKey('Saves/Nintendo/Mario/Mario.srm', $this->files);
-		$this->assertFalse($service->hasSram(self::USER, self::GAME));
-		$this->assertFalse($service->deleteSram(self::USER, self::GAME), 'and once is enough');
+	public function testTheFolderOfTheCoreWinsOverTheFlatOne(): void {
+		$this->files['Saves/states/Mario.state1'] = 'flat';
+		$this->files[self::STATES . '/Mario.state1'] = 'by core';
+		$this->assertSame('by core', $this->service()->load(self::USER, self::GAME, 1));
 	}
 
-	public function testABatterySaveWrittenBeforeTheSavesFolderIsStillFound(): void {
-		// Played before a saves folder was configured, so the battery save
-		// went to the app data -- where the save states of the same session
-		// are still read from once the folder is set.
-		$this->service()->saveSram(self::USER, self::GAME, 'a battery save');
+	public function testEverySlotRetroArchSavedIsListed(): void {
+		$this->files[self::STATES . '/Mario.state'] = 'zero';
+		$this->files[self::STATES . '/Mario.state990'] = 'nine ninety';
+		$this->files[self::STATES . '/Mario.state990.png'] = 'picture';
+		$this->files['Saves/states/Mario.state.auto'] = 'auto';
+		$this->files[self::STATES . '/Mario.state2'] = 'two';
+		$this->mtimes[self::STATES . '/Mario.state2'] = 3000;
 
-		$service = $this->service('/Saves');
-		$this->assertTrue($service->hasSram(self::USER, self::GAME));
-		$this->assertSame('a battery save', $service->loadSram(self::USER, self::GAME));
+		$states = $this->service()->list(self::USER, self::GAME);
+		$this->assertSame([StateService::AUTO_SLOT, 0, 2, 990], array_column($states, 'slot'));
+		$this->assertSame(['slot' => 2, 'size' => 3, 'mtime' => 3000, 'hasThumbnail' => false], $states[2]);
+		$this->assertTrue($states[3]['hasThumbnail']);
+		$this->assertSame('nine ninety', $this->service()->load(self::USER, self::GAME, 990));
 	}
 
-	public function testDeletingTheBatterySaveClearsTheAppDataToo(): void {
-		// One in each place: the app data from before the saves folder was
-		// configured, the folder's own from a session since.
-		$this->service()->saveSram(self::USER, self::GAME, 'an older battery save');
-		$this->files['Saves/Nintendo/Mario/Mario.srm'] = 'a battery save';
-
-		$service = $this->service('/Saves');
-		$this->assertTrue($service->deleteSram(self::USER, self::GAME));
-
-		$this->assertArrayNotHasKey('Saves/Nintendo/Mario/Mario.srm', $this->files);
-		$this->assertFalse($service->hasSram(self::USER, self::GAME));
-		// A delete is final: emptying or unsetting the saves folder later on
-		// must not hand the app-data battery save back.
-		$this->assertNull($this->service()->loadSram(self::USER, self::GAME));
+	public function testFilesOfOtherGamesAreNotTakenForSlots(): void {
+		foreach (['Mario Bros.state1', 'Mario.state01', 'Mario.state1.bak', 'Mario.srm', 'Mario.state1000'] as $name) {
+			$this->files[self::STATES . '/' . $name] = 'not mario';
+		}
+		$this->assertSame([], $this->service()->list(self::USER, self::GAME));
 	}
 
-	public function testABatterySaveUnderTheOldNameOfTheGameIsStillDeleted(): void {
-		$service = $this->service('/Saves');
-		// As a rename leaves it: the folder followed the game, the battery
-		// save inside kept the name the game had.
-		$this->files['Saves/Nintendo/Mario/Super Mario Bros.srm'] = 'a battery save';
-
-		$this->assertTrue($service->hasSram(self::USER, self::GAME));
-		$this->assertSame('a battery save', $service->loadSram(self::USER, self::GAME));
-		$this->assertTrue($service->deleteSram(self::USER, self::GAME));
-		$this->assertArrayNotHasKey('Saves/Nintendo/Mario/Super Mario Bros.srm', $this->files);
-	}
-
-	public function testAGameWithoutABatterySaveHasNothingToDelete(): void {
+	public function testGamesOfTheSameCoreShareItsFolder(): void {
 		$service = $this->service();
+		$service->saveSram(self::USER, '/Games/GB/Tetris.gb', 'gb');
+		$service->saveSram(self::USER, '/Games/GBC/Pokemon.gbc', 'gbc');
+		$this->assertSame('gb', $this->files['Saves/saves/Gambatte/Tetris.srm']);
+		$this->assertSame('gbc', $this->files['Saves/saves/Gambatte/Pokemon.srm']);
+	}
+
+	public function testAGameThatDoesNotSayItsSystemSavesWithoutACore(): void {
+		$service = $this->service();
+		$service->save(self::USER, '/Games/Mystery.zip', 1, 'state');
+		$this->assertSame('state', $this->files['Saves/states/Mystery.state1']);
+	}
+
+	public function testNothingIsSavedWithoutASavesFolder(): void {
+		$service = $this->service('');
+		$this->assertSame([], $service->list(self::USER, self::GAME));
+		$this->assertNull($service->load(self::USER, self::GAME, 1));
 		$this->assertFalse($service->hasSram(self::USER, self::GAME));
-		$this->assertFalse($service->deleteSram(self::USER, self::GAME));
+	}
+
+	public function testTheSavesFolderIsMadeOnTheFirstSave(): void {
+		$this->service('/Games/My Saves')->save(self::USER, self::GAME, 1, 'state');
+		$this->assertSame('state', $this->files['Games/My Saves/states/FCEUmm/Mario.state1']);
+		$this->assertArrayHasKey('Games/My Saves/manifest.server', $this->files);
+	}
+
+	// What the player is told.
+
+	public function testASaveIsMarkedWhenTheRomIsNoLongerTheOneItWasMadeFrom(): void {
+		$this->files['Games/NES/Mario.nes'] = 'rom';
+		$this->ids['Games/NES/Mario.nes'] = 42;
+		$this->checksums[42] = 'first';
+		$service = $this->service();
+		$service->save(self::USER, self::GAME, 1, 'state');
+		$this->assertArrayNotHasKey('stale', $service->list(self::USER, self::GAME)[0]);
+
+		$this->checksums[42] = 'second';
+		$this->assertTrue($this->service()->list(self::USER, self::GAME)[0]['stale']);
+	}
+
+	public function testASaveIsNotMarkedWhenNothingIsKnownOfTheRom(): void {
+		$service = $this->service();
+		$service->save(self::USER, self::GAME, 1, 'state');
+		$this->assertArrayNotHasKey('stale', $service->list(self::USER, self::GAME)[0]);
+	}
+
+	public function testTheNewestScreenshotOfAGameStandsInForItsThumbnail(): void {
+		$this->files[self::STATES . '/Mario.state1.png'] = 'one';
+		$this->files['Saves/states/Mario.state.auto.png'] = 'auto';
+		$this->mtimes['Saves/states/Mario.state.auto.png'] = 5000;
+		$this->files['Saves/states/Gambatte/Tetris.state2.png'] = 'tetris';
+		$this->files[self::STATES . '/Zelda.state1'] = 'no picture';
+
+		$index = $this->service()->thumbnailIndex(self::USER, [self::GAME, '/Games/GB/Tetris.gb', '/Games/NES/Zelda.nes']);
+		$this->assertSame([
+			self::GAME => ['slot' => StateService::AUTO_SLOT, 'mtime' => 5000],
+			'/Games/GB/Tetris.gb' => ['slot' => 2, 'mtime' => 2000],
+		], $index);
+	}
+
+	public function testThereIsNoScreenshotIndexWithoutASavesFolder(): void {
+		$this->assertSame([], $this->service('')->thumbnailIndex(self::USER, [self::GAME]));
+	}
+
+	// Following and cleaning up.
+
+	public function testSavesFollowAGameThatIsRenamed(): void {
+		$this->files['Games/NES/Mario.nes'] = 'rom';
+		$this->ids['Games/NES/Mario.nes'] = 42;
+		$service = $this->service();
+		$service->save(self::USER, self::GAME, 1, 'state');
+		$service->saveSram(self::USER, self::GAME, 'sram');
+
+		unset($this->files['Games/NES/Mario.nes'], $this->ids['Games/NES/Mario.nes']);
+		$this->files['Games/NES/Super Mario.nes'] = 'rom';
+		$this->ids['Games/NES/Super Mario.nes'] = 42;
+
+		$renamed = $this->service();
+		$this->assertSame('state', $renamed->load(self::USER, '/Games/NES/Super Mario.nes', 1));
+		$this->assertSame('sram', $renamed->loadSram(self::USER, '/Games/NES/Super Mario.nes'));
+		$this->assertArrayNotHasKey(self::STATES . '/Mario.state1', $this->files);
+		$manifest = $this->manifest();
+		$this->assertSame('', $manifest['states/FCEUmm/Mario.state1']);
+		$this->assertSame(md5('state'), $manifest['states/FCEUmm/Super Mario.state1']);
+		$this->assertSame('/Games/NES/Super Mario.nes', $this->games[self::USER]['42']['path']);
+	}
+
+	public function testARenameDoesNotOverwriteWhatTheNewNameAlreadyHas(): void {
+		$this->files['Games/NES/Mario.nes'] = 'rom';
+		$this->ids['Games/NES/Mario.nes'] = 42;
+		$this->service()->save(self::USER, self::GAME, 1, 'old');
+		unset($this->files['Games/NES/Mario.nes'], $this->ids['Games/NES/Mario.nes']);
+		$this->files['Games/NES/Luigi.nes'] = 'rom';
+		$this->ids['Games/NES/Luigi.nes'] = 42;
+		$this->files[self::STATES . '/Luigi.state1'] = 'luigi';
+
+		$this->assertSame('luigi', $this->service()->load(self::USER, '/Games/NES/Luigi.nes', 1));
+		$this->assertSame('old', $this->files[self::STATES . '/Mario.state1']);
 	}
 
 	public function testEverythingOfAGameGoesWithIt(): void {
 		$service = $this->service();
-		$service->save(self::USER, self::GAME, 1, 'first');
-		$service->save(self::USER, self::GAME, 2, 'second');
-		$service->saveSram(self::USER, self::GAME, 'a battery save');
-		$service->save(self::USER, '/Games/Zelda.sfc', 1, 'another game');
+		$service->save(self::USER, self::GAME, 1, 'state');
+		$service->saveThumbnail(self::USER, self::GAME, 1, 'picture');
+		$service->saveSram(self::USER, self::GAME, 'sram');
+		$this->files['Saves/states/Mario.state990'] = 'flat';
+		$this->files[self::STATES . '/Zelda.state1'] = 'zelda';
 
 		$service->deleteAllForGame(self::USER, self::GAME);
-
-		$this->assertSame([], $service->list(self::USER, self::GAME));
-		$this->assertNull($service->loadSram(self::USER, self::GAME));
-		$this->assertSame('another game', $service->load(self::USER, '/Games/Zelda.sfc', 1));
-	}
-
-	public function testAGameFiledUnderItsIdIsStillCleanedUpOnceItIsGone(): void {
-		// Filed under the id of its file while it existed. The registry
-		// hands that key back as a number -- PHP turns array keys that look
-		// like numbers into numbers -- and the cleanup used to trip over it.
-		$service = $this->service();
-		$this->files[ltrim(self::GAME, '/')] = 'rom bytes';
-		$this->ids[ltrim(self::GAME, '/')] = 101;
-		$service->save(self::USER, self::GAME, 1, 'a state');
-		$service->saveSram(self::USER, self::GAME, 'a battery save');
-
-		// Deleted past the trash: the file and its id are gone, and only
-		// the registry still knows what the game was filed under.
-		unset($this->files[ltrim(self::GAME, '/')], $this->ids[ltrim(self::GAME, '/')]);
-		$service->deleteAllForGame(self::USER, self::GAME);
-
-		$states = $this->appData['states/' . hash('sha256', self::USER)] ?? [];
-		$this->assertArrayNotHasKey('101-1.state', $states);
-		$this->assertArrayNotHasKey('101.srm', $states);
+		$this->assertSame(['Saves/manifest.server', self::STATES . '/Zelda.state1'], array_values(array_filter(
+			array_keys($this->files),
+			static fn (string $path): bool => !str_ends_with($path, '.folder'),
+		)));
+		$this->assertSame('', $this->manifest()['saves/FCEUmm/Mario.srm']);
+		// Never in the manifest, so there is nothing for RetroArch to delete.
+		$this->assertArrayNotHasKey('states/Mario.state990', $this->manifest());
 		$this->assertSame([], $service->gamesOf(self::USER));
 	}
 
+	public function testAGameKnownOnlyByItsIdIsStillCleanedUp(): void {
+		$this->files['Games/NES/Mario.nes'] = 'rom';
+		$this->ids['Games/NES/Mario.nes'] = 42;
+		$this->service()->save(self::USER, self::GAME, 1, 'state');
+		unset($this->files['Games/NES/Mario.nes'], $this->ids['Games/NES/Mario.nes']);
+
+		$this->service()->deleteAllForFileId(self::USER, 42);
+		$this->assertArrayNotHasKey(self::STATES . '/Mario.state1', $this->files);
+		$this->assertSame([], $this->games[self::USER]);
+	}
+
+	public function testWhatEarlierVersionsLeftInTheAppDataGoesWithTheGame(): void {
+		$this->files['Games/NES/Mario.nes'] = 'rom';
+		$this->ids['Games/NES/Mario.nes'] = 42;
+		$folder = 'states/' . StateService::userKey(self::USER);
+		$this->appData['states'] = [];
+		$this->appData[$folder] = ['42-0.state' => 'auto', '42-1.png' => 'pic', '42.srm' => 'sram', '7-1.state' => 'other'];
+
+		$this->service()->deleteAllForGame(self::USER, self::GAME);
+		$this->assertSame(['7-1.state' => 'other'], $this->appData[$folder]);
+	}
+
+	public function testABatterySaveIsDeletedWhereverItIs(): void {
+		$this->files['Saves/saves/Mario.srm'] = 'flat';
+		$this->files[self::SAVES . '/Mario.srm'] = 'by core';
+		$service = $this->service();
+		$this->assertTrue($service->deleteSram(self::USER, self::GAME));
+		$this->assertFalse($service->hasSram(self::USER, self::GAME));
+		$this->assertFalse($service->deleteSram(self::USER, self::GAME));
+	}
+
 	public function testEverythingOfAUserGoesWithThem(): void {
-		$service = $this->service();
-		$service->save(self::USER, self::GAME, 1, 'of alice');
-		$service->save('bob', self::GAME, 1, 'of bob');
-
-		$service->deleteAllForUser(self::USER);
-
-		$this->assertNull($service->load(self::USER, self::GAME, 1));
-		$this->assertSame('of bob', $service->load('bob', self::GAME, 1), 'and nobody else is touched');
+		$this->appData['states'] = [];
+		$this->appData['states/' . StateService::userKey(self::USER)] = ['1-1.state' => 'x'];
+		$this->games[self::USER] = ['1' => ['file_id' => 1, 'path' => self::GAME, 'md5' => '']];
+		$this->service()->deleteAllForUser(self::USER);
+		$this->assertArrayNotHasKey('states/' . StateService::userKey(self::USER), $this->appData);
+		$this->assertArrayNotHasKey(self::USER, $this->games);
 	}
 
-	public function testTheGamesAUserHasStatesForAreKnown(): void {
-		$service = $this->service();
-		$service->save(self::USER, self::GAME, 1, 'first');
-		$service->save(self::USER, '/Games/Zelda.sfc', 1, 'another game');
-
-		$games = array_values($service->gamesOf(self::USER));
-		sort($games);
-		$this->assertSame(['/Games/NES/Mario.nes', '/Games/Zelda.sfc'], $games);
-
-		// Which is what tells the cleanup what is still played.
-		$service->deleteAllForGame(self::USER, self::GAME);
-		$this->assertSame(['/Games/Zelda.sfc'], array_values($service->gamesOf(self::USER)));
+	public function testTheGamesAUserHasSavesForAreKnown(): void {
+		$this->files['Games/NES/Mario.nes'] = 'rom';
+		$this->ids['Games/NES/Mario.nes'] = 42;
+		$this->service()->saveSram(self::USER, self::GAME, 'sram');
+		$this->assertSame(['42' => self::GAME], $this->service()->gamesOf(self::USER));
 	}
 
-	// With a saves folder, the states are files of the user.
+	// The names.
 
-	public function testASavesFolderKeepsTheStatesInTheFilesOfTheUser(): void {
-		$service = $this->service('/Saves');
-		$service->save(self::USER, self::GAME, 1, 'first');
-		$service->save(self::USER, self::GAME, StateService::AUTO_SLOT, 'automatic');
-		$service->saveThumbnail(self::USER, self::GAME, 1, 'a picture');
-		$service->saveSram(self::USER, self::GAME, 'a battery save');
-
-		// Under the system, so two games of the same name keep apart.
-		$this->assertSame('first', $this->files['Saves/Nintendo/Mario/Slot 1.state'] ?? null);
-		$this->assertSame('automatic', $this->files['Saves/Nintendo/Mario/Auto.state'] ?? null, 'the automatic slot reads as Auto');
-		$this->assertSame('a picture', $this->files['Saves/Nintendo/Mario/Slot 1.png'] ?? null);
-		$this->assertSame('a battery save', $this->files['Saves/Nintendo/Mario/Mario.srm'] ?? null);
-
-		$this->assertSame('first', $service->load(self::USER, self::GAME, 1));
-		$this->assertSame([StateService::AUTO_SLOT, 1], array_column($service->list(self::USER, self::GAME), 'slot'));
-	}
-
-	public function testASavesFolderIsEmptiedWithTheGame(): void {
-		$service = $this->service('/Saves');
-		$service->save(self::USER, self::GAME, 1, 'first');
-
-		$service->deleteAllForGame(self::USER, self::GAME);
-		$this->assertArrayNotHasKey('Saves/Nintendo/Mario/Slot 1.state', $this->files);
-	}
-
-	public function testGamesOfTheSameNameOnDifferentSystemsKeepTheirOwnSaves(): void {
-		$service = $this->service('/Saves');
-		$service->save(self::USER, '/Games/NES/Mario.nes', 1, 'the Nintendo one');
-		$service->save(self::USER, '/Games/Genesis/Mario.md', 1, 'the Genesis one');
-
-		$this->assertSame('the Nintendo one', $service->load(self::USER, '/Games/NES/Mario.nes', 1));
-		$this->assertSame('the Genesis one', $service->load(self::USER, '/Games/Genesis/Mario.md', 1));
-		$this->assertSame('the Nintendo one', $this->files['Saves/Nintendo/Mario/Slot 1.state'] ?? null);
-		$this->assertSame('the Genesis one', $this->files['Saves/Genesis/Mario/Slot 1.state'] ?? null);
-	}
-
-	public function testAGameThatDoesNotSayItsSystemKeepsSavingWhereItAlwaysDid(): void {
-		$service = $this->service('/Saves');
-		$service->save(self::USER, '/Games/Unsorted/Mystery.zip', 1, 'a state');
-		$this->assertSame('a state', $this->files['Saves/Mystery/Slot 1.state'] ?? null);
-	}
-
-	public function testTheGameFolderIsOnlyResolvedOncePerRequest(): void {
-		// The states listing asks twice -- list() for the slots, hasSram()
-		// for the battery save -- and the folder cannot move in between.
-		$service = $this->service('/Saves');
-		$service->save(self::USER, self::GAME, 1, 'a save');
-
-		$this->asked = [];
-		$service->list(self::USER, self::GAME);
-		$service->hasSram(self::USER, self::GAME);
-
-		$this->assertNotContains(
-			'Saves/Nintendo/Mario',
-			$this->asked,
-			'the folder resolved for the save is remembered for the rest of the request',
-		);
-	}
-
-	public function testDeletingAGameDropsItsFolderFromTheMemo(): void {
-		$service = $this->service('/Saves');
-		$service->save(self::USER, self::GAME, 1, 'a save');
-
-		$service->deleteAllForGame(self::USER, self::GAME);
-
-		$this->assertSame([], $service->list(self::USER, self::GAME), 'nothing left to list');
-		$service->save(self::USER, self::GAME, 2, 'saved again');
-		$this->assertSame(
-			'saved again',
-			$service->load(self::USER, self::GAME, 2),
-			'a fresh save after the delete starts a fresh folder, not the remembered one',
-		);
-	}
-
-	public function testOnlySlotsThatAreOfferedCanBeWritten(): void {
-		// The controller refuses the rest, so the service is the last word
-		// on what the slots even are.
-		$this->assertSame(3, StateService::SLOTS);
-		$this->assertSame(0, StateService::AUTO_SLOT);
-		$this->assertGreaterThanOrEqual(StateService::SLOTS, StateService::HIGHEST_SLOT);
+	public function testANameIsReadBackAsTheSlotItWasWrittenFor(): void {
+		foreach ([StateService::AUTO_SLOT, 0, 1, 3, 999] as $slot) {
+			$name = StateService::stateName('Mario', $slot);
+			$this->assertSame(['slot' => $slot, 'thumbnail' => false], StateService::parseStateName('Mario', $name));
+			$this->assertSame(['slot' => $slot, 'thumbnail' => true], StateService::parseStateName('Mario', "$name.png"));
+		}
+		$this->assertNull(StateService::parseStateName('Mario', 'Mario.state-1'));
+		$this->assertNull(StateService::parseStateName('Mario', 'Mario.srm'));
 	}
 }

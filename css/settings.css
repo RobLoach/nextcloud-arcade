@@ -253,3 +253,23 @@
 		transition: none;
 	}
 }
+
+/* The steps of connecting RetroArch, numbered as the server's own lists
+   are not. */
+#arcade-settings .arcade-cloudsync-steps {
+	list-style: decimal;
+	padding-inline-start: calc(var(--default-grid-baseline) * 6);
+	margin-block: calc(var(--default-grid-baseline) * 2);
+}
+
+#arcade-settings .arcade-cloudsync-steps li {
+	margin-block: var(--default-grid-baseline);
+}
+
+/* An address to copy, so it can be selected whole and wraps rather than
+   pushing the page wider. */
+#arcade-settings .arcade-cloudsync-url,
+#arcade-settings .arcade-cloudsync-steps code {
+	user-select: all;
+	overflow-wrap: anywhere;
+}

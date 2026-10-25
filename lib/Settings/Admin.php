@@ -10,6 +10,7 @@ use OCA\Arcade\CoreOptions;
 use OCA\Arcade\Service\BiosService;
 use OCA\Arcade\Service\SettingsService;
 use OCP\AppFramework\Http\TemplateResponse;
+use OCP\IURLGenerator;
 use OCP\IUserSession;
 use OCP\Settings\ISettings;
 use OCP\Util;
@@ -23,6 +24,7 @@ class Admin implements ISettings {
 		private SettingsService $settingsService,
 		private BiosService $biosService,
 		private IUserSession $userSession,
+		private IURLGenerator $urlGenerator,
 	) {
 	}
 
@@ -45,6 +47,9 @@ class Admin implements ISettings {
 			// The BIOS section manages this folder, so without one there
 			// is nothing to manage and the template leaves it out.
 			'systemFolder' => $this->systemFolder(),
+			// The WebDAV address of every user's files, for the Cloud Sync
+			// instructions; the user and the folder are theirs to add.
+			'webdavBase' => $this->urlGenerator->getAbsoluteURL('/remote.php/dav/files/'),
 		]);
 	}
 

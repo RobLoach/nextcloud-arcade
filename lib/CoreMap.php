@@ -353,6 +353,38 @@ class CoreMap {
 	}
 
 	/**
+	 * The name each core gives itself. RetroArch files saves and states
+	 * under it when it sorts them into folders by core, which it does
+	 * unless told otherwise, so these are spelled exactly as the cores
+	 * spell them.
+	 */
+	public const CORE_NAMES = [
+		'fceumm' => 'FCEUmm',
+		'snes9x' => 'Snes9x',
+		'gambatte' => 'Gambatte',
+		'mgba' => 'mGBA',
+		'genesis_plus_gx' => 'Genesis Plus GX',
+		'gearsystem' => 'Gearsystem',
+		'mednafen_pce_fast' => 'Beetle PCE Fast',
+		'handy' => 'Handy',
+		'mednafen_ngp' => 'Beetle NeoPop',
+		'mednafen_wswan' => 'Beetle WonderSwan',
+		'mednafen_vb' => 'Beetle VB',
+		'vecx' => 'VecX',
+		'gearcoleco' => 'Gearcoleco',
+		'pcsx_rearmed' => 'PCSX-ReARMed',
+	];
+
+	/**
+	 * The name of the core that plays a game, as RetroArch sorts saves
+	 * under it. Empty when the system is unknown.
+	 */
+	public static function coreNameForPath(string $path): string {
+		$system = self::systemForPath($path);
+		return $system === null ? '' : (self::CORE_NAMES[self::SYSTEMS[$system]['core']] ?? '');
+	}
+
+	/**
 	 * @return array<string, string> extension => mimetype
 	 */
 	public static function extensionMimeMap(): array {

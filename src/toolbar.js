@@ -33,9 +33,11 @@ const CHROME_SELECTOR = '.arcade-toolbar, .arcade-topbar, .arcade-actions-menu, 
  * @param {string} [options.closeUrl] when set, adds a close button leading there
  * @param {Function} options.flash says something to the player, taking the
  *   message and how it reads: success, info, warning or error
+ * @param {?object} [options.stateCache] the save states of the game held
+ *   for the session; without one the game cannot be saved
  * @return {Function} detaches the toolbar again
  */
-export function attachToolbar({ container, instance, romPath, romName, settings = {}, closeUrl = '', onClose = null, flash: say }) {
+export function attachToolbar({ container, instance, romPath, romName, settings = {}, closeUrl = '', onClose = null, flash: say, stateCache = null }) {
 	container.classList.add('arcade-player-container')
 
 	// Fires when the toolbar is taken down, so anything still on its way
@@ -151,8 +153,9 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 	}
 
 	// Saving needs a logged-in user and somewhere of their own to put it,
-	// so on a public share, or without a saves folder, there is none.
-	const canSave = getCurrentUser() !== null && romPath && (settings.saves_folder ?? '') !== ''
+	// so on a public share, or without a saves folder, the session hands
+	// over no states to keep.
+	const canSave = stateCache !== null
 	let autosaveTimer = null
 	let statesPanel = null
 	let statesButton = null
@@ -202,6 +205,7 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 			// Saving or loading a slot is the end of the interaction, so get
 			// the panel out of the way and back to the game.
 			onDone: hideStates,
+			cache: stateCache,
 		})
 		statesButton = button(ICONS.save, t('arcade', 'Save states'), (element) => {
 			togglePanel(statesPanel, element, () => {
@@ -213,13 +217,17 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 		})
 		statesButton.setAttribute('aria-haspopup', 'dialog')
 		setExpanded(statesButton, false)
+		// The listing the offer is made from is also what says which
+		// states to fetch ahead, so the slots load at once from then on.
+		// After the offer, so a game resumed as it opens gets the line to
+		// itself for the one state it is waiting on.
 		offerResume({
 			container,
-			romPath,
 			load: statesPanel.load,
+			list: stateCache.list,
 			automatic: settings.autoload_on_start === true,
 			signal: gone.signal,
-		})
+		}).then(() => stateCache.prefetch(gone.signal))
 
 		// And keep saving it while it is played, when asked to. Two tabs
 		// on the same game write over each other's automatic slot here,

@@ -117,6 +117,14 @@ Rewind does nothing until it is switched on in
 by RetroArch itself, which is why holding it rewinds and releasing it plays
 on.
 
+### Loading
+
+While a game is on its way, a progress bar over the player says how much
+of it has arrived — a disc image is hundreds of megabytes. The emulator
+core is counted in too, when the server says how big it is. Once
+everything is in, it says the emulator is starting, which takes a moment
+with nothing to count.
+
 ### The control bar
 
 A control bar sits along the top of the player with pause/resume, a save
@@ -142,7 +150,15 @@ and can be dismissed.
 The save state menu has three slots per game, each with a screenshot
 thumbnail; a filled slot is labeled with its date alone, since the
 screenshot already says which game it is. Saving or loading a slot closes
-the menu and returns to the game.
+the menu and returns to the game. Slots RetroArch saved into beyond
+those three are listed below them, to be loaded or deleted.
+
+Saving and loading take no longer than the core does. The states of a
+game are fetched as it starts and held while it is played, and a save is
+held at once and sent to the server in the background; should that fail,
+the player says so, and tries again when the game closes. Closing the
+game waits for every save to arrive, and the browser asks before a tab
+with one still on its way is closed.
 
 Above the slots sits the Auto slot, which the player writes itself, at an
 interval while playing if one is set. When a game has save states, the
@@ -153,8 +169,8 @@ the same game is marked stale, and the player warns before loading it.
 States are per user and per game, so every NextCloud user has their own
 saves, even for a shared ROM. A game is known by the id Nextcloud gave the
 file, so renaming a ROM or moving it keeps its saves, its battery save and
-how long it was played — the folder in the saves folder is brought along
-to the new name. Where the files land is in
+how long it was played — its files in the saves folder are renamed
+along with it. Where the files land is in
 [the settings guide](settings.md#where-saves-are-kept).
 
 ### Battery saves

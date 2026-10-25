@@ -1,9 +1,10 @@
 import { getRequestToken } from '@nextcloud/auth'
 import { generateUrl } from '@nextcloud/router'
 
-// The slot the player writes by itself, on the clock in the settings;
-// StateService knows it as AUTO_SLOT.
-export const AUTO_SLOT = 0
+// The slot the player writes by itself, on the clock in the settings:
+// RetroArch's .state.auto, which StateService knows as AUTO_SLOT. Not 0,
+// which is RetroArch's own first slot.
+export const AUTO_SLOT = -1
 
 /**
  * @param {string} route the app route, e.g. '/state'

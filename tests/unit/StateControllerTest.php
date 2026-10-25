@@ -246,4 +246,25 @@ class StateControllerTest extends TestCase {
 
 		$this->assertSame(Http::STATUS_BAD_REQUEST, $response->getStatus());
 	}
+
+	/**
+	 * The automatic slot and the numbered ones the player offers are
+	 * written; slot 0 and the far ones are RetroArch's, only to be read.
+	 */
+	public function testOnlyTheSlotsThePlayerOffersAreWritten(): void {
+		foreach ([StateService::AUTO_SLOT => Http::STATUS_OK, 1 => Http::STATUS_OK, StateService::SLOTS => Http::STATUS_OK,
+			0 => Http::STATUS_BAD_REQUEST, StateService::SLOTS + 1 => Http::STATUS_BAD_REQUEST, -2 => Http::STATUS_BAD_REQUEST] as $slot => $status) {
+			$response = $this->controller(body: 'the state')->save(self::GAME, $slot);
+			$this->assertSame($status, $response->getStatus(), "slot $slot");
+		}
+	}
+
+	public function testAnySlotRetroArchSavedIntoCanBeLoaded(): void {
+		$controller = $this->controller();
+		// Asked for, and found empty: a slot turned away is never asked.
+		$this->stateService->expects($this->once())->method('load')->with('alice', self::GAME, 990)->willReturn(null);
+
+		$this->assertSame(Http::STATUS_NOT_FOUND, $controller->get(self::GAME, 990)->getStatus());
+		$this->assertSame(Http::STATUS_BAD_REQUEST, $controller->get(self::GAME, StateService::HIGHEST_SLOT + 1)->getStatus());
+	}
 }

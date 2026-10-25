@@ -5,6 +5,7 @@ $settings = $_['settings'];
 $fallbacks = $_['fallbacks'];
 $buttons = $_['buttons'];
 $hotkeys = $_['hotkeys'];
+$cloudSyncUrl = $_['cloudSyncUrl'];
 ?>
 
 <div id="arcade-settings">
@@ -180,7 +181,7 @@ $hotkeys = $_['hotkeys'];
 			],
 			'saves_folder' => [
 				$l->t('Saves folder'),
-				$l->t('Save states and battery saves are stored here, under the system and the game. Without a folder, a game cannot be saved at all and the player says so.'),
+				$l->t('Save states and battery saves are stored here, in a saves and a states folder laid out the way RetroArch keeps its own, so RetroArch can share them through Cloud Sync. Without a folder, a game cannot be saved at all and the player says so.'),
 			],
 			'system_folder' => [
 				$l->t('System folder'),
@@ -204,6 +205,10 @@ $hotkeys = $_['hotkeys'];
 				<?php if ($key === 'thumbnails_folder' && $settings['fetch_enabled']): ?>
 					<button type="button" id="arcade-fetch-thumbnails"><?php p($l->t('Look for missing box art')); ?></button>
 					<span id="arcade-fetch-status" aria-live="polite"></span>
+				<?php endif; ?>
+				<?php if ($key === 'saves_folder' && $cloudSyncUrl !== ''): ?>
+					<br><em><?php p($l->t('To play with the same saves in RetroArch, open Settings → Saving → Cloud Sync there, choose the webdav backend, and give it this address, your user name and an app password:')); ?></em>
+					<br><code class="arcade-cloudsync-url"><?php p($cloudSyncUrl); ?></code>
 				<?php endif; ?>
 			</p>
 		<?php endforeach; ?>

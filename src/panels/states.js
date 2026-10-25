@@ -1,6 +1,7 @@
 import { translate as t } from '@nextcloud/l10n'
-import { AUTO_SLOT, api, deadline, stateUrl, UPLOAD_WAIT, wasGivenUpOn } from '../api.js'
+import { AUTO_SLOT, api, stateUrl, wasGivenUpOn } from '../api.js'
 import { disableSramSync, enableSramSync } from '../player.js'
+import { createStateCache } from '../statecache.js'
 import { waitAtMost } from '../wait.js'
 import { createPanel } from './panel.js'
 
@@ -16,6 +17,22 @@ const CORE_ANSWER_WAIT = 10 * 1000
 const TIMED_OUT = Symbol('timed out')
 
 /**
+ * What to tell the player when a save made in the background did not
+ * reach the server, for the cache to call.
+ *
+ * @param {Function} flash says something to the player
+ * @return {Function} takes the slot and the error
+ */
+export function uploadFailed(flash) {
+	return (slot, error) => {
+		console.error('Could not upload the state', error)
+		flash(wasGivenUpOn(error)
+			? t('arcade', 'Sending the save to the server took too long. It is kept for now and sent again when the game closes.')
+			: t('arcade', 'Could not send the save to the server. It is kept for now and sent again when the game closes.'), 'error')
+	}
+}
+
+/**
  * Build the save states panel.
  *
  * @param {object} options options
@@ -25,11 +42,16 @@ const TIMED_OUT = Symbol('timed out')
  *                                 the message and how it reads: success,
  *                                 info, warning or error
  * @param {Function} options.onDone called after a slot was saved or loaded
+ * @param {?object} [options.cache] the states of the game held for the
+ *                                  session, from createStateCache()
  * @return {{element: HTMLElement, refresh: Function, load: Function, save: Function}}
  *         the panel
  */
-export function createStatesPanel({ instance, romPath, flash, onDone }) {
+export function createStatesPanel({ instance, romPath, flash, onDone, cache = null }) {
 	const element = createPanel('arcade-states', t('arcade', 'Save states'))
+	// The player hands over the one the session holds; standing alone,
+	// the panel keeps one of its own.
+	const states = cache ?? createStateCache({ romPath, onUploadFailed: uploadFailed(flash) })
 
 	const slotsContainer = document.createElement('div')
 	element.appendChild(slotsContainer)
@@ -119,63 +141,45 @@ export function createStatesPanel({ instance, romPath, flash, onDone }) {
 	// does not: it arrives in the middle of the game, unbidden, and takes
 	// the top-right chrome with it while it shows. Going wrong is still
 	// worth saying either way.
+	//
+	// The panel is only held for as long as the core takes to hand the
+	// state over. Getting it to the server is the cache's business, in
+	// the background, and the cache says so if that fails.
 	const save = (slot, { quiet = false } = {}) => alone(async () => {
-		try {
-			// Nothing is uploaded until the core has answered, so a core
-			// that never does costs the slot nothing: what it already held
-			// is still there afterwards.
-			const written = await askCore(instance.saveState(), 'saveState',
-				t('arcade', 'The game did not hand over a save state, so the slot is unchanged'))
-			if (written === TIMED_OUT) {
-				return
-			}
-			let { state, thumbnail } = written
-			if (thumbnail === undefined) {
-				// Not every core provides a state thumbnail; fall back to a
-				// plain screenshot so the slot always has one. A picture is
-				// the one part worth going without, so a core that will not
-				// answer for it holds nothing up.
-				thumbnail = await waitAtMost(
-					instance.screenshot().catch(() => undefined), CORE_ANSWER_WAIT, undefined)
-			}
-			// One budget for the pair: a deadline each would let a single
-			// save hold the panel for twice what either of them allows.
-			// The long one, this being the request that carries megabytes.
-			const budget = deadline(UPLOAD_WAIT)
-			await api(stateUrl('/state', romPath, slot), {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/octet-stream' },
-				body: state,
-				signal: budget,
-			})
-			if (thumbnail !== undefined) {
-				await api(stateUrl('/state/thumbnail', romPath, slot), {
-					method: 'POST',
-					headers: { 'Content-Type': 'image/png' },
-					body: thumbnail,
-					signal: budget,
-				}).catch(() => {})
-			}
-			if (!quiet) {
-				flash(slot === AUTO_SLOT
-					? t('arcade', 'Game saved')
-					: t('arcade', 'State saved to slot {slot}', { slot }), 'success')
-			}
-			onDone()
-		} catch (error) {
-			// An upload given up on is cut off mid-body, and the server
-			// turns away a body shorter than it was promised rather than
-			// writing it, so this leaves the slot as it was too.
-			report(error, 'Could not save the state',
-				t('arcade', 'Saving took too long and was stopped, so the slot is unchanged'),
-				t('arcade', 'Could not save the state'))
+		// Nothing is held until the core has answered, so a core that
+		// never does costs the slot nothing: what it already held is
+		// still there afterwards.
+		const written = await askCore(instance.saveState(), 'saveState',
+			t('arcade', 'The game did not hand over a save state, so the slot is unchanged'))
+		if (written === TIMED_OUT) {
+			return
 		}
+		let { state, thumbnail } = written
+		if (thumbnail === undefined) {
+			// Not every core provides a state thumbnail; fall back to a
+			// plain screenshot so the slot always has one. A picture is
+			// the one part worth going without, so a core that will not
+			// answer for it holds nothing up.
+			thumbnail = await waitAtMost(
+				instance.screenshot().catch(() => undefined), CORE_ANSWER_WAIT, undefined)
+		}
+		states.put(slot, state, thumbnail ?? null)
+		if (!quiet) {
+			flash(slot === AUTO_SLOT
+				? t('arcade', 'Game saved')
+				: t('arcade', 'State saved to slot {slot}', { slot }), 'success')
+		}
+		onDone()
+	}).catch((error) => {
+		console.error('Could not save the state', error)
+		flash(t('arcade', 'Could not save the state'), 'error')
 	})
 
 	const load = (slot) => alone(async () => {
 		try {
-			const response = await api(stateUrl('/state', romPath, slot), { signal: deadline(UPLOAD_WAIT) })
-			const state = await response.blob()
+			// At once when the state is held, which it is once the session
+			// has fetched it ahead or it was saved here.
+			const state = await states.get(slot)
 			if (state.size === 0) {
 				// Handed an empty file, RetroArch waits for a state that
 				// will never come -- a minute of nothing, and then a
@@ -203,7 +207,7 @@ export function createStatesPanel({ instance, romPath, flash, onDone }) {
 
 	const remove = async (slot) => {
 		try {
-			await api(stateUrl('/state', romPath, slot), { method: 'DELETE' })
+			await states.remove(slot)
 			await refresh()
 		} catch (error) {
 			console.error('Could not delete the state', error)
@@ -285,11 +289,12 @@ export function createStatesPanel({ instance, romPath, flash, onDone }) {
 		// Whatever the server sent, this is what it is taken to mean. The
 		// caller catches as well, but a panel is not worth blanking over
 		// a missing field.
-		const states = Array.isArray(data?.states) ? data.states : []
+		const listed = Array.isArray(data?.states) ? data.states : []
 		const slotCount = Number.isFinite(Number(data?.slots)) ? Number(data.slots) : 0
-		const bySlot = new Map(states.map((state) => [state.slot, state]))
-		// The slots offered now, plus anything left in slots earlier
-		// versions offered, so those saves stay reachable.
+		const bySlot = new Map(listed.map((state) => [state.slot, state]))
+		const offered = (slot) => slot >= 1 && slot <= slotCount
+		// The slots offered, plus any other RetroArch saved into, so those
+		// saves are reachable here too.
 		const slots = []
 		if (bySlot.has(AUTO_SLOT)) {
 			slots.push(AUTO_SLOT)
@@ -297,8 +302,8 @@ export function createStatesPanel({ instance, romPath, flash, onDone }) {
 		for (let slot = 1; slot <= slotCount; slot++) {
 			slots.push(slot)
 		}
-		for (const state of states) {
-			if (state.slot > slotCount) {
+		for (const state of listed) {
+			if (state.slot !== AUTO_SLOT && !offered(state.slot)) {
 				slots.push(state.slot)
 			}
 		}
@@ -314,7 +319,10 @@ export function createStatesPanel({ instance, romPath, flash, onDone }) {
 			thumbnail.className = 'arcade-states-thumbnail'
 			thumbnail.alt = ''
 			if (state?.hasThumbnail) {
-				thumbnail.src = stateUrl('/state/thumbnail', romPath, slot) + `&mtime=${state.mtime}`
+				// A slot saved this session shows the picture it was saved
+				// with, which the server may not have yet.
+				thumbnail.src = states.thumbnailUrl(slot)
+					?? stateUrl('/state/thumbnail', romPath, slot) + `&mtime=${state.mtime}`
 			}
 			row.appendChild(thumbnail)
 
@@ -326,8 +334,8 @@ export function createStatesPanel({ instance, romPath, flash, onDone }) {
 			const when = state === undefined ? '' : new Date(state.mtime * 1000).toLocaleString()
 			if (slot === AUTO_SLOT) {
 				label.textContent = t('arcade', 'Auto — {date}', { date: when })
-			} else if (slot > slotCount) {
-				label.textContent = t('arcade', '{date}, from an older version', { date: when })
+			} else if (!offered(slot)) {
+				label.textContent = t('arcade', 'Slot {slot} — {date}', { slot, date: when })
 			} else {
 				label.textContent = state === undefined
 					? t('arcade', 'Slot {slot} — empty', { slot })
@@ -344,9 +352,9 @@ export function createStatesPanel({ instance, romPath, flash, onDone }) {
 				row.appendChild(warning)
 			}
 
-			// The automatic slot is written by the player itself, and slots
-			// beyond the ones offered now are only there to be emptied.
-			if (slot !== AUTO_SLOT && slot <= slotCount) {
+			// The automatic slot is written by the player itself, and the
+			// slots it does not offer are only there to be loaded or emptied.
+			if (offered(slot)) {
 				row.appendChild(addSlotButton(smallButton(
 					t('arcade', 'Save'),
 					() => save(slot),
@@ -384,8 +392,7 @@ export function createStatesPanel({ instance, romPath, flash, onDone }) {
 
 	const refresh = async () => {
 		try {
-			const response = await api(stateUrl('/states', romPath))
-			render(await response.json())
+			render(await states.list())
 		} catch (error) {
 			// The rendering is in here too: a surprise in the shape of the
 			// answer would otherwise escape as an unhandled rejection and

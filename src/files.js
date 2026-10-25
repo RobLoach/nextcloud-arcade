@@ -1,6 +1,6 @@
 import { translate as t, translatePlural as n } from '@nextcloud/l10n'
 import { generateUrl } from '@nextcloud/router'
-import { api } from './api.js'
+import { AUTO_SLOT, api } from './api.js'
 import { formatPlayTime } from './format.js'
 import { ICONS, icon } from './icons.js'
 import { playGame } from './play.js'
@@ -46,7 +46,7 @@ function playedLine(playtime) {
  * @return {string} what the slot is called where the player shows it
  */
 function slotName(slot) {
-	return slot === 0 ? t('arcade', 'Autosave') : t('arcade', 'Slot {slot}', { slot })
+	return slot === AUTO_SLOT ? t('arcade', 'Autosave') : t('arcade', 'Slot {slot}', { slot })
 }
 
 /**

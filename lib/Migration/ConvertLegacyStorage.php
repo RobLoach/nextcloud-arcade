@@ -5,15 +5,12 @@ declare(strict_types=1);
 namespace OCA\Arcade\Migration;
 
 use OCA\Arcade\AppInfo\Application;
-use OCA\Arcade\CoreMap;
 use OCA\Arcade\Db\GameMapper;
 use OCA\Arcade\Db\PlayMapper;
 use OCA\Arcade\Service\Folders;
-use OCA\Arcade\Service\SettingsService;
 use OCA\Arcade\Service\StateService;
 use OCP\Config\IUserConfig;
 use OCP\Files\AppData\IAppDataFactory;
-use OCP\Files\Folder;
 use OCP\Files\IRootFolder;
 use OCP\Files\NotFoundException;
 use OCP\Files\SimpleFS\ISimpleFolder;
@@ -29,9 +26,9 @@ use OCP\Migration\IRepairStep;
  *
  * Older versions kept the games registry in a games.json next to the states,
  * filed states under the hash of the ROM's path (and before that flat in the
- * shared states folder, under the hash of user and path), kept saves-folder
- * saves without the system segment, and kept the play records and favorites
- * as JSON blobs of the user config. Each of those is converted here.
+ * shared states folder, under the hash of user and path), and kept the play
+ * records and favorites as JSON blobs of the user config. Each of those is
+ * converted here.
  *
  * The step is idempotent: everything is checked before it is touched, so a
  * partial earlier run only leaves less to do. Nothing that cannot be
@@ -49,7 +46,6 @@ class ConvertLegacyStorage implements IRepairStep {
 		private IUserManager $userManager,
 		private IUserConfig $userConfig,
 		private ITagManager $tagManager,
-		private SettingsService $settingsService,
 		private GameMapper $gameMapper,
 		private PlayMapper $playMapper,
 	) {
@@ -69,8 +65,7 @@ class ConvertLegacyStorage implements IRepairStep {
 	/**
 	 * The app data: every user folder under the states root gets its
 	 * games.json imported, its path-hash names brought to file-id names,
-	 * the flat files of its user adopted, and the old saves-folder layout
-	 * moved under the system of each game.
+	 * and the flat files of its user adopted.
 	 */
 	private function convertStates(IOutput $output): void {
 		try {
@@ -127,7 +122,6 @@ class ConvertLegacyStorage implements IRepairStep {
 		$entries = $this->gameMapper->entriesOf($userId);
 		$entries = $this->renameToFileIds($userId, $folder, $entries);
 		$this->adoptFlatFiles($userId, $folder, $root, $flat, $entries);
-		$this->moveSavesFolders($userId, $entries);
 	}
 
 	/**
@@ -226,69 +220,6 @@ class ConvertLegacyStorage implements IRepairStep {
 				$folder->newFile($key . $suffix, $root->getFile($legacy . $suffix)->getContent());
 				$root->getFile($legacy . $suffix)->delete();
 				unset($flat[$legacy . $suffix]);
-			}
-		}
-	}
-
-	/**
-	 * Saves in the user's own saves folder were filed straight under the
-	 * name of the game before the system became part of the path. A folder
-	 * under the old layout moves under the system -- unless something
-	 * already lives at the new place, in which case it stays.
-	 *
-	 * @param array<string, array{path: string, md5: string}> $entries
-	 */
-	private function moveSavesFolders(string $userId, array $entries): void {
-		$savesPath = $this->settingsService->getUserSettings($userId)['saves_folder'] ?? '';
-		if (!is_string($savesPath) || $savesPath === '') {
-			return;
-		}
-		try {
-			$userFolder = $this->rootFolder->getUserFolder($userId);
-			$saves = Folders::folderAt($userFolder, trim($savesPath, '/'));
-		} catch (\Throwable) {
-			return;
-		}
-		if ($saves === null) {
-			return;
-		}
-		// One listing says which old-layout folders there are at all.
-		$present = [];
-		foreach ($saves->getDirectoryListing() as $node) {
-			if ($node instanceof Folder) {
-				$present[$node->getName()] = true;
-			}
-		}
-
-		$base = trim($savesPath, '/');
-		foreach ($entries as $entry) {
-			if ($entry['path'] === '') {
-				continue;
-			}
-			$system = CoreMap::shortNameForPath($entry['path']);
-			$stem = StateService::stemOf($entry['path']);
-			if ($system === '' || !isset($present[$stem])) {
-				// A game that does not say its system saves where it always did.
-				continue;
-			}
-			// Where the service files the game today: "$base/$system/$stem".
-			$gamePath = StateService::gameFolderPath($savesPath, $entry['path']);
-			try {
-				$node = $userFolder->get("$base/$stem");
-				if (!$node instanceof Folder || $userFolder->nodeExists($gamePath)) {
-					continue;
-				}
-				try {
-					$target = $saves->get($system);
-				} catch (NotFoundException) {
-					$target = $saves->newFolder($system);
-				}
-				if (!$target instanceof Folder) {
-					continue;
-				}
-				$node->move($userFolder->getPath() . '/' . $gamePath);
-			} catch (\Throwable) {
-				// Keeping the folder where it is beats losing the saves.
 			}
 		}
 	}
@@ -408,7 +339,7 @@ class ConvertLegacyStorage implements IRepairStep {
 	 */
 	private function suffixes(): array {
 		$suffixes = [StateService::sramFileName('')];
-		foreach (StateService::slots() as $slot) {
+		foreach (StateService::legacySlots() as $slot) {
 			$suffixes[] = StateService::fileName('', $slot, 'state');
 			$suffixes[] = StateService::fileName('', $slot, 'png');
 		}

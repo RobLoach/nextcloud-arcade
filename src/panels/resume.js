@@ -1,5 +1,5 @@
 import { translate as t } from '@nextcloud/l10n'
-import { api, stateUrl } from '../api.js'
+import { AUTO_SLOT } from '../api.js'
 
 /**
  * Pick up a game where it was left: either by offering to, or by doing it
@@ -9,14 +9,15 @@ import { api, stateUrl } from '../api.js'
  * @param {HTMLElement} options.container element to attach the prompt to
  * @param {string} options.romPath path identifying the game
  * @param {Function} options.load loads a state slot
+ * @param {Function} options.list lists the slots, taking an abort signal
  * @param {boolean} [options.automatic] load without asking
  * @param {?AbortSignal} [options.signal] the game is over; offer nothing
+ * @return {Promise<void>} answers once the offer is made, or not
  */
-export async function offerResume({ container, romPath, load, automatic = false, signal = null }) {
+export async function offerResume({ container, load, list, automatic = false, signal = null }) {
 	let latest = null
 	try {
-		const response = await api(stateUrl('/states', romPath), { signal })
-		const data = await response.json()
+		const data = await list(signal)
 		latest = data.states.reduce((a, b) => (a === null || b.mtime > a.mtime ? b : a), null)
 	} catch (error) {
 		// A game closed mid-request is not a fault worth reporting.
@@ -40,10 +41,10 @@ export async function offerResume({ container, romPath, load, automatic = false,
 	// spoken as it appears rather than only drawn.
 	prompt.setAttribute('role', 'status')
 	const text = document.createElement('span')
-	text.textContent = t('arcade', 'Continue from slot {slot} ({date})?', {
-		slot: latest.slot,
-		date: new Date(latest.mtime * 1000).toLocaleString(),
-	})
+	const date = new Date(latest.mtime * 1000).toLocaleString()
+	text.textContent = latest.slot === AUTO_SLOT
+		? t('arcade', 'Continue from the automatic save ({date})?', { date })
+		: t('arcade', 'Continue from slot {slot} ({date})?', { slot: latest.slot, date })
 	prompt.appendChild(text)
 
 	// It stays until it is answered: it already has a Dismiss button, and

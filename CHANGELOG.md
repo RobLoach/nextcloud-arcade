@@ -7,6 +7,20 @@ All notable changes to NextCloud Arcade. The format follows
 ## [Unreleased]
 
 ### Added
+- RetroArch Cloud Sync. The saves folder is laid out the way RetroArch
+  keeps its own -- `saves/` and `states/`, filed under the name of the
+  core, with RetroArch's file names -- and every save and delete is
+  recorded in the `manifest.server` its Cloud Sync reads. Point RetroArch
+  at the folder over WebDAV and a game saved there carries on in Arcade,
+  and the other way around. The administration settings say how, and the
+  personal settings give each player their own address.
+- Any slot RetroArch saved into is listed in the player, and can be
+  loaded and deleted there.
+- A progress bar while a game downloads, and then a word that the
+  emulator is starting.
+- Save states load and save at once. The states of a game are fetched
+  as it starts and held for the session; a save is held at once and sent
+  to the server in the background, and closing the game waits for it.
 - "Least played", alongside "Most played", for the games you have started
   and not come back to. The ones never started stay behind them either
   way, so it is not a list of everything untouched.
@@ -22,6 +36,10 @@ All notable changes to NextCloud Arcade. The format follows
   would do next.
 
 ### Changed
+- Saves are no longer read from the old `Saves/<System>/<Game>/` layout,
+  nor from the app data of versions before saves folders: save states
+  and battery saves start afresh under the new one. The automatic slot is
+  RetroArch's `.state.auto`, and slots 1 to 3 its `.state1` to `.state3`.
 - Which picture a system is shown with is now set once for the instance,
   in the administration settings, where it sat alongside a personal copy
   of the same choice. A value an earlier version stored for a user is no
