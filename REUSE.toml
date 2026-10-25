@@ -1,0 +1,73 @@
+version = 1
+SPDX-PackageName = "nextcloud-arcade"
+SPDX-PackageSupplier = "Rob Loach <robloach@gmail.com>"
+SPDX-PackageDownloadLocation = "https://github.com/RobLoach/nextcloud-arcade"
+
+# The app itself. Everything not covered by a later entry is the app's own
+# code, under the licence the App Store requires of a published app.
+[[annotations]]
+path = "**"
+precedence = "aggregate"
+SPDX-FileCopyrightText = "Rob Loach"
+SPDX-License-Identifier = "AGPL-3.0-or-later"
+
+# The emulator cores are separate works by their own authors, shipped
+# unmodified and each under its own terms -- not under the app's. The full
+# texts are in img/cores/LICENSES/ and the mapping is in img/cores/README.md,
+# which is the authority if this file and that one ever disagree.
+#
+# Two of these may not be sold or put in a commercial product or activity,
+# which is why they are called out separately rather than lumped in with the
+# rest. See https://github.com/RobLoach/nextcloud-arcade/issues/52.
+
+[[annotations]]
+path = [
+  "img/cores/fceumm_libretro.*",
+  "img/cores/gambatte_libretro.*",
+  "img/cores/mednafen_pce_fast_libretro.*",
+  "img/cores/mednafen_ngp_libretro.*",
+  "img/cores/mednafen_wswan_libretro.*",
+  "img/cores/mednafen_vb_libretro.*",
+  "img/cores/pcsx_rearmed_libretro.*",
+]
+precedence = "override"
+SPDX-FileCopyrightText = "The libretro core authors"
+SPDX-License-Identifier = "GPL-2.0-or-later"
+
+[[annotations]]
+path = [
+  "img/cores/gearsystem_libretro.*",
+  "img/cores/gearcoleco_libretro.*",
+  "img/cores/vecx_libretro.*",
+]
+precedence = "override"
+SPDX-FileCopyrightText = "The libretro core authors"
+SPDX-License-Identifier = "GPL-3.0-or-later"
+
+[[annotations]]
+path = "img/cores/mgba_libretro.*"
+precedence = "override"
+SPDX-FileCopyrightText = "Jeffrey Pfau and the mGBA contributors"
+SPDX-License-Identifier = "MPL-2.0"
+
+[[annotations]]
+path = "img/cores/handy_libretro.*"
+precedence = "override"
+SPDX-FileCopyrightText = "Keith Wilkins and the Handy contributors"
+SPDX-License-Identifier = "Zlib"
+
+# Freeware for personal use only; commercial users are told to seek the
+# copyright holders' permission first.
+[[annotations]]
+path = "img/cores/snes9x_libretro.*"
+precedence = "override"
+SPDX-FileCopyrightText = "The Snes9x authors"
+SPDX-License-Identifier = "LicenseRef-Snes9x"
+
+# Redistributions may not be sold, nor used in a commercial product or
+# activity.
+[[annotations]]
+path = "img/cores/genesis_plus_gx_libretro.*"
+precedence = "override"
+SPDX-FileCopyrightText = "Charles MacDonald, Eke-Eke and the Genesis Plus GX contributors"
+SPDX-License-Identifier = "LicenseRef-GenesisPlusGX"

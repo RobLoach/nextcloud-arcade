@@ -11,7 +11,7 @@
     "cores": "mkdir -p img/cores && for core in fceumm snes9x gambatte mgba genesis_plus_gx gearsystem mednafen_pce_fast handy mednafen_ngp mednafen_wswan mednafen_vb vecx gearcoleco pcsx_rearmed; do unzip -o -q \"3rdparty/retroarch-emscripten-build/retroarch/${core}_libretro.zip\" -d img/cores; done",
     "dev": "vite build --mode development",
     "l10n:extract": "php build/translationtool.phar create-pot-files",
-    "postcores": "cp 3rdparty/retroarch-emscripten-build/license img/cores/license",
+    "postcores": "build/check-core-licences.sh",
     "precores": "git submodule update --init --recursive",
     "test": "npm run build",
     "test:js": "vitest run",

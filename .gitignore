@@ -46,4 +46,10 @@
 !/img/cores/snes9x_libretro.wasm
 !/img/cores/vecx_libretro.js
 !/img/cores/vecx_libretro.wasm
-!/img/cores/license
+# Whose each core is and under what terms. Two of them may not be sold or
+# put in a commercial product, and both require their notice to travel with
+# the binary, so these are not generated files to be ignored -- they are the
+# part that makes shipping the rest of this folder allowed.
+!/img/cores/README.md
+!/img/cores/LICENSES/
+!/img/cores/LICENSES/*

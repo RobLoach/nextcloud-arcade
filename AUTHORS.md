@@ -38,8 +38,16 @@ exist without any of this.
   | [gearsystem](https://github.com/libretro/gearsystem) | Master System, Game Gear | GPL-3.0 |
   | [pcsx_rearmed](https://github.com/libretro/pcsx_rearmed) | PlayStation | GPL-2.0 |
 
-  Some of those cores are not free for commercial use. The licence of each
-  is in `img/cores/license`, as it comes from the build.
+  Some of those cores are not free for commercial use — `snes9x` and
+  `genesis_plus_gx` may not be sold nor put in a commercial product or
+  activity, which is unresolved for publishing to the App Store and is
+  tracked in [#52](https://github.com/RobLoach/nextcloud-arcade/issues/52).
+
+  These cores are separate works by their own authors, shipped unmodified
+  and not covered by this app's AGPL. The full text of every one of their
+  licences travels with the binaries in `img/cores/LICENSES/`, and
+  [`img/cores/README.md`](img/cores/README.md) says which text applies to
+  which core.
 
 ### In the browser
 
