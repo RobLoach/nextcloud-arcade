@@ -56,6 +56,15 @@ All notable changes to NextCloud Arcade. The format follows
   what each limit is currently set to.
 
 ### Fixed
+- What the app gives up on is now written to the log. Six places caught
+  every possible failure and carried on without a word — among them the
+  one that hid two bugs fixed just before this, where a single unreadable
+  file cost a whole chunk of the library its titles, regions and systems
+  at once and looked exactly like a library nobody had indexed. The
+  library still lists, the sidebar still draws and the saves are still
+  kept where they are; the difference is that the log now says what was
+  lost and why. The places where a miss is an ordinary answer — a path
+  that leads nowhere, an expired share token — are left quiet on purpose.
 - The emulator cores now carry their own licences. `img/cores/` held a
   single GPL-3.0 file that named no core and was not the licence of
   several of them; snes9x and genesis_plus_gx each require their notice to

@@ -18,6 +18,7 @@ use OCP\FilesMetadata\IFilesMetadataManager;
 use OCP\FilesMetadata\Model\IFilesMetadata;
 use OCP\Files\SimpleFS\ISimpleFolder;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\LoggerInterface;
 
 class StateServiceTest extends TestCase {
 	private const USER = 'alice';
@@ -46,6 +47,7 @@ class StateServiceTest extends TestCase {
 			$settings,
 			$this->metadataManager(),
 			$this->gameMapper(),
+			$this->createStub(LoggerInterface::class),
 		);
 	}
 

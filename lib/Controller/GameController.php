@@ -17,6 +17,7 @@ use OCP\Files\File;
 use OCP\Files\IRootFolder;
 use OCP\FilesMetadata\IFilesMetadataManager;
 use OCP\IRequest;
+use Psr\Log\LoggerInterface;
 
 /**
  * What the app knows about one ROM, for the sidebar of the Files app: the
@@ -37,6 +38,7 @@ class GameController extends ArcadeController {
 		private IFilesMetadataManager $metadataManager,
 		private RecentService $recentService,
 		private StateService $stateService,
+		private LoggerInterface $logger,
 		protected ?string $userId,
 	) {
 		parent::__construct($appName, $request);
@@ -116,8 +118,15 @@ class GameController extends ArcadeController {
 					$known[$field] = $metadata->getString($key);
 				}
 			}
-		} catch (\Throwable) {
-			// Nothing has been filed for this file yet.
+		} catch (\Throwable $e) {
+			// Nothing has been filed for this file yet, which is ordinary
+			// for a game the background job has not reached. Anything else
+			// landing here shows up as a sidebar of empty fields, so it is
+			// worth being able to tell the two apart.
+			$this->logger->debug('Could not read what the ROM says about itself', [
+				'fileId' => $fileId,
+				'exception' => $e,
+			]);
 		}
 		return $known;
 	}

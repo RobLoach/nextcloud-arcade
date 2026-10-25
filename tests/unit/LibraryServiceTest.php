@@ -22,6 +22,7 @@ use OCP\SystemTag\ISystemTag;
 use OCP\SystemTag\ISystemTagManager;
 use OCP\SystemTag\ISystemTagObjectMapper;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\LoggerInterface;
 
 class LibraryServiceTest extends TestCase {
 	private LibraryService $service;
@@ -40,6 +41,7 @@ class LibraryServiceTest extends TestCase {
 			$this->createStub(IFilesMetadataManager::class),
 			$this->tagManager,
 			$this->tagObjectMapper,
+			$this->createStub(LoggerInterface::class),
 		);
 	}
 
@@ -409,6 +411,7 @@ class LibraryServiceTest extends TestCase {
 			$manager,
 			$this->tagManager,
 			$this->tagObjectMapper,
+			$this->createStub(LoggerInterface::class),
 		);
 	}
 
@@ -420,6 +423,36 @@ class LibraryServiceTest extends TestCase {
 		$method = new \ReflectionMethod($service, 'addWhatWasRead');
 		$method->invokeArgs($service, [&$games]);
 		return $games;
+	}
+
+	public function testWhatTheMetadataLookupSwallowsIsStillSaidOutLoud(): void {
+		// This catch covers a whole chunk of the library, so anything
+		// landing in it costs every game in that chunk its title, region
+		// and system at once. It used to do that without a word, which is
+		// why a .bin that would not place itself took a running server and
+		// a reflection probe to work out.
+		$manager = $this->createStub(IFilesMetadataManager::class);
+		$manager->method('getMetadataForFiles')->willThrowException(new \RuntimeException('no metadata table'));
+		$logger = $this->createMock(LoggerInterface::class);
+		$logger->expects($this->once())->method('debug')->with(
+			$this->stringContains('what the ROMs say about themselves'),
+			$this->arrayHasKey('exception'),
+		);
+		$service = new LibraryService(
+			$this->createStub(ICacheFactory::class),
+			new ThumbnailService(),
+			$this->stateService,
+			$manager,
+			$this->tagManager,
+			$this->tagObjectMapper,
+			$logger,
+		);
+
+		$games = $this->whatWasRead($service, [
+			['id' => 78, 'path' => '/Games/Sonic.bin', 'basename' => 'Sonic.bin', 'system' => ''],
+		]);
+
+		$this->assertSame('', $games[0]['system'], 'the listing still comes back, just without what was read');
 	}
 
 	public function testABinIsGivenTheSystemItsHeaderNamed(): void {
@@ -486,6 +519,7 @@ class LibraryServiceTest extends TestCase {
 			$this->createStub(IFilesMetadataManager::class),
 			$this->tagManager,
 			$this->tagObjectMapper,
+			$this->createStub(LoggerInterface::class),
 		);
 	}
 

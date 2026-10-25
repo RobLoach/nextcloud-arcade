@@ -22,6 +22,7 @@ use OCP\ICacheFactory;
 use OCP\IImage;
 use OCP\Image;
 use OCP\Preview\IProviderV2;
+use Psr\Log\LoggerInterface;
 
 /**
  * Gives ROMs the box art of the thumbnails folder as their Nextcloud
@@ -45,6 +46,7 @@ class RomPreview implements IProviderV2 {
 		private ThumbnailService $thumbnailService,
 		private IFilesMetadataManager $metadataManager,
 		private ICacheFactory $cacheFactory,
+		private LoggerInterface $logger,
 	) {
 	}
 
@@ -94,7 +96,11 @@ class RomPreview implements IProviderV2 {
 	private function title(File $file): string {
 		try {
 			return $this->metadataManager->getMetadata($file->getId())->getString(MetadataListener::TITLE);
-		} catch (\Throwable) {
+		} catch (\Throwable $e) {
+			$this->logger->debug('Could not read the title a ROM gives itself', [
+				'fileId' => $file->getId(),
+				'exception' => $e,
+			]);
 			return '';
 		}
 	}

@@ -16,6 +16,7 @@ use OCP\FilesMetadata\IFilesMetadataManager;
 use OCP\FilesMetadata\Model\IFilesMetadata;
 use OCP\IRequest;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\LoggerInterface;
 
 class GameControllerTest extends TestCase {
 	private const FILE_ID = 42;
@@ -68,6 +69,7 @@ class GameControllerTest extends TestCase {
 			$metadataManager,
 			$recentService,
 			$stateService,
+			$this->createStub(LoggerInterface::class),
 			$userId,
 		);
 	}
@@ -157,6 +159,7 @@ class GameControllerTest extends TestCase {
 			$this->createStub(IFilesMetadataManager::class),
 			$this->createStub(RecentService::class),
 			$this->createStub(StateService::class),
+			$this->createStub(LoggerInterface::class),
 			'alice',
 		);
 

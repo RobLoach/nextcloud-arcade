@@ -16,6 +16,7 @@ use OCP\FilesMetadata\IFilesMetadataManager;
 use OCP\Files\NotFoundException;
 use OCP\Files\SimpleFS\ISimpleFile;
 use OCP\Files\SimpleFS\ISimpleFolder;
+use Psr\Log\LoggerInterface;
 
 /**
  * Stores emulator save states, keyed by user and ROM path, so every
@@ -81,6 +82,7 @@ class StateService {
 		private SettingsService $settingsService,
 		private IFilesMetadataManager $metadataManager,
 		private GameMapper $gameMapper,
+		private LoggerInterface $logger,
 	) {
 	}
 
@@ -556,8 +558,16 @@ class StateService {
 			if (!$userFolder->nodeExists($path) && $this->makeFolder($userFolder, dirname($path)) !== null) {
 				$node->move($userFolder->getPath() . '/' . $path);
 			}
-		} catch (\Throwable) {
-			// Keeping the folder where it is beats losing the saves.
+		} catch (\Throwable $e) {
+			// Keeping the folder where it is beats losing the saves. The
+			// renamed game then has its saves under its old name, which
+			// works but is not what the user will go looking for, so this
+			// one is worth more than a debug line.
+			$this->logger->warning('Could not move the saves of a renamed game', [
+				'from' => $was,
+				'to' => $romPath,
+				'exception' => $e,
+			]);
 		}
 		return $node;
 	}
@@ -602,7 +612,15 @@ class StateService {
 			// game was re-dumped, and a memo of it would be a memo of the
 			// answer it exists to notice changing.
 			return $this->metadataManager->getMetadata($id)->getString(MetadataListener::CHECKSUM);
-		} catch (\Throwable) {
+		} catch (\Throwable $e) {
+			// An empty checksum is how this says "no idea", and the caller
+			// treats that as the ROM being unchanged. So a failure here is
+			// not nothing: it is the check that notices a re-dumped game
+			// quietly answering no.
+			$this->logger->debug('Could not read the checksum of a ROM', [
+				'path' => $romPath,
+				'exception' => $e,
+			]);
 			return '';
 		}
 	}

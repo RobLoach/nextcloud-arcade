@@ -20,6 +20,7 @@ use OCP\ICache;
 use OCP\ICacheFactory;
 use OCP\SystemTag\ISystemTagManager;
 use OCP\SystemTag\ISystemTagObjectMapper;
+use Psr\Log\LoggerInterface;
 
 /**
  * Finds the games of a library folder, and puts them in the order and on
@@ -90,6 +91,7 @@ class LibraryService {
 		private IFilesMetadataManager $metadataManager,
 		private ISystemTagManager $tagManager,
 		private ISystemTagObjectMapper $tagObjectMapper,
+		private LoggerInterface $logger,
 	) {
 	}
 
@@ -131,9 +133,12 @@ class LibraryService {
 					}
 				}
 			}
-		} catch (\Throwable) {
+		} catch (\Throwable $e) {
 			// Tags are a filter, not the library: the games still list
-			// without them.
+			// without them. Said out loud all the same -- every game in
+			// the list loses its tags together, and the page that comes
+			// back looks like a library nobody has ever tagged.
+			$this->logger->debug('Could not read the tags of the library', ['exception' => $e]);
 			return;
 		}
 		foreach ($games as &$game) {
@@ -549,9 +554,18 @@ class LibraryService {
 					];
 				}
 			}
-		} catch (\Throwable) {
+		} catch (\Throwable $e) {
 			// Nothing has been read of the ROMs yet, which is no reason to
 			// go without the thumbnails that do match.
+			//
+			// Worth saying which it was, though. This catch covers a whole
+			// chunk of the library at once, so whatever lands here costs
+			// every game in that chunk its title, its region and its
+			// system together -- and for a .bin, whose name says nothing,
+			// the system was the only thing that knew what it was. One
+			// such failure reads on the page as a library that has never
+			// been indexed.
+			$this->logger->debug('Could not read what the ROMs say about themselves', ['exception' => $e]);
 		}
 		return $known;
 	}
