@@ -1,6 +1,6 @@
 # NextCloud Arcade
 
-Play retro console games directly in NextCloud, through
+Play retro console games directly in [NextCloud](https://nextcloud.com/), through
 [Nostalgist.js](https://nostalgist.js.org/) and the RetroArch libretro cores
 compiled to WebAssembly. ROMs are streamed from your files, and run in the browser.
 
