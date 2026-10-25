@@ -6,7 +6,6 @@ namespace OCA\Arcade\Settings;
 
 use OCA\Arcade\AppInfo\Application;
 use OCA\Arcade\Controls;
-use OCA\Arcade\CoreMap;
 use OCA\Arcade\Service\SettingsService;
 use OCP\AppFramework\Http\TemplateResponse;
 use OCP\AppFramework\Services\IInitialState;
@@ -36,8 +35,6 @@ class Personal implements ISettings {
 			'fallbacks' => $this->settingsService->folderFallbacks(),
 			'buttons' => Controls::BUTTONS,
 			'hotkeys' => Controls::HOTKEYS,
-			'systems' => CoreMap::SYSTEMS,
-			'thumbnailTypes' => SettingsService::THUMBNAIL_LABELS,
 		]);
 	}
 

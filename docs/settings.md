@@ -30,11 +30,6 @@ Personal settings → Arcade:
 | Saves folder | empty | Save states and battery saves, in your own files. Without one, a game cannot be saved |
 | System folder | empty | Where BIOS files are read from |
 | Screenshots folder | empty | Where the screenshot button saves images; left empty, they are downloaded |
-| Picture shown for each system | Box art | Box art, title screen, screenshot or logo, per system |
-
-Box art, title screen, screenshot and logo name the kind of picture a
-system is drawn with; which file that comes out of is
-[box art matching](usage.md#box-art).
 
 ## Where saves are kept
 
@@ -62,7 +57,7 @@ Administration settings → Arcade holds what is the same for everybody:
 | Folders deep at most | 6 | How far into a library folder the scan goes |
 | How long a scan is kept | 1 day | How long an unchanged scan may be reused, from 1 hour to 1 week |
 | Core options | Core default | Options of the emulator cores, which users cannot change |
-| Picture each system starts out shown with | Box art | The default for the personal setting of the same name |
+| Picture shown for each system | Box art | Box art, title screen, screenshot or logo, per system, for everybody |
 
 Box art, checksums and the three scan limits are scalars of the instance,
 so they live in a declarative settings form that the server renders and
@@ -73,9 +68,13 @@ so those are the administrator's alone; left on "Core default", the core
 decides. Looking up box art is the only thing in the app that has the
 server itself fetch from the internet, which is why it can be turned off
 for the instance: with it off, the button is gone from the personal
-settings and the endpoint refuses. The kind of picture a system is shown
-with is a matter of taste, so the administration page only sets where
-everybody starts.
+settings and the endpoint refuses.
+
+The kind of picture a system is shown with is set here for everybody,
+alongside the core options, rather than by each user. Box art, title
+screen, screenshot and logo name the kind of picture a system is drawn
+with; which file each comes out of is [box art
+matching](usage.md#box-art).
 
 ## BIOS files
 

@@ -196,10 +196,13 @@ class SettingsServiceTest extends TestCase {
 	}
 
 	public function testAStaleRowCannotShadowTheInstanceSettings(): void {
-		// Early versions saved the whole form, core options and all.
+		// Early versions saved the whole form, core options and all -- and
+		// one of them let a user pick the kind of picture for themselves,
+		// which the instance says now.
 		$stored = json_encode([
 			'video_smooth' => true,
 			'core_options' => ['snes9x' => ['snes9x_overclock' => '150%']],
+			'thumbnail_types' => ['nes' => 'title'],
 			'max_games' => 123,
 		]);
 		$config = $this->createMock(IUserConfig::class);
@@ -216,6 +219,7 @@ class SettingsServiceTest extends TestCase {
 		$settings = $service->getUserSettings(self::USER);
 
 		$this->assertSame([], $settings['core_options'], 'the core options are the administrator\'s');
+		$this->assertSame([], $settings['thumbnail_types'], 'and so is the kind of picture, now');
 		$this->assertSame(5000, $settings['max_games'], 'and so are the instance limits');
 		$this->assertTrue($settings['video_smooth'], 'while the user\'s own choices stay');
 		$this->assertSame(['video_smooth' => true], $written, 'the row is trued up so it cannot shadow again');
@@ -373,11 +377,12 @@ class SettingsServiceTest extends TestCase {
 		$this->assertArrayNotHasKey('made_up', $saved['buttons']);
 	}
 
-	public function testTheKindOfPictureIsAUsersToSet(): void {
-		// It is a matter of taste, unlike the options of a core: the
-		// administration page only says where everybody starts.
+	public function testTheKindOfPictureIsNotAUsersToSet(): void {
+		// Set once for the instance, like the options of a core. The
+		// personal page no longer offers it, and a body that carries one
+		// anyway is not taken at its word.
 		$saved = $this->save(['thumbnail_types' => ['nes' => 'title', 'snes' => 'made up']]);
-		$this->assertSame(['nes' => 'title'], $saved['thumbnail_types'] ?? null);
+		$this->assertNotSame('title', $saved['thumbnail_types']['nes'] ?? null);
 	}
 
 	public function testWhatBelongsToTheInstanceIsNotAUsersToSet(): void {

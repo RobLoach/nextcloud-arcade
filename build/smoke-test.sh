@@ -366,6 +366,24 @@ for SETTINGS_PAGE in user admin; do
 		else
 			fail "the $SETTINGS_PAGE settings drew $SECTIONS sections, so part of the page did not load"
 		fi
+		# Which picture a system is shown with is the instance's to set,
+		# so it is on one of these pages and not the other. Both halves
+		# are checked: on the administration page because a section that
+		# silently stopped drawing would leave nowhere to set it at all,
+		# and on the personal page because the field posting from there
+		# is ignored by the server, which would be a control that looks
+		# like it works and does nothing.
+		if [ "$SETTINGS_PAGE" = admin ]; then
+			if grep -q 'arcade-thumbnail-type' "$BODY"; then
+				echo "ok: the administration settings offer the picture for each system"
+			else
+				fail "the administration settings have nowhere to set the picture for each system"
+			fi
+		elif grep -q 'arcade-thumbnail-type' "$BODY"; then
+			fail "the personal settings still offer a picture per system, which the server no longer takes"
+		else
+			echo "ok: the personal settings leave the picture for each system to the instance"
+		fi
 	fi
 done
 

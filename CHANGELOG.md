@@ -22,6 +22,10 @@ All notable changes to NextCloud Arcade. The format follows
   would do next.
 
 ### Changed
+- Which picture a system is shown with is now set once for the instance,
+  in the administration settings, where it sat alongside a personal copy
+  of the same choice. A value an earlier version stored for a user is no
+  longer read back, so everybody follows the instance.
 - The Master System and the Game Gear now run on gearsystem, which is free
   to pass on, where they ran on the Mega Drive's core, which is not.
 - The shelves above the library are "Continue playing" and "Recently
@@ -52,6 +56,13 @@ All notable changes to NextCloud Arcade. The format follows
   what each limit is currently set to.
 
 ### Fixed
+- The emulator cores now carry their own licences. `img/cores/` held a
+  single GPL-3.0 file that named no core and was not the licence of
+  several of them; snes9x and genesis_plus_gx each require their notice to
+  accompany any redistribution, and neither notice was anywhere in the
+  tree. Every core's licence text now sits in `img/cores/LICENSES/` with
+  `img/cores/README.md` saying which applies to which, and `npm run cores`
+  refuses to finish if a core is shipped that nothing accounts for.
 - The background reading of ROM headers could stop for a whole library
   and stay stopped. Working out which games had never been looked at
   asked each one for its system, and a ROM carrying metadata that no part

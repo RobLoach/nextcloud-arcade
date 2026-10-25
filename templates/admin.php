@@ -177,7 +177,7 @@ $systemFolder = $_['systemFolder'];
 	<div class="section">
 		<?php print_unescaped($this->inc('part.sectionhead', [
 			'title' => $l->t('Pictures'),
-			'hint' => $l->t('What a game of each system is shown with to begin with. Everybody can pick their own afterwards; which file each kind comes out of is in the usage guide.'),
+			'hint' => $l->t('What a game of each system is shown with, for everybody on this instance. Which file each kind comes out of is in the usage guide.'),
 		])); ?>
 		<div class="arcade-pictures">
 			<?php foreach ($systems as $systemId => $system): ?>

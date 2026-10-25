@@ -104,9 +104,9 @@ class SettingsService {
 					: (int)$value;
 			}
 		}
-		// The options of a core are the same for everybody playing it. The
-		// kind of picture a system is shown with is only where a user
-		// starts: it is a matter of taste, so it can be changed.
+		// The options of a core are the same for everybody playing it, and
+		// so is the kind of picture a system is shown with: both are set
+		// once for the instance, in the administration settings.
 		$defaults['core_options'] = $this->getCoreOptions();
 		$defaults['thumbnail_types'] = $this->getThumbnailTypes();
 		return $defaults;
@@ -414,10 +414,11 @@ class SettingsService {
 	 */
 	public function setUserSettings(string $userId, array $settings): array {
 		$sanitized = $this->sanitize($settings);
-		// The options of a core belong to the core, and the rest of these
-		// to the instance. The kind of picture a system is shown with is
-		// not among them: that one is a matter of taste.
-		unset($sanitized['core_options']);
+		// The options of a core belong to the core, the kind of picture a
+		// system is shown with to the instance, and the rest of these to
+		// the instance as well. None of the three is a user's to set, so
+		// none is taken from a body however it arrives.
+		unset($sanitized['core_options'], $sanitized['thumbnail_types']);
 		foreach (array_keys(self::INSTANCE_ONLY) as $key) {
 			unset($sanitized[$key]);
 		}
@@ -485,9 +486,14 @@ class SettingsService {
 	 * @return array<string, mixed>
 	 */
 	private function readStoredRow(array $stored): array {
+		// Left out on the way in as well as on the way out: a version of
+		// the app before this one let a user pick the kind of picture for
+		// themselves, so a row stored then still holds one, and reading it
+		// back would keep that user on their old choice forever while the
+		// instance setting moved beneath them.
 		return self::volumeOf(array_diff_key(
 			$stored,
-			array_flip(['core_options', ...array_keys(self::INSTANCE_ONLY)]),
+			array_flip(['core_options', 'thumbnail_types', ...array_keys(self::INSTANCE_ONLY)]),
 		));
 	}
 

@@ -5,8 +5,6 @@ $settings = $_['settings'];
 $fallbacks = $_['fallbacks'];
 $buttons = $_['buttons'];
 $hotkeys = $_['hotkeys'];
-$systems = $_['systems'];
-$thumbnailTypes = $_['thumbnailTypes'];
 ?>
 
 <div id="arcade-settings">
@@ -211,24 +209,4 @@ $thumbnailTypes = $_['thumbnailTypes'];
 		<?php endforeach; ?>
 	</div>
 
-	<div class="section">
-		<?php print_unescaped($this->inc('part.sectionhead', [
-			'title' => $l->t('Picture shown for each system'),
-			'hint' => $l->t('Which of the pictures in your thumbnails folder a system is shown with, when it has more than one.'),
-		])); ?>
-		<?php foreach ($systems as $systemId => $system): ?>
-			<p>
-				<label for="arcade-thumbnail-<?php p($systemId); ?>"><?php p($system['short']); ?></label><br>
-				<select id="arcade-thumbnail-<?php p($systemId); ?>" class="arcade-thumbnail-type"
-					data-system="<?php p($systemId); ?>">
-					<?php foreach ($thumbnailTypes as $type => $label): ?>
-						<option value="<?php p($type); ?>"
-							<?php if (($settings['thumbnail_types'][$systemId] ?? 'boxart') === $type) { p('selected'); } ?>>
-							<?php p($label); ?>
-						</option>
-					<?php endforeach; ?>
-				</select>
-			</p>
-		<?php endforeach; ?>
-	</div>
 </div>
