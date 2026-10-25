@@ -2,8 +2,7 @@
 
 Play retro console games directly in NextCloud, through
 [Nostalgist.js](https://nostalgist.js.org/) and the RetroArch libretro cores
-compiled to WebAssembly. Nothing is emulated on the server: ROMs are streamed
-from your files and run in the browser.
+compiled to WebAssembly. ROMs are streamed from your files, and run in the browser.
 
 [![NextCloud Arcade](img/screenshot-thumbnail.jpg)](img/screenshot.png)
 
@@ -27,16 +26,13 @@ from your files and run in the browser.
 - Plays ROMs straight from the Files app.
 - Personal settings for every player, down to the keys.
 
-## Installation
-
-It needs:
+## Dependencies
 
 - Nextcloud 34 or 35
 - PHP 8.3 or newer
-- Background jobs on cron, recommended —
-  [what Arcade puts in them](docs/settings.md#background-jobs)
+- Background jobs on cron (recommended)
 
-Then:
+## Installation
 
 1. Put the app into `apps/`:
 
@@ -51,14 +47,21 @@ Then:
 	occ app:enable arcade
 	```
 
-3. If the ROMs were uploaded before the app was enabled, they still carry a
-	generic mimetype — [Troubleshooting](docs/settings.md#troubleshooting) has
-	the one command that fixes it.
+3. If ROMs were uploaded prior to the app being enabled, they still carry a
+	generic mimetype. Run the following to fix the mimetype:
+    ```sh
+    occ maintenance:mimetype:update-db
+    ```
 
-4. Open Administration settings → Arcade and set the default Games folder.
+5. Open Administration → Arcade, and set the default Games folder.
 
-Updating is `git pull` in that folder: the built JavaScript and the emulator
-cores are committed, so nothing needs to be built on the server.
+## Updating
+
+To update the application, use:
+```sh
+cd /path/to/nextcloud/apps/arcade
+git pull
+```
 
 ## Documentation
 
@@ -70,5 +73,6 @@ cores are committed, so nothing needs to be built on the server.
 | [Systems](docs/systems.md) | Which ROMs play, on which core, with which BIOS |
 | [Development](docs/development.md) | Changing the code |
 
-Everything the app is built on is in [AUTHORS.md](AUTHORS.md); what changed
-in each version is in [CHANGELOG.md](CHANGELOG.md).
+## License
+
+*NextCloud Arcade* is licensed under [AGPLv3](LICENSE). Supporting library licenses captured in [AUTHORS](AUTHORS.md).
