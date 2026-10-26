@@ -239,7 +239,10 @@ export function createStateCache({ romPath, onUploadFailed = () => {} }) {
 		 * @param {?AbortSignal} [signal] stops fetching when it fires
 		 */
 		async prefetch(signal = null) {
-			if (prefetched) {
+			// Not until there is a listing to go by: one that failed as the
+			// game started leaves nothing to fetch, and would otherwise use
+			// up the one go for the rest of the session.
+			if (prefetched || listedAt === 0) {
 				return
 			}
 			prefetched = true

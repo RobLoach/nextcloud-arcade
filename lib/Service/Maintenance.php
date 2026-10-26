@@ -91,27 +91,31 @@ class Maintenance {
 	}
 
 	/**
-	 * What the maintenance section shows before anything is pressed. What
-	 * hangs on the tables is only asked for when they are in order.
+	 * What the maintenance section shows before anything is pressed: only
+	 * what is cheap to find. What is left behind of deleted games and users
+	 * takes a walk over every user's saves, so it waits to be asked for.
 	 *
 	 * @return array{
 	 *     database: list<string>,
-	 *     leftBehind: ?array{users: int, games: int},
 	 *     appData: array{files: int, bytes: int},
 	 * }
 	 */
 	public function status(): array {
-		$problems = $this->databaseProblems();
-		$leftBehind = null;
-		if ($problems === []) {
-			$counts = $this->cleanupService->sweep(true);
-			$leftBehind = ['users' => $counts['users'], 'games' => $counts['games']];
-		}
 		return [
-			'database' => $problems,
-			'leftBehind' => $leftBehind,
+			'database' => $this->databaseProblems(),
 			'appData' => $this->stateService->appDataSaves(),
 		];
+	}
+
+	/**
+	 * How many deleted games and users have saves left behind, found the
+	 * way removing them would, without removing anything.
+	 *
+	 * @return array{users: int, games: int}
+	 */
+	public function findLeftBehind(): array {
+		$counts = $this->cleanupService->sweep(true);
+		return ['users' => $counts['users'], 'games' => $counts['games']];
 	}
 
 	/**

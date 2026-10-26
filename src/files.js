@@ -262,6 +262,12 @@ class ArcadeSidebarTab extends HTMLElement {
 		this.refresh()
 	}
 
+	disconnectedCallback() {
+		// Whatever was on its way for this file is dropped while the tab is
+		// away, so it asks again when it is put back.
+		this._shown = null
+	}
+
 	get node() {
 		return this._node
 	}

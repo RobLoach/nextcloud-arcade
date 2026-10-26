@@ -333,4 +333,17 @@ describe('the save states held for a session', () => {
 		expect(leave()).toBe(false)
 		cache.dispose()
 	})
+
+	test('fetches nothing ahead until a listing has said what there is, and then does', async () => {
+		const cache = createStateCache({ romPath: '/Games/Mario.nes' })
+		await cache.prefetch()
+		expect(requests).toHaveLength(0)
+
+		await listed(cache, [{ slot: 0, size: 5, mtime: 10, hasThumbnail: false }])
+		requests = []
+		cache.prefetch()
+		await settle()
+		expect(requests.map((request) => request.url)).toEqual(['/state?slot=0'])
+		await answerAll()
+	})
 })

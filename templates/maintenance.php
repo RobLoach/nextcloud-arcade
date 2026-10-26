@@ -16,7 +16,7 @@
 		<?php foreach ([
 			'database' => [$l->t('Database'), $l->t('Repair the database')],
 			'filetypes' => [$l->t('ROM file types'), $l->t('Fix ROM file types')],
-			'leftbehind' => [$l->t('Saves of deleted games and users'), $l->t('Remove them')],
+			'leftbehind' => [$l->t('Saves of deleted games and users'), $l->t('Look for them')],
 			'appdata' => [$l->t('Saves left by earlier versions'), $l->t('Remove them')],
 		] as $task => [$heading, $action]): ?>
 			<div class="arcade-maintenance-task" data-task="<?php p($task); ?>">

@@ -469,17 +469,8 @@ function setUpMaintenance() {
 		say('filetypes', t('arcade', 'ROMs uploaded before Arcade was enabled can still be plain files to Nextcloud, and do not play from the Files app.'))
 		buttonOf('filetypes').disabled = false
 
-		const left = status.leftBehind
-		if (left === null || left === undefined) {
-			say('leftbehind', t('arcade', 'Repair the database first.'))
-			buttonOf('leftbehind').disabled = true
-		} else if (left.users === 0 && left.games === 0) {
-			say('leftbehind', t('arcade', 'Nothing is left behind.'))
-			buttonOf('leftbehind').disabled = true
-		} else {
-			say('leftbehind', leftBehind(left, false))
-			buttonOf('leftbehind').disabled = false
-		}
+		databaseInOrder = problems.length === 0
+		showLeftBehind()
 
 		const appData = status.appData ?? { files: 0, bytes: 0 }
 		if (appData.files === 0) {
@@ -492,6 +483,49 @@ function setUpMaintenance() {
 			buttonOf('appdata').disabled = false
 		}
 
+	}
+
+	// What is left behind of deleted games and users takes a walk over the
+	// saves of every user to find, so it is not found until asked for: the
+	// button looks first, and once something is found, removes it.
+	let databaseInOrder = true
+	let found = null
+	const leftButton = buttonOf('leftbehind')
+	const lookLabel = leftButton.textContent
+	const removeLabel = t('arcade', 'Remove them')
+	const showLeftBehind = () => {
+		leftButton.classList.remove('arcade-maintenance-confirm')
+		if (!databaseInOrder) {
+			say('leftbehind', t('arcade', 'Repair the database first.'))
+			leftButton.textContent = lookLabel
+			leftButton.disabled = true
+		} else if (found === null) {
+			say('leftbehind', t('arcade', 'Not looked for yet. Looking goes through the saves of every user, which takes a while on a large instance.'))
+			leftButton.textContent = lookLabel
+			leftButton.disabled = false
+		} else if (found.users === 0 && found.games === 0) {
+			say('leftbehind', t('arcade', 'Nothing is left behind.'))
+			leftButton.textContent = lookLabel
+			leftButton.disabled = false
+		} else {
+			say('leftbehind', leftBehind(found, false))
+			leftButton.textContent = removeLabel
+			leftButton.disabled = false
+		}
+	}
+	const lookForLeftBehind = async () => {
+		leftButton.disabled = true
+		say('leftbehind', t('arcade', 'Looking …'))
+		try {
+			found = await (await api(url('/leftbehind'), { signal: deadline(UPLOAD_WAIT) })).json()
+		} catch (error) {
+			console.error('Could not look for saves left behind', error)
+			found = null
+			showLeftBehind()
+			say('leftbehind', t('arcade', 'Could not be checked.'))
+			return
+		}
+		showLeftBehind()
 	}
 
 	const refresh = async () => {
@@ -550,7 +584,26 @@ function setUpMaintenance() {
 	buttonOf('filetypes').addEventListener('click', () => run('filetypes', '/filetypes', (result) => (result.updated === 0 && result.healed === 0
 		? t('arcade', 'Every ROM already had its file type.')
 		: n('arcade', 'Gave %n file its ROM file type.', 'Gave %n files their ROM file type.', result.updated))))
-	armed('leftbehind', () => run('leftbehind', '/leftbehind', (result) => leftBehind(result, true)))
+	// Looking is the first press; removing what was found asks for two.
+	let leftTimer = null
+	leftButton.addEventListener('click', () => {
+		if (found === null || (found.users === 0 && found.games === 0)) {
+			lookForLeftBehind()
+			return
+		}
+		if (!leftButton.classList.contains('arcade-maintenance-confirm')) {
+			leftButton.classList.add('arcade-maintenance-confirm')
+			leftButton.textContent = t('arcade', 'Really remove?')
+			leftTimer = setTimeout(showLeftBehind, 4000)
+			return
+		}
+		clearTimeout(leftTimer)
+		run('leftbehind', '/leftbehind', (result) => {
+			found = { users: 0, games: 0 }
+			showLeftBehind()
+			return leftBehind(result, true)
+		})
+	})
 	armed('appdata', () => run('appdata', '/appdata', (result) => n('arcade', 'Removed %n file.', 'Removed %n files.', result.removed)))
 
 	refresh()

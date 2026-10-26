@@ -52,6 +52,14 @@ class MaintenanceController extends ArcadeController {
 		return new JSONResponse($this->maintenance->fixFileTypes());
 	}
 
+	#[FrontpageRoute(verb: 'GET', url: '/arcade/maintenance/leftbehind')]
+	public function findLeftBehind(): JSONResponse {
+		if ($this->maintenance->databaseProblems() !== []) {
+			return new JSONResponse(['error' => 'database'], Http::STATUS_CONFLICT);
+		}
+		return new JSONResponse($this->maintenance->findLeftBehind());
+	}
+
 	#[FrontpageRoute(verb: 'POST', url: '/arcade/maintenance/leftbehind')]
 	public function removeLeftBehind(): JSONResponse {
 		return new JSONResponse($this->maintenance->removeLeftBehind());

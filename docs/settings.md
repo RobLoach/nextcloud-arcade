@@ -25,7 +25,7 @@ Personal settings → Arcade:
 | Volume | 100% | How loud the game plays, 0 to 100 |
 | Audio latency | 64 ms | Raise it if the sound crackles |
 | Controls | [see the usage guide](usage.md#the-keyboard) | The key of every button and of the player itself |
-| Games library folder | `/Games` | Scanned for the games library page. Scan, beside it, scans it afresh now and says how many games it holds |
+| Games library folder | `/Games` | Scanned for the games library page. Scan, beside it, scans it afresh now -- games copied into it outside Nextcloud included -- and says how many it holds |
 | Thumbnails folder | empty | Images used as game thumbnails, and where fetched box art lands |
 | Saves folder | empty | Save states and battery saves, in your own files, in RetroArch's layout. Without one, a game cannot be saved |
 | System folder | empty | Where BIOS files are read from |
@@ -137,7 +137,7 @@ administrator would otherwise do with occ, one button each:
 | --- | --- | --- |
 | Database | Makes whatever tables and columns of Arcade are missing, and touches nothing that is there | `occ arcade:repair` |
 | ROM file types | Gives ROMs uploaded before Arcade was enabled their file type, so they play from the Files app | `occ maintenance:mimetype:update-db` |
-| Saves of deleted games and users | Removes them; asks to be pressed twice | `occ arcade:cleanup` |
+| Saves of deleted games and users | Looks for them when asked, as that goes through every user's saves, then removes them; removing asks to be pressed twice | `occ arcade:cleanup` |
 | Saves left by earlier versions | Removes what versions before 0.48.8 kept in the app data; asks to be pressed twice | `occ arcade:cleanup --legacy` |
 
 Box art, checksums and the three scan limits are scalars of the instance,

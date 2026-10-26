@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Nextcloud 3.14159\n"
 "Report-Msgid-Bugs-To: translations\\@example.com\n"
-"POT-Creation-Date: 2026-10-26 02:24-0400\n"
+"POT-Creation-Date: 2026-10-26 02:48-0400\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -51,7 +51,7 @@ msgstr ""
 #: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/lib/Settings/PersonalSection.php:24
 #: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/specialAppInfoFakeDummyForL10nScript.php:2
 #: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:208
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:313
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:319
 msgid "Arcade"
 msgstr ""
 
@@ -196,7 +196,7 @@ msgid ""
 "library you can browse by keyboard, mouse, touch or gamepad."
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/fileaction.js:107
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/fileaction.js:115
 msgid "Play with Arcade"
 msgstr ""
 
@@ -752,7 +752,7 @@ msgid "Saving …"
 msgstr ""
 
 #: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:118
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:651
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:704
 msgid "Saved"
 msgstr ""
 
@@ -874,19 +874,11 @@ msgid ""
 "Nextcloud, and do not play from the Files app."
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:474
-msgid "Repair the database first."
-msgstr ""
-
 #: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:477
-msgid "Nothing is left behind."
-msgstr ""
-
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:486
 msgid "Nothing is left."
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:489
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:480
 msgid ""
 "%n file ({size}) left in the app data by versions before 0.48.8, which "
 "nothing reads any more."
@@ -896,87 +888,112 @@ msgid_plural ""
 msgstr[0] ""
 msgstr[1] ""
 
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:495
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/maintenance.php:20
+msgid "Remove them"
+msgstr ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:499
+msgid "Repair the database first."
+msgstr ""
+
 #: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:503
+msgid ""
+"Not looked for yet. Looking goes through the saves of every user, which "
+"takes a while on a large instance."
+msgstr ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:507
+msgid "Nothing is left behind."
+msgstr ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:518
+msgid "Looking …"
+msgstr ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:525
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:537
 msgid "Could not be checked."
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:512
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:546
 msgid "Working …"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:521
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:555
 msgid "Could not be done. The server log says why."
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:533
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:567
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:596
 msgid "Really remove?"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:548
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:582
 msgid "Repaired: the database tables are in order."
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:549
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:583
 msgid "Still wrong: {problems}."
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:551
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:585
 msgid "Every ROM already had its file type."
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:552
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:586
 msgid "Gave %n file its ROM file type."
 msgid_plural "Gave %n files their ROM file type."
 msgstr[0] ""
 msgstr[1] ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:554
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:607
 msgid "Removed %n file."
 msgid_plural "Removed %n files."
 msgstr[0] ""
 msgstr[1] ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:571
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:624
 msgid "{message}, still going"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:612
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:665
 msgid "Missing"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:614
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:667
 msgid "Present ({size}, instance store, managed with occ arcade:bios)"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:617
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:670
 msgid "Present ({size})"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:638
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:691
 msgid "That file is too big to be a BIOS"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:642
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:695
 msgid "Uploading …"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:654
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:707
 msgid "Could not upload the file"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:669
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:722
 msgid "Removing …"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:674
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:727
 msgid "Removed"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:679
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:732
 msgid "This file comes from the instance store; manage it with occ arcade:bios"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:682
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:735
 msgid "Could not remove the file"
 msgstr ""
 
@@ -1228,8 +1245,7 @@ msgid "Saves of deleted games and users"
 msgstr ""
 
 #: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/maintenance.php:19
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/maintenance.php:20
-msgid "Remove them"
+msgid "Look for them"
 msgstr ""
 
 #: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/maintenance.php:20

@@ -459,6 +459,9 @@ export function createStatesPanel({ instance, romPath, flash, onDone, cache = nu
 	const refresh = async () => {
 		try {
 			render(await states.list())
+			// Should the listing as the game started have failed, the states
+			// are fetched ahead now; it does nothing if they already were.
+			states.prefetch()
 		} catch (error) {
 			// The rendering is in here too: a surprise in the shape of the
 			// answer would otherwise escape as an unhandled rejection and

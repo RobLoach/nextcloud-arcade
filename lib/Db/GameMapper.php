@@ -91,11 +91,11 @@ class GameMapper extends QBMapper {
 	/**
 	 * Note where a game is now, what it hashes to, the core the player ran
 	 * it on and the name its saves go by, replacing what was noted before.
-	 * An empty core or name leaves the one noted before alone: only the
-	 * player knows them, and a write that came from anywhere else has
-	 * nothing to say about them.
+	 * An empty core, or a null name, leaves the one noted before alone:
+	 * only the player knows them, and a write that came from anywhere else
+	 * has nothing to say about them. An empty name clears the one noted.
 	 */
-	public function set(string $userId, string $key, int $fileId, string $path, string $checksum, string $core = '', string $name = ''): void {
+	public function set(string $userId, string $key, int $fileId, string $path, string $checksum, string $core = '', ?string $name = null): void {
 		if ($this->replace($userId, $key, $fileId, $path, $checksum, $core, $name) > 0) {
 			return;
 		}
@@ -106,7 +106,7 @@ class GameMapper extends QBMapper {
 		$game->setLastPath($path);
 		$game->setChecksum($checksum);
 		$game->setCore($core === '' ? null : $core);
-		$game->setName($name === '' ? null : $name);
+		$game->setName($name === null || $name === '' ? null : $name);
 		try {
 			$this->insert($game);
 		} catch (Exception $e) {
@@ -120,7 +120,7 @@ class GameMapper extends QBMapper {
 		}
 	}
 
-	private function replace(string $userId, string $key, int $fileId, string $path, string $checksum, string $core, string $name): int {
+	private function replace(string $userId, string $key, int $fileId, string $path, string $checksum, string $core, ?string $name): int {
 		$qb = $this->db->getQueryBuilder();
 		$qb->update($this->getTableName())
 			->set('file_id', $qb->createNamedParameter($fileId, IQueryBuilder::PARAM_INT))
@@ -129,8 +129,8 @@ class GameMapper extends QBMapper {
 		if ($core !== '') {
 			$qb->set('core', $qb->createNamedParameter($core));
 		}
-		if ($name !== '') {
-			$qb->set('name', $qb->createNamedParameter($name));
+		if ($name !== null) {
+			$qb->set('name', $name === '' ? $qb->createNamedParameter(null) : $qb->createNamedParameter($name));
 		}
 		$qb->where($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)))
 			->andWhere($qb->expr()->eq('game_key', $qb->createNamedParameter($key)));

@@ -101,10 +101,22 @@ class CloudSyncManifest {
 				foreach ($this->filesUnder($root, $kind) as $path => $file) {
 					$seen[$path] = true;
 					$known = $entries[$path] ?? '';
-					if ($since !== null && $known !== '' && $file->getMTime() <= $since) {
+					// When the file reached the server, not only when it says
+					// it was changed: the desktop client and rsync keep the
+					// time a file had, so a save copied in today can say
+					// yesterday.
+					$arrived = max($file->getMTime(), $file->getUploadTime());
+					if ($since !== null && $known !== '' && $arrived <= $since) {
 						continue;
 					}
-					$hash = (string)$file->hash('md5');
+					$hash = $file->hash('md5');
+					// A storage that cannot hash -- some external ones -- says
+					// nothing about the file, and an empty hash is how the
+					// manifest says a file was deleted: RetroArch would delete
+					// its own copy. The entry is left as it is instead.
+					if (!is_string($hash) || $hash === '') {
+						continue;
+					}
 					if ($hash !== $known) {
 						$entries[$path] = $hash;
 						$counts['recorded']++;
@@ -113,7 +125,11 @@ class CloudSyncManifest {
 			}
 			foreach ($entries as $path => $hash) {
 				$path = (string)$path;
-				if ($hash !== '' && !isset($seen[$path]) && self::inScope($path)) {
+				// Not seen in the walk is not yet gone: the walk stops some
+				// folders down and passes over dot-files, which RetroArch
+				// syncs all the same. Only a file that is not there at all is
+				// recorded as deleted -- RetroArch deletes its copy on that.
+				if ($hash !== '' && !isset($seen[$path]) && self::inScope($path) && !$root->nodeExists($path)) {
 					$entries[$path] = '';
 					$counts['removed']++;
 				}

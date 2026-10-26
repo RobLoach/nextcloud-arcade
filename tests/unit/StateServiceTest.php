@@ -36,6 +36,10 @@ class StateServiceTest extends TestCase {
 	private array $ids = [];
 	/** What each file id hashes to, for the ROMs that have been read. */
 	private array $checksums = [];
+	/** When each file reached the server, for the ones the tests say. */
+	private array $uploads = [];
+	/** The files whose storage cannot hash them. */
+	private array $cannotHash = [];
 	/** Every file written over, in order. */
 	private array $writes = [];
 	/** When each file of the user was written, for the ones the tests say. */
@@ -77,14 +81,14 @@ class StateServiceTest extends TestCase {
 			},
 		);
 		$mapper->method('set')->willReturnCallback(
-			function (string $userId, string $key, int $fileId, string $path, string $checksum, string $core = '', string $name = ''): void {
+			function (string $userId, string $key, int $fileId, string $path, string $checksum, string $core = '', ?string $name = null): void {
 				$was = $this->games[$userId][$key] ?? [];
 				$this->games[$userId][$key] = [
 					'file_id' => $fileId,
 					'path' => $path,
 					'md5' => $checksum,
 					'core' => $core !== '' ? $core : ($was['core'] ?? ''),
-					'name' => $name !== '' ? $name : ($was['name'] ?? ''),
+					'name' => $name ?? ($was['name'] ?? ''),
 				];
 			},
 		);
@@ -323,7 +327,8 @@ class StateServiceTest extends TestCase {
 		$file->method('getPath')->willReturn('/' . self::USER . '/files/' . $path);
 		$file->method('getId')->willReturnCallback(fn (): int => $this->ids[$path] ?? 0);
 		$file->method('getContent')->willReturnCallback(fn (): string => $this->files[$path]);
-		$file->method('hash')->willReturnCallback(fn (string $type): string => hash($type, $this->files[$path]));
+		$file->method('hash')->willReturnCallback(fn (string $type): string|false => isset($this->cannotHash[$path]) ? false : hash($type, $this->files[$path]));
+		$file->method('getUploadTime')->willReturnCallback(fn (): int => $this->uploads[$path] ?? 0);
 		$file->method('getSize')->willReturnCallback(fn (): int => strlen($this->files[$path]));
 		$file->method('getMTime')->willReturnCallback(fn (): int => $this->mtimes[$path] ?? 2000);
 		$file->method('putContent')->willReturnCallback(
@@ -926,5 +931,87 @@ class StateServiceTest extends TestCase {
 		$service->save(self::USER, self::GAME, 0, 'quick save');
 		$this->assertSame('quick save', $this->files[self::STATES . '/Mario.state']);
 		$this->assertSame([0], array_column($service->list(self::USER, self::GAME), 'slot'));
+	}
+
+	// What the review of the pull request turned up.
+
+	public function testARenamedGameOpenedFromTheSidebarFirstStillBringsItsSaves(): void {
+		$this->files['Games/NES/Mario.nes'] = 'rom';
+		$this->ids['Games/NES/Mario.nes'] = 42;
+		$player = $this->service();
+		// The player says the name, which for a ROM is its own.
+		$player->useName(self::USER, self::GAME, 'Mario');
+		$player->save(self::USER, self::GAME, 1, 'state');
+		$this->assertSame('', $this->games[self::USER]['42']['name']);
+
+		unset($this->files['Games/NES/Mario.nes'], $this->ids['Games/NES/Mario.nes']);
+		$this->files['Games/NES/Super Mario.nes'] = 'rom';
+		$this->ids['Games/NES/Super Mario.nes'] = 42;
+
+		// The sidebar asks first, saying no name.
+		$this->assertSame([1], array_column($this->service()->list(self::USER, '/Games/NES/Super Mario.nes'), 'slot'));
+		$this->assertArrayHasKey(self::STATES . '/Super Mario.state1', $this->files);
+	}
+
+	public function testANameNotedBeforeForAPlainRomIsCleared(): void {
+		$this->files['Games/NES/Mario.nes'] = 'rom';
+		$this->ids['Games/NES/Mario.nes'] = 42;
+		$this->games[self::USER]['42'] = ['file_id' => 42, 'path' => self::GAME, 'md5' => '', 'core' => 'fceumm', 'name' => 'Mario'];
+		$player = $this->service();
+		$player->useName(self::USER, self::GAME, 'Mario');
+		$player->save(self::USER, self::GAME, 1, 'state');
+		$this->assertSame('', $this->games[self::USER]['42']['name']);
+	}
+
+	public function testAZippedGameThatIsGoneIsCleanedUpUnderItsCoreAndName(): void {
+		$this->files['Games/comp.zip'] = 'zip';
+		$this->ids['Games/comp.zip'] = 9;
+		$player = $this->service();
+		$player->useCore(self::USER, '/Games/comp.zip', 'snes9x');
+		$player->useName(self::USER, '/Games/comp.zip', 'Game (USA)');
+		$player->save(self::USER, '/Games/comp.zip', 1, 'state');
+		unset($this->files['Games/comp.zip'], $this->ids['Games/comp.zip']);
+
+		$this->service()->deleteAllForGame(self::USER, '/Games/comp.zip');
+		$this->assertArrayNotHasKey('Saves/states/Snes9x/Game (USA).state1', $this->files);
+	}
+
+	public function testDeletingAGameKeepsAFlatSaveAnotherCoreShares(): void {
+		$this->files['Games/Tetris.gb'] = 'rom';
+		$this->files['Games/Tetris.nes'] = 'rom';
+		$this->files['Saves/saves/Tetris.srm'] = 'flat, whose is it';
+		unset($this->files['Games/Tetris.gb']);
+
+		$this->service()->deleteAllForGame(self::USER, '/Games/Tetris.gb');
+		$this->assertSame('flat, whose is it', $this->files['Saves/saves/Tetris.srm']);
+	}
+
+	public function testAFileDeeperThanTheWalkOrHiddenIsNotRecordedAsDeleted(): void {
+		$deep = 'saves/FCEUmm/a/b/c/Mario.srm';
+		$this->files["Saves/$deep"] = 'deep';
+		$this->files['Saves/states/.hidden.state'] = 'hidden';
+		$this->files['Saves/manifest.server'] = CloudSyncManifest::render([$deep => md5('deep'), 'states/.hidden.state' => md5('hidden')]);
+
+		$this->assertSame(['recorded' => 0, 'removed' => 0], $this->service()->reconcile(self::USER));
+		$this->assertSame(md5('deep'), $this->manifest()[$deep]);
+	}
+
+	public function testAFileTheStorageCannotHashIsLeftAsItWas(): void {
+		$this->files[self::SAVES . '/Mario.srm'] = 'sram';
+		$this->cannotHash[self::SAVES . '/Mario.srm'] = true;
+		$this->files['Saves/manifest.server'] = CloudSyncManifest::render(['saves/FCEUmm/Mario.srm' => 'abc']);
+
+		$this->service()->reconcile(self::USER, true);
+		$this->assertSame('abc', $this->manifest()['saves/FCEUmm/Mario.srm']);
+	}
+
+	public function testASaveCopiedInWithAnOldTimeIsStillNoticed(): void {
+		$this->files[self::SAVES . '/Mario.srm'] = 'copied in today';
+		$this->mtimes[self::SAVES . '/Mario.srm'] = 1000;
+		$this->uploads[self::SAVES . '/Mario.srm'] = 5000;
+		$this->files['Saves/manifest.server'] = CloudSyncManifest::render(['saves/FCEUmm/Mario.srm' => md5('before')]);
+		$this->mtimes['Saves/manifest.server'] = 3000;
+
+		$this->assertSame(['recorded' => 1, 'removed' => 0], $this->service()->reconcile(self::USER));
 	}
 }

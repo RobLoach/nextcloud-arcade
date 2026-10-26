@@ -221,17 +221,26 @@ class StateService {
 	 */
 	public function deleteAllForGame(string $userId, string $romPath): void {
 		$keys = [$this->key($userId, $romPath) => true];
+		$noted = null;
 		foreach ($this->gameMapper->entriesOf($userId) as $key => $entry) {
 			if ($entry['path'] === $romPath) {
 				$keys[$key] = true;
+				$noted ??= $entry;
 			}
 		}
 		// PHP turns array keys that look like numbers into numbers, and the
 		// file id keys are exactly that; the files are named by the string.
 		$keys = array_map(strval(...), array_keys($keys));
-		// Before the registry forgets it: that is where the core is noted.
-		$core = $this->coreNameOf($userId, $romPath);
-		$stem = $this->stemFor($userId, $romPath);
+		// Before the registry forgets it: that is where the core and the
+		// name are noted -- and taken from the entry found by its path, as
+		// the game is gone by now, and with it the file id key() would look
+		// it up by.
+		$core = isset($this->cores[$userId][$romPath]) || $noted === null
+			? $this->coreNameOf($userId, $romPath)
+			: self::coreName($noted['core'], $romPath);
+		$stem = isset($this->names[$userId][$romPath]) || $noted === null || $noted['name'] === ''
+			? $this->stemFor($userId, $romPath)
+			: $noted['name'];
 		foreach ($keys as $key) {
 			$this->deleteLegacy($userId, $key);
 		}
@@ -640,8 +649,15 @@ class StateService {
 			return;
 		}
 		$removed = [];
+		// The flat folders hold the files of every core, so a game of the
+		// same name on another core keeps those -- the folder of a core
+		// only has its own.
+		$sharedFlat = $this->sharedWithAnother($userId, $romPath, null, $stem);
 		foreach ([self::STATES, self::SAVES] as $kind) {
 			foreach (self::dirsFor($core, $kind) as $dir) {
+				if ($dir === $kind && $sharedFlat) {
+					continue;
+				}
 				foreach ($this->filesIn($root, $dir) as $name => $file) {
 					if (self::belongsTo($stem, $kind, $name)) {
 						$file->delete();
@@ -656,13 +672,16 @@ class StateService {
 	/**
 	 * Whether another game the user still has goes by the same saves: one
 	 * the registry knows, or one lying next to the deleted game.
+	 *
+	 * @param ?string $core the core whose folder is meant, or null for the
+	 *                      flat folders, which every core shares
 	 */
-	private function sharedWithAnother(string $userId, string $romPath, string $core, string $stem): bool {
+	private function sharedWithAnother(string $userId, string $romPath, ?string $core, string $stem): bool {
 		foreach ($this->gameMapper->entriesOf($userId) as $entry) {
 			$path = $entry['path'];
 			$theirs = $entry['name'] !== '' ? $entry['name'] : self::stemOf($path);
 			if ($path !== '' && $path !== $romPath && $theirs === $stem
-				&& self::coreName($entry['core'], $path) === $core
+				&& ($core === null || self::coreName($entry['core'], $path) === $core)
 				&& Folders::has($this->rootFolder, $userId, $path)) {
 				return true;
 			}
@@ -677,7 +696,7 @@ class StateService {
 				$path = rtrim($parent, '/') . '/' . $node->getName();
 				if ($node instanceof File && $path !== $romPath && self::stemOf($path) === $stem
 					&& isset($extensions[strtolower(pathinfo($path, PATHINFO_EXTENSION))])
-					&& CoreMap::coreNameForPath($path) === $core) {
+					&& ($core === null || CoreMap::coreNameForPath($path) === $core)) {
 					return true;
 				}
 			}
@@ -753,7 +772,10 @@ class StateService {
 						if ($folder === null || $folder->nodeExists($newName)) {
 							continue;
 						}
-						$hash = md5($file->getContent());
+						// The storage's own hash where it has one, rather than
+						// reading a save of megabytes in whole for it.
+						$hash = $file->hash('md5');
+						$hash = is_string($hash) && $hash !== '' ? $hash : md5($file->getContent());
 						$file->move($folder->getPath() . '/' . $newName);
 						$moved["$dir/$name"] = '';
 						$moved["$target/$newName"] = $hash;
@@ -821,8 +843,25 @@ class StateService {
 			$romPath,
 			$this->checksumOf($userId, $romPath),
 			$this->cores[$userId][$romPath] ?? '',
-			$this->names[$userId][$romPath] ?? '',
+			$this->notableName($userId, $romPath),
 		);
+	}
+
+	/**
+	 * The name to note with a game: only one its file does not already
+	 * say -- a game in a zip. A ROM named like its saves is followed by
+	 * its file name, so renaming it renames its saves; noting that name
+	 * too would pin them to the name it had, so it is cleared instead.
+	 *
+	 * @return ?string null to leave what is noted alone -- the player did
+	 *                 not say -- '' to clear it, or the name to note
+	 */
+	private function notableName(string $userId, string $romPath): ?string {
+		$said = $this->names[$userId][$romPath] ?? null;
+		if ($said === null) {
+			return null;
+		}
+		return $said === self::stemOf($romPath) ? '' : $said;
 	}
 
 	/**

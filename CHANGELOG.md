@@ -58,6 +58,9 @@ All notable changes to NextCloud Arcade. The format follows
   would do next.
 
 ### Changed
+- The upgrade no longer converts the save states earlier versions kept in
+  the app data: nothing reads them any more. The maintenance section
+  removes them.
 - `occ arcade:status` reports the games with saves and the plays of each
   user; the files and sizes it used to list were those of the app data,
   where saves no longer live.
@@ -102,6 +105,22 @@ All notable changes to NextCloud Arcade. The format follows
   what each limit is currently set to.
 
 ### Fixed
+- "Play with Arcade" now appears in the file menu of the Files app. It was
+  added where @nextcloud/files 3 keeps actions, and the Files app of
+  Nextcloud 34 and 35 reads them where version 4 does, so it never showed.
+- Scan finds games copied into the library folder outside Nextcloud -- a
+  network share, rsync, a drive -- by having Nextcloud look at the folder
+  on disk first.
+- Putting the Cloud Sync manifest right no longer records a save as
+  deleted -- which RetroArch then deletes too -- because it lay deeper
+  than the walk went, was a dot-file, or sat on a storage that cannot
+  hash; and it notices a save copied in with an older time.
+- A game renamed and first opened from the Files sidebar keeps its saves;
+  a zipped game deleted once its file was gone has its saves removed from
+  the right folder; and deleting a game keeps a save in the shared flat
+  folders that another game of the same name uses.
+- The maintenance section looks for the saves of deleted games and users
+  only when asked, rather than on every visit of the page.
 - Nextcloud 35 replaced the Files sidebar, and with it the two ways the
   app used it: "Open sidebar" in the player failed with "Sidebar.open is
   not a function", and the Arcade tab of the sidebar never appeared. Both
