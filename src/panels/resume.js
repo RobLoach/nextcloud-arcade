@@ -12,9 +12,11 @@ import { AUTO_SLOT } from '../api.js'
  * @param {Function} options.list lists the slots, taking an abort signal
  * @param {boolean} [options.automatic] load without asking
  * @param {?AbortSignal} [options.signal] the game is over; offer nothing
+ * @param {?Function} [options.onFailure] told the error when the slots
+ *                                         cannot be listed at all
  * @return {Promise<void>} answers once the offer is made, or not
  */
-export async function offerResume({ container, load, list, automatic = false, signal = null }) {
+export async function offerResume({ container, load, list, automatic = false, signal = null, onFailure = null }) {
 	let latest = null
 	try {
 		const data = await list(signal)
@@ -23,6 +25,9 @@ export async function offerResume({ container, load, list, automatic = false, si
 		// A game closed mid-request is not a fault worth reporting.
 		if (signal?.aborted !== true) {
 			console.error('Could not list the states', error)
+			// Said, not only logged: without the list the game starts with
+			// none of its saves, and nothing else would say why.
+			onFailure?.(error)
 		}
 	}
 	// The list takes a moment, and the game can be closed inside it: a

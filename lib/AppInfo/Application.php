@@ -8,6 +8,7 @@ use OCA\Arcade\BackgroundJob\CleanupSweep;
 use OCA\Arcade\BackgroundJob\FetchThumbnails;
 use OCA\Arcade\BackgroundJob\RefreshMetadata;
 use OCA\Arcade\Capabilities;
+use OCA\Arcade\Middleware\DatabaseMiddleware;
 use OCA\Arcade\CoreMap;
 use OCA\Arcade\Listener\CleanupListener;
 use OCA\Arcade\Listener\CSPListener;
@@ -94,6 +95,8 @@ class Application extends App implements IBootstrap {
 		// apps that are enabled, so a disabled Arcade is simply absent
 		// from /ocs/v2.php/cloud/capabilities, with nothing to clean up.
 		$context->registerCapability(Capabilities::class);
+		// A request that fails for a table an upgrade left out says so.
+		$context->registerMiddleware(DatabaseMiddleware::class);
 	}
 
 	public function boot(IBootContext $context): void {

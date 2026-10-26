@@ -101,6 +101,11 @@ All notable changes to NextCloud Arcade. The format follows
   what each limit is currently set to.
 
 ### Fixed
+- A save that cannot reach the server says why: the status the server
+  answered with, or that it did not answer. When the reason is a table
+  of Arcade an upgrade left out, the player says the database needs
+  repairing and where an administrator does it, as soon as the game
+  opens -- the saves it could not fetch used to go unmentioned.
 - Saving a game whose name has a quote or brackets in it, like "Kirby's
   Adventure (USA)", no longer fails behind a web application firewall.
   The name went into the address of every request about the game, where

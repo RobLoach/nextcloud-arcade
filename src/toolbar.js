@@ -5,7 +5,7 @@ import { AUTO_SLOT, dav } from './api.js'
 import { ICONS, icon } from './icons.js'
 import { createGalleryPanel } from './panels/gallery.js'
 import { offerResume } from './panels/resume.js'
-import { createStatesPanel } from './panels/states.js'
+import { createStatesPanel, databaseBroken, whyFailed } from './panels/states.js'
 import { davUrl, fileIdOf, makeFolder } from './player.js'
 import { shortNameForPath } from './systems.js'
 import { UNTIL_DISMISSED } from './toast.js'
@@ -227,6 +227,9 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 			list: stateCache.list,
 			automatic: settings.autoload_on_start === true,
 			signal: gone.signal,
+			onFailure: (error) => flash(error?.reason === 'database'
+				? databaseBroken()
+				: t('arcade', 'Could not read the save states ({why}).', { why: whyFailed(error) }), 'error'),
 		}).then(() => stateCache.prefetch(gone.signal))
 
 		// And keep saving it while it is played, when asked to. Two tabs

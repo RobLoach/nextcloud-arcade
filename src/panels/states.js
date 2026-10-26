@@ -37,10 +37,37 @@ const LOAD_FAILED = 'Failed to load state'
 export function uploadFailed(flash) {
 	return (slot, error) => {
 		console.error('Could not upload the state', error)
+		if (error?.reason === 'database') {
+			flash(databaseBroken(), 'error')
+			return
+		}
 		flash(wasGivenUpOn(error)
 			? t('arcade', 'Sending the save to the server took too long. It is kept for now and sent again when the game closes.')
-			: t('arcade', 'Could not send the save to the server. It is kept for now and sent again when the game closes.'), 'error')
+			: t('arcade', 'Could not send the save to the server ({why}). It is kept for now and sent again when the game closes.', { why: whyFailed(error) }), 'error')
 	}
+}
+
+/**
+ * What to tell the player when the app's tables on the server need
+ * repairing -- which only an administrator can do, so it says where.
+ *
+ * @return {string} the message
+ */
+export function databaseBroken() {
+	return t('arcade', 'Saves cannot be kept until the Arcade database is repaired. An administrator can repair it under Administration settings → Arcade → Maintenance.')
+}
+
+/**
+ * Why a request failed, in a few words worth passing on to whoever has to
+ * look into it: the status the server answered with, or that it did not.
+ *
+ * @param {*} error what was thrown
+ * @return {string} the reason
+ */
+export function whyFailed(error) {
+	return Number.isFinite(error?.status)
+		? t('arcade', 'the server answered {status}', { status: error.status })
+		: t('arcade', 'no answer from the server')
 }
 
 /**
@@ -307,7 +334,7 @@ export function createStatesPanel({ instance, romPath, flash, onDone, cache = nu
 
 	// A panel that cannot say what is in the slots says that, rather than
 	// standing there empty with no way to ask again.
-	const renderFailure = () => {
+	const renderFailure = (error) => {
 		slotsContainer.innerHTML = ''
 		sramContainer.innerHTML = ''
 		slotButtons.length = 0
@@ -315,7 +342,9 @@ export function createStatesPanel({ instance, romPath, flash, onDone, cache = nu
 		row.className = 'arcade-states-slot'
 		const label = document.createElement('span')
 		label.className = 'arcade-states-label'
-		label.textContent = t('arcade', 'Could not read the save states.')
+		label.textContent = error?.reason === 'database'
+			? databaseBroken()
+			: t('arcade', 'Could not read the save states ({why}).', { why: whyFailed(error) })
 		row.appendChild(label)
 		row.appendChild(smallButton(t('arcade', 'Retry'), () => refresh()))
 		slotsContainer.appendChild(row)
@@ -434,7 +463,7 @@ export function createStatesPanel({ instance, romPath, flash, onDone, cache = nu
 			// answer would otherwise escape as an unhandled rejection and
 			// leave the panel blank with nothing said about it.
 			console.error('Could not list the states', error)
-			renderFailure()
+			renderFailure(error)
 		}
 	}
 

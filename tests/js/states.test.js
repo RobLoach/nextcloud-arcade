@@ -23,7 +23,7 @@ vi.mock('@nextcloud/l10n', () => ({
 		text.replace(/\{(\w+)\}/g, (whole, key) => params[key] ?? whole),
 }))
 
-const { createStatesPanel } = await import('../../src/panels/states.js')
+const { createStatesPanel, uploadFailed } = await import('../../src/panels/states.js')
 const { createCoreLog } = await import('../../src/corelog.js')
 
 // A core that answers when the test says so, so one call can be held open
@@ -251,5 +251,29 @@ describe('the save states panel', () => {
 
 		await vi.advanceTimersByTimeAsync(750)
 		expect(flash).toHaveBeenCalledWith('State loaded from slot 1', 'success')
+	})
+
+	test('says why a save could not be sent, and where to repair a broken database', () => {
+		const flash = vi.fn()
+		vi.spyOn(console, 'error').mockImplementation(() => {})
+		const told = uploadFailed(flash)
+
+		told(1, Object.assign(new Error('500'), { status: 500, reason: null }))
+		told(1, new TypeError('Failed to fetch'))
+		told(1, Object.assign(new Error('503'), { status: 503, reason: 'database' }))
+
+		expect(flash.mock.calls[0][0]).toContain('the server answered 500')
+		expect(flash.mock.calls[1][0]).toContain('no answer from the server')
+		expect(flash.mock.calls[2][0]).toContain('Administration settings → Arcade → Maintenance')
+	})
+
+	test('says the database needs repairing when the slots cannot be listed for it', async () => {
+		const { panel } = panelWith(heldCore().instance)
+		api.mockRejectedValue(Object.assign(new Error('503'), { status: 503, reason: 'database' }))
+		vi.spyOn(console, 'error').mockImplementation(() => {})
+
+		await panel.refresh()
+
+		expect(panel.element.textContent).toContain('Arcade database is repaired')
 	})
 })

@@ -129,6 +129,14 @@ export async function api(url, options = {}) {
 		// and the caller wants to tell that apart from a server that broke.
 		const refused = new Error(`${response.status} ${response.statusText}`)
 		refused.status = response.status
+		// And why, when the app said: a database that needs repairing is
+		// something the player can pass on, where a bare 503 is not.
+		try {
+			const body = await response.json()
+			refused.reason = typeof body?.error === 'string' ? body.error : null
+		} catch {
+			refused.reason = null
+		}
 		throw refused
 	}
 	return response
