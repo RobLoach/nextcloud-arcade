@@ -121,7 +121,7 @@ class CSPListener implements IEventListener {
 			// An unknown or expired token shares nothing.
 			return false;
 		}
-		$romMimes = array_fill_keys(array_values(CoreMap::extensionMimeMap()), true);
+		$romMimes = CoreMap::romMimes();
 		if ($node instanceof File) {
 			return isset($romMimes[$node->getMimetype()]);
 		}

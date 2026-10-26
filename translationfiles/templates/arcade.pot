@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Nextcloud 3.14159\n"
 "Report-Msgid-Bugs-To: translations\\@example.com\n"
-"POT-Creation-Date: 2026-10-26 02:48-0400\n"
+"POT-Creation-Date: 2026-10-26 09:56-0400\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -50,8 +50,7 @@ msgstr ""
 #: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/lib/Settings/AdminSection.php:24
 #: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/lib/Settings/PersonalSection.php:24
 #: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/specialAppInfoFakeDummyForL10nScript.php:2
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:208
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:319
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:256
 msgid "Arcade"
 msgstr ""
 
@@ -200,83 +199,83 @@ msgstr ""
 msgid "Play with Arcade"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:41
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:473
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:30
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:508
 msgid "Played %n time"
 msgid_plural "Played %n times"
 msgstr[0] ""
 msgstr[1] ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:51
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:40
 msgid "Autosave"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:51
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:40
 msgid "Slot {slot}"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:85
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:74
 msgid "Play"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:91
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:413
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:627
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:80
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:438
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:667
 msgid "System"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:92
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:81
 msgid "Title"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:93
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:82
 msgid "Region"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:94
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:83
 msgid "Mapper"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:95
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:84
 msgid "Checksum"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:96
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:85
 msgid "CRC32"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:97
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:416
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:86
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:441
 msgid "Played"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:103
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:92
 #: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:89
 #: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:211
 #: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:263
 msgid "Save states"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:120
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:109
 #: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:416
 msgid "made from another copy of this game"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:121
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:110
 #: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:417
 msgid ""
 "The ROM has changed since this state was saved, so loading it may go wrong."
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:170
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:159
 msgid "Nothing is known about this game yet"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:177
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:166
 msgid "Could not ask the server about this game."
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:180
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:169
 msgid "Try again"
 msgstr ""
 
@@ -296,217 +295,227 @@ msgstr ""
 msgid "{minutes}m played"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:202
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:203
 msgid "ZIP archive"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:305
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:284
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:473
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:509
+msgid "Details"
+msgstr ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:285
+msgid "Details of {game}"
+msgstr ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:328
 msgid "Remove from favorites"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:306
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:329
 msgid "Add to favorites"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:319
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:342
 msgid "Could not change the favorites for {game}. Try again in a moment."
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:412
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:437
 msgid "Name"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:414
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:439
 msgid "Size"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:415
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:440
 msgid "Modified"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:500
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:540
 msgid "{first}–{last} of {total}"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:526
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:566
 msgid "Previous"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:537
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:577
 msgid "Next"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:545
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:585
 msgid "Games per page"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:549
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:589
 msgid "{count} per page"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:577
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:617
 msgid "Search games …"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:578
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:618
 msgid "Search games"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:596
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:636
 msgid "Filter by system"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:599
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:639
 msgid "All systems"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:625
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:665
 msgid "Name, A to Z"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:626
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:666
 msgid "Name, Z to A"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:628
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:668
 msgid "Newest first"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:629
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:669
 msgid "Oldest first"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:630
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:670
 msgid "Most played"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:634
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:674
 msgid "Least played"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:638
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:678
 msgid "Sort games"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:645
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:685
 msgid "Sorted by the table"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:673
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:713
 msgid "Filter by tag"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:676
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:716
 msgid "All tags"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:708
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:748
 msgid "Games library"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:715
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:755
 msgid "Grid view"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:716
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:756
 msgid "List view"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:717
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:757
 msgid "Table view"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:743
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:783
 msgid "The games library is being refreshed."
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:744
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:784
 msgid "Rescan the library folder"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:760
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:800
 msgid "Refreshing the games library in the background. This can take a while."
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:780
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:820
 msgid "%n game in {path}"
 msgid_plural "%n games in {path}"
 msgstr[0] ""
 msgstr[1] ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:790
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:830
 msgid "Use this folder"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:826
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:866
 msgid "No ROMs were found in your files yet. Upload some games, then rescan."
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:830
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:870
 msgid "ROMs were already found in these folders:"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:856
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:896
 msgid ""
 "The games library folder {folder} exists, but no games were found in it."
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:857
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:897
 msgid "The games library folder {folder} does not exist yet."
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:864
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:904
 msgid ""
 "Arcade lists the ROM files of retro consoles — like .nes, .sfc, .gba, .md or "
 "zipped games — and plays them right in the browser."
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:876
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:916
 msgid "Create {folder}"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:881
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:921
 msgid "Created {folder}. Put some games in it and rescan."
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:885
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:925
 msgid "Could not create {folder}"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:894
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:934
 msgid "Looking for ROMs in your files …"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:902
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:942
 msgid "Or pick a folder yourself in the Arcade personal settings."
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:964
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:969
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:1004
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:1009
 msgid "Could not load the games library."
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:1089
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:1129
 msgid "Favorites"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:1098
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:1138
 msgid "Continue playing"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:1110
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:1150
 msgid "Recently added"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:1122
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:1162
 msgid "No games match the filters."
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:1123
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:1163
 msgid "No games on this page. Go back to see the rest."
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:1144
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:1184
 msgid "Only the first {count} games of the folder are listed."
 msgstr ""
 
@@ -1072,28 +1081,24 @@ msgstr ""
 msgid "Full screen"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:517
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:534
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:502
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:509
 msgid "Open sidebar"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:534
-msgid "Details"
-msgstr ""
-
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:540
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:515
 msgid "Settings"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:545
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:520
 msgid "Download"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:548
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:523
 msgid "Actions"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:586
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:561
 msgid "Close"
 msgstr ""
 

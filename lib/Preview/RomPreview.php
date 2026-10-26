@@ -58,7 +58,9 @@ class RomPreview implements IProviderV2 {
 	public static function mimeTypeRegex(): string {
 		$mimes = array_map(
 			static fn (string $mime): string => preg_quote($mime, '/'),
-			array_values(array_unique(array_column(CoreMap::SYSTEMS, 'mime'))),
+			// Every name a ROM goes by, the Color variants' and what earlier
+			// versions called them included.
+			array_keys(CoreMap::romMimes()),
 		);
 		return '/^(' . implode('|', $mimes) . ')$/';
 	}

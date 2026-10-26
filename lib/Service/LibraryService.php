@@ -686,7 +686,7 @@ class LibraryService {
 	private function systemFor(string $extension, array $parents, array $extensionMap, string $mime = ''): ?string {
 		$system = $extensionMap[$extension] ?? '';
 		if ($system !== '' && isset(self::CONTESTED[$extension])) {
-			if ($mime === (CoreMap::SYSTEMS[$system]['mime'] ?? null)) {
+			if (in_array($mime, CoreMap::mimesOf($system), true)) {
 				return $system;
 			}
 			foreach (array_reverse($parents) as $parent) {
@@ -858,7 +858,7 @@ class LibraryService {
 	 */
 	private function romQuery(array $extensionMap, int $limit = 0): ISearchQuery {
 		$clauses = [];
-		foreach (array_unique(array_values(CoreMap::extensionMimeMap())) as $mime) {
+		foreach (array_keys(CoreMap::romMimes()) as $mime) {
 			$clauses[] = new SearchComparison(ISearchComparison::COMPARE_EQUAL, 'mimetype', $mime);
 		}
 		foreach (array_keys($extensionMap) as $extension) {

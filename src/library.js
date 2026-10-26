@@ -7,6 +7,7 @@ import { ICONS, icon } from './icons.js'
 import { attachLibraryGamepad } from './librarypad.js'
 import { davUrl, makeFolder } from './player.js'
 import { playUrl, previewUrl } from './play.js'
+import { showDetails } from './sidebar.js'
 import { systemLabel } from './systems.js'
 import { showError, showInfo } from './toast.js'
 
@@ -269,6 +270,28 @@ function thumbnailFor(game, size) {
 }
 
 /**
+ * A button opening the Files sidebar on a game: its details, tags,
+ * shares, versions and the Arcade tab, without leaving the library.
+ *
+ * @param {object} game the game
+ * @param {string} scope which shelf the game sits on, for its focus name
+ * @return {HTMLElement} the button
+ */
+function detailsButton(game, scope) {
+	const button = focusable(document.createElement('button'), `${scope}/details/${game.path}`)
+	button.type = 'button'
+	button.className = 'arcade-library-details'
+	button.title = t('arcade', 'Details')
+	button.setAttribute('aria-label', t('arcade', 'Details of {game}', { game: gameName(game) }))
+	button.innerHTML = icon(ICONS.information)
+	button.addEventListener('click', (event) => {
+		event.preventDefault()
+		showDetails(game.path, game.id)
+	})
+	return button
+}
+
+/**
  * @param {object} game the game
  * @param {Function} reload reloads the library
  * @param {string} scope which shelf the card sits on, so the focus names
@@ -322,6 +345,7 @@ function renderCard(game, reload, scope) {
 		}
 	})
 	card.appendChild(favorite)
+	card.appendChild(detailsButton(game, scope))
 
 	return card
 }
@@ -392,6 +416,7 @@ function renderList(games) {
 		row.appendChild(system)
 
 		item.appendChild(row)
+		item.appendChild(detailsButton(game, 'page'))
 		list.appendChild(item)
 	}
 	return list
@@ -438,6 +463,16 @@ function renderTable(games, reload) {
 		cell.appendChild(button)
 		headRow.appendChild(cell)
 	}
+	// The details buttons get a column of their own, named for anything
+	// reading the header out loud.
+	const detailsHead = document.createElement('th')
+	detailsHead.setAttribute('scope', 'col')
+	detailsHead.className = 'arcade-library-details-cell'
+	const detailsLabel = document.createElement('span')
+	detailsLabel.className = 'hidden-visually'
+	detailsLabel.textContent = t('arcade', 'Details')
+	detailsHead.appendChild(detailsLabel)
+	headRow.appendChild(detailsHead)
 	head.appendChild(headRow)
 	table.appendChild(head)
 
@@ -473,6 +508,11 @@ function renderTable(games, reload) {
 			playedCell.title = n('arcade', 'Played %n time', 'Played %n times', game.plays)
 		}
 		row.appendChild(playedCell)
+
+		const detailsCell = document.createElement('td')
+		detailsCell.className = 'arcade-library-details-cell'
+		detailsCell.appendChild(detailsButton(game, 'page'))
+		row.appendChild(detailsCell)
 
 		body.appendChild(row)
 	}

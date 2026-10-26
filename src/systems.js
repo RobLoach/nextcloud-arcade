@@ -9,7 +9,23 @@ const systems = loadState('arcade', 'systems', {})
  * @return {string[]} every ROM mimetype the player can handle
  */
 export function romMimes() {
-	return [...new Set(Object.values(systems).map((system) => system.mime))]
+	return [...new Set(Object.values(systems).flatMap(mimesOf))]
+}
+
+/**
+ * Every mimetype a system's games may carry: the one it gives files, the
+ * ones some of its extensions get of their own, and the names earlier
+ * versions gave them, which files keep until they are given the new one.
+ *
+ * @param {object} system the system definition
+ * @return {string[]} its mimetypes
+ */
+function mimesOf(system) {
+	return [
+		system.mime,
+		...Object.values(system.extension_mimes ?? {}),
+		...(system.legacy_mimes ?? []),
+	].filter(Boolean)
 }
 
 /**
@@ -22,7 +38,7 @@ export function romMimes() {
 export function systemForFile(basename, mime = '') {
 	const entries = Object.entries(systems)
 	if (mime) {
-		const byMime = entries.find(([, system]) => system.mime === mime)
+		const byMime = entries.find(([, system]) => mimesOf(system).includes(mime))
 		if (byMime) {
 			return { id: byMime[0], ...byMime[1] }
 		}

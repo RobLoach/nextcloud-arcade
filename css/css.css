@@ -292,7 +292,8 @@
 	flex: 1;
 }
 
-.arcade .arcade-library-favorite {
+.arcade .arcade-library-favorite,
+.arcade .arcade-library-game .arcade-library-details {
 	position: absolute;
 	top: var(--default-grid-baseline, 4px);
 	inset-inline-end: var(--default-grid-baseline, 4px);
@@ -310,16 +311,56 @@
 	display: flex;
 }
 
+.arcade .arcade-library-game .arcade-library-details {
+	/* The star has the one corner, the details the other. */
+	inset-inline-end: auto;
+	inset-inline-start: var(--default-grid-baseline, 4px);
+}
+
 .arcade .arcade-library-game:hover .arcade-library-favorite,
 .arcade .arcade-library-favorite:focus-visible,
-.arcade .arcade-library-favorite.active {
+.arcade .arcade-library-favorite.active,
+.arcade .arcade-library-game:hover .arcade-library-details,
+.arcade .arcade-library-game .arcade-library-details:focus-visible {
 	opacity: 1;
 }
 
-.arcade .arcade-library-favorite svg {
+.arcade .arcade-library-favorite svg,
+.arcade .arcade-library-game .arcade-library-details svg {
 	width: 100%;
 	height: 100%;
 	fill: #fff;
+}
+
+/* In the list and the table the button sits at the end of the line, and
+   wears the colours of the page rather than a scrim. */
+.arcade .arcade-library-rows .arcade-library-details,
+.arcade .arcade-library-table .arcade-library-details {
+	display: flex;
+	flex-shrink: 0;
+	width: 34px;
+	height: 34px;
+	min-height: 0;
+	padding: 7px;
+	margin: 0;
+	border: none;
+	border-radius: var(--border-radius-pill, 50%);
+	background-color: transparent;
+	cursor: pointer;
+}
+
+.arcade .arcade-library-rows .arcade-library-details:hover,
+.arcade .arcade-library-rows .arcade-library-details:focus-visible,
+.arcade .arcade-library-table .arcade-library-details:hover,
+.arcade .arcade-library-table .arcade-library-details:focus-visible {
+	background-color: var(--color-background-hover);
+}
+
+.arcade .arcade-library-rows .arcade-library-details svg,
+.arcade .arcade-library-table .arcade-library-details svg {
+	width: 100%;
+	height: 100%;
+	fill: var(--color-text-maxcontrast);
 }
 
 .arcade .arcade-library-favorite.active svg {
@@ -351,6 +392,17 @@
 	padding: 0;
 	display: flex;
 	flex-direction: column;
+}
+
+.arcade .arcade-library-rows > li {
+	display: flex;
+	align-items: center;
+	gap: var(--default-grid-baseline, 4px);
+}
+
+.arcade .arcade-library-rows .arcade-library-row {
+	flex: 1;
+	min-width: 0;
 }
 
 .arcade .arcade-library-row {
@@ -440,6 +492,13 @@
 	width: 55%;
 }
 
+.arcade .arcade-library-table .arcade-library-details-cell {
+	width: 34px;
+	max-width: none;
+	padding-block: 0;
+	overflow: visible;
+}
+
 .arcade .arcade-library-table tr:hover td {
 	background-color: var(--color-background-hover);
 }
@@ -471,7 +530,8 @@
    same thing standing still. */
 @media (prefers-reduced-motion: reduce) {
 	.arcade .arcade-library-game,
-	.arcade .arcade-library-favorite {
+	.arcade .arcade-library-favorite,
+	.arcade .arcade-library-details {
 		transition: none;
 	}
 }

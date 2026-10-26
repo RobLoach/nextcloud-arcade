@@ -40,7 +40,9 @@ class CoreMap {
 			'label' => 'Super Nintendo',
 			'short' => 'Super Nintendo',
 			'platform' => 'Nintendo - Super Nintendo Entertainment System',
-			'mime' => 'application/x-snes-rom',
+			// The name freedesktop.org gives it; the one before is its alias.
+			'mime' => 'application/vnd.nintendo.snes.rom',
+			'legacy_mimes' => ['application/x-snes-rom'],
 			'extensions' => ['sfc', 'smc'],
 			'core' => 'snes9x',
 			'aliases' => ['snes', 'sfc', 'superfamicom', 'supernintendo', 'supernes', 'supernintendoentertainmentsystem', 'superentertainmentsystem', 'supernintendo16bit', 'superfamicon'],
@@ -120,7 +122,8 @@ class CoreMap {
 			'label' => 'Atari Lynx',
 			'short' => 'Lynx',
 			'platform' => 'Atari - Lynx',
-			'mime' => 'application/x-lynx-rom',
+			'mime' => 'application/x-atari-lynx-rom',
+			'legacy_mimes' => ['application/x-lynx-rom'],
 			'extensions' => ['lnx'],
 			'core' => 'handy',
 			'aliases' => ['lynx', 'atarilynx', 'lynxhandheld'],
@@ -131,6 +134,9 @@ class CoreMap {
 			'short' => 'Neo Geo Pocket',
 			'platform' => 'SNK - Neo Geo Pocket',
 			'mime' => 'application/x-neo-geo-pocket-rom',
+			// The Color has a type of its own in freedesktop.org, though one
+			// core plays both.
+			'extension_mimes' => ['ngc' => 'application/x-neo-geo-pocket-color-rom'],
 			'extensions' => ['ngp', 'ngc'],
 			'core' => 'mednafen_ngp',
 			'aliases' => ['ngp', 'ngpc', 'neogeopocket', 'neogeopocketcolor', 'neogeopocketcolour', 'snkneogeopocket'],
@@ -141,6 +147,7 @@ class CoreMap {
 			'short' => 'WonderSwan',
 			'platform' => 'Bandai - WonderSwan',
 			'mime' => 'application/x-wonderswan-rom',
+			'extension_mimes' => ['wsc' => 'application/x-wonderswan-color-rom'],
 			'extensions' => ['ws', 'wsc'],
 			'core' => 'mednafen_wswan',
 			'aliases' => ['ws', 'wsc', 'wonderswan', 'wonderswancolor', 'wonderswancolour', 'bandaiwonderswan'],
@@ -385,16 +392,54 @@ class CoreMap {
 	}
 
 	/**
+	 * The mimetype each extension is given: the one of its system, or one
+	 * of its own where freedesktop.org tells a variant apart -- the
+	 * Neo Geo Pocket Color, the WonderSwan Color.
+	 *
 	 * @return array<string, string> extension => mimetype
 	 */
 	public static function extensionMimeMap(): array {
 		$map = [];
 		foreach (self::SYSTEMS as $system) {
 			foreach ($system['extensions'] as $extension) {
-				$map[$extension] = $system['mime'];
+				$map[$extension] = $system['extension_mimes'][$extension] ?? $system['mime'];
 			}
 		}
 		return $map;
+	}
+
+	/**
+	 * Every mimetype a system's games may carry: the ones files are given
+	 * now, and the names earlier versions gave them, which files keep
+	 * until the repair step gives them the new one.
+	 *
+	 * @return list<string>
+	 */
+	public static function mimesOf(string $system): array {
+		$definition = self::SYSTEMS[$system] ?? null;
+		if ($definition === null) {
+			return [];
+		}
+		return array_values(array_unique([
+			$definition['mime'],
+			...array_values($definition['extension_mimes'] ?? []),
+			...($definition['legacy_mimes'] ?? []),
+		]));
+	}
+
+	/**
+	 * Every mimetype a game of any system may carry, by mimetype.
+	 *
+	 * @return array<string, true>
+	 */
+	public static function romMimes(): array {
+		$mimes = [];
+		foreach (array_keys(self::SYSTEMS) as $system) {
+			foreach (self::mimesOf($system) as $mime) {
+				$mimes[$mime] = true;
+			}
+		}
+		return $mimes;
 	}
 
 	/**

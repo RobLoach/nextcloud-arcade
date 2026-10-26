@@ -56,8 +56,20 @@ All notable changes to NextCloud Arcade. The format follows
   put back to its defaults.
 - Mute, in the player's control bar, drawn as whichever of the two it
   would do next.
+- A Details button on every game of the library -- in the corner of a
+  card, at the end of a row of the list and the table -- opening the
+  Files sidebar on it, with its tags, shares, versions and Arcade tab,
+  without leaving the library. Nextcloud 34 can only show that sidebar in
+  the Files app, so there the button opens the game's details in Files.
 
 ### Changed
+- Nextcloud 34.0.4 or newer is required.
+- ROMs take the file types the shared freedesktop.org database gives
+  them: Super Nintendo games are `application/vnd.nintendo.snes.rom` and
+  Atari Lynx games `application/x-atari-lynx-rom`, and Neo Geo Pocket
+  Color (`.ngc`) and WonderSwan Color (`.wsc`) games have types of their
+  own. Files are given the new types at upgrade, and the names earlier
+  versions gave are still taken until then.
 - The upgrade no longer converts the save states earlier versions kept in
   the app data: nothing reads them any more. The maintenance section
   removes them.

@@ -28,7 +28,7 @@ compiled to WebAssembly. ROMs are streamed from your files, and run in the brows
 
 ## Dependencies
 
-- Nextcloud 34 or 35
+- Nextcloud 34.0.4 or newer, up to 35
 - PHP 8.3 or newer
 - Background jobs on cron (recommended)
 

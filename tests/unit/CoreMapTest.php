@@ -155,7 +155,7 @@ class CoreMapTest extends TestCase {
 		$systems = CoreMap::extensionSystemMap();
 		foreach (CoreMap::SYSTEMS as $id => $system) {
 			foreach ($system['extensions'] as $extension) {
-				$this->assertSame($system['mime'], $mimes[$extension] ?? null);
+				$this->assertSame($system['extension_mimes'][$extension] ?? $system['mime'], $mimes[$extension] ?? null);
 				$this->assertSame($id, $systems[$extension] ?? null);
 			}
 		}
@@ -179,5 +179,25 @@ class CoreMapTest extends TestCase {
 
 	public function testAnUnknownSystemIsCalledWhateverItWasAskedBy(): void {
 		$this->assertSame('madeup', CoreMap::displayName('madeup'));
+	}
+
+	public function testTheMimetypesAreTheOnesFreedesktopGives(): void {
+		$mimes = CoreMap::extensionMimeMap();
+		$this->assertSame('application/vnd.nintendo.snes.rom', $mimes['sfc']);
+		$this->assertSame('application/x-atari-lynx-rom', $mimes['lnx']);
+		// The Color variants have types of their own.
+		$this->assertSame('application/x-neo-geo-pocket-rom', $mimes['ngp']);
+		$this->assertSame('application/x-neo-geo-pocket-color-rom', $mimes['ngc']);
+		$this->assertSame('application/x-wonderswan-rom', $mimes['ws']);
+		$this->assertSame('application/x-wonderswan-color-rom', $mimes['wsc']);
+	}
+
+	public function testTheNamesEarlierVersionsGaveAreStillGamesOfTheirSystem(): void {
+		$this->assertContains('application/x-snes-rom', CoreMap::mimesOf('snes'));
+		$this->assertContains('application/x-lynx-rom', CoreMap::mimesOf('lynx'));
+		$this->assertContains('application/x-neo-geo-pocket-color-rom', CoreMap::mimesOf('ngp'));
+		$this->assertArrayHasKey('application/x-snes-rom', CoreMap::romMimes());
+		$this->assertArrayHasKey('application/x-wonderswan-color-rom', CoreMap::romMimes());
+		$this->assertSame([], CoreMap::mimesOf('unknown'));
 	}
 }
