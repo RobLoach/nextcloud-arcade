@@ -9,14 +9,17 @@ use OCA\Arcade\BackgroundJob\ScanLibraries;
 use OCA\Arcade\Service\LibraryScanner;
 use OCA\Arcade\Service\LibraryService;
 use OCA\Arcade\Service\SettingsService;
+use OCA\Arcade\Service\UserFilesystems;
 use OCP\BackgroundJob\IJobList;
 use OCP\Files\Cache\IScanner;
 use OCP\Files\Folder;
 use OCP\Files\IRootFolder;
+use OCP\Files\ISetupManager;
 use OCP\Files\NotFoundException;
 use OCP\Files\Storage\IStorage;
 use OCP\IUser;
 use OCP\IUserManager;
+use OCP\IUserSession;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
 
@@ -33,6 +36,8 @@ class LibraryScannerTest extends TestCase {
 	private array $scanned = [];
 	/** The folders Nextcloud was asked to scan on disk, as user:path. */
 	private array $filesScanned = [];
+	/** How often the files of everybody were let go of. */
+	private int $tornDown = 0;
 
 	private function scanner(): LibraryScanner {
 		$settings = $this->createStub(SettingsService::class);
@@ -88,7 +93,15 @@ class LibraryScannerTest extends TestCase {
 			}
 		});
 
-		return new LibraryScanner($settings, $library, $root, $jobList, $users, $this->createStub(LoggerInterface::class));
+		// A background job: nobody is signed in, and nothing was set up.
+		$setup = $this->createStub(ISetupManager::class);
+		$setup->method('isSetupComplete')->willReturn(false);
+		$setup->method('tearDown')->willReturnCallback(function (): void {
+			$this->tornDown++;
+		});
+		$filesystems = new UserFilesystems($setup, $users, $this->createStub(IUserSession::class));
+
+		return new LibraryScanner($settings, $library, $root, $jobList, $users, $this->createStub(LoggerInterface::class), $filesystems);
 	}
 
 	public function testALibraryIsScannedPastTheCacheAndItsGamesReadAgain(): void {
@@ -120,6 +133,8 @@ class LibraryScannerTest extends TestCase {
 		$this->libraries = ['alice' => true, 'bob' => false, 'carol' => true, 'dave' => true];
 		$this->assertSame(2, $this->scanner()->scanAll());
 		$this->assertSame(['alice (afresh)', 'dave (afresh)'], $this->scanned);
+		// Every user let go of, the ones that failed too.
+		$this->assertSame(4, $this->tornDown);
 	}
 
 	public function testGamesCopiedOntoTheDiskAreLookedForFirst(): void {

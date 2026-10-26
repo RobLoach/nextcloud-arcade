@@ -8,11 +8,14 @@ use OCA\Arcade\Command\Cleanup;
 use OCA\Arcade\Db\GameMapper;
 use OCA\Arcade\Service\CleanupService;
 use OCA\Arcade\Service\StateService;
+use OCA\Arcade\Service\UserFilesystems;
 use OCP\Files\Folder;
 use OCP\Files\IRootFolder;
+use OCP\Files\ISetupManager;
 use OCP\Files\Node;
 use OCP\IUser;
 use OCP\IUserManager;
+use OCP\IUserSession;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Console\Tester\CommandTester;
 
@@ -40,6 +43,14 @@ class CleanupTest extends TestCase {
 	private array $deletedGames = [];
 	/** The registry users dropped wholesale. */
 	private array $deletedUsers = [];
+
+	private function filesystems(IUserManager $userManager): UserFilesystems {
+		return new UserFilesystems(
+			$this->createStub(ISetupManager::class),
+			$userManager,
+			$this->createStub(IUserSession::class),
+		);
+	}
 
 	private function tester(): CommandTester {
 		$stateService = $this->createStub(StateService::class);
@@ -114,7 +125,7 @@ class CleanupTest extends TestCase {
 		$rootFolder->method('getUserFolder')->willReturn($userFolder);
 
 		return new CommandTester(new Cleanup(
-			new CleanupService($stateService, $gameMapper, $userManager, $rootFolder),
+			new CleanupService($stateService, $gameMapper, $userManager, $rootFolder, $this->filesystems($userManager)),
 		));
 	}
 

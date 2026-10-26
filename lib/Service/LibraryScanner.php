@@ -31,6 +31,7 @@ class LibraryScanner {
 		private IJobList $jobList,
 		private IUserManager $userManager,
 		private LoggerInterface $logger,
+		private UserFilesystems $userFilesystems,
 	) {
 	}
 
@@ -74,7 +75,9 @@ class LibraryScanner {
 		$scanned = 0;
 		$this->userManager->callForSeenUsers(function (IUser $user) use (&$scanned): void {
 			try {
-				if ($this->scan($user->getUID()) !== null) {
+				// Each library let go of once scanned, so the walk holds one
+				// user's files at a time rather than everybody's.
+				if ($this->userFilesystems->forUser($user, fn () => $this->scan($user->getUID())) !== null) {
 					$scanned++;
 				}
 			} catch (\Throwable $e) {

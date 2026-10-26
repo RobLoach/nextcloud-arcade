@@ -26,6 +26,7 @@ class CleanupService {
 		private GameMapper $gameMapper,
 		private IUserManager $userManager,
 		private IRootFolder $rootFolder,
+		private UserFilesystems $userFilesystems,
 	) {
 	}
 
@@ -135,7 +136,7 @@ class CleanupService {
 		$totals = ['users' => 0, 'recorded' => 0, 'removed' => 0];
 		foreach ($userIds as $each) {
 			try {
-				$counts = $this->stateService->reconcile($each, $full);
+				$counts = $this->userFilesystems->forUser($each, fn () => $this->stateService->reconcile($each, $full));
 			} catch (\Throwable $e) {
 				// One user's broken manifest is theirs to sort out, and no
 				// reason to leave everybody else's as it is.
@@ -157,6 +158,14 @@ class CleanupService {
 	 * @param \Closure(string): void $report
 	 */
 	private function cleanUser(string $userId, bool $dryRun, \Closure $report): int {
+		// One user's files held at a time, however many users there are.
+		return $this->userFilesystems->forUser($userId, fn (): int => $this->cleanFilesOf($userId, $dryRun, $report));
+	}
+
+	/**
+	 * @param \Closure(string): void $report
+	 */
+	private function cleanFilesOf(string $userId, bool $dryRun, \Closure $report): int {
 		try {
 			$userFolder = $this->rootFolder->getUserFolder($userId);
 		} catch (NotFoundException|\Throwable) {

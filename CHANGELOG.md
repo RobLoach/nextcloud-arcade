@@ -69,6 +69,10 @@ All notable changes to NextCloud Arcade. The format follows
   server's memory first.
 - Looking for box art and screenshots asks the database for the images of
   a folder only, rather than listing everything in it.
+- The background jobs that go through every user -- scanning every
+  library, the weekly cleanup and Cloud Sync check -- let go of each
+  user's files once done with them, so on a large instance they no longer
+  hold everybody's mounts at once and run out of memory partway.
 - ROMs take the file types the shared freedesktop.org database gives
   them: Super Nintendo games are `application/vnd.nintendo.snes.rom` and
   Atari Lynx games `application/x-atari-lynx-rom`, and Neo Geo Pocket
