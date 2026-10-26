@@ -275,6 +275,9 @@ class StateController extends ArcadeController {
 			// once, rather than by each of them; an unknown one is ignored.
 			$core = $this->request->getParam('core', '');
 			$this->stateService->useCore($this->userId, $file, is_string($core) ? $core : '');
+			// And the name its saves go by, which for a zip is the game in
+			// it, as RetroArch names them.
+			$this->stateService->useName($this->userId, $file, $this->encodedParam('n'));
 		}
 		return $plausible;
 	}

@@ -58,6 +58,12 @@ found inside it, which is noted with the game, so the Files sidebar and
 the cleanup find it there too; a game whose system cannot be told at all
 saves straight into `saves/` and `states/`.
 
+A zipped game's saves are named after the game inside the zip, as
+RetroArch names them: `Super Street Fighter II.zip` holding
+`Super Street Fighter II (USA).sfc` saves as
+`saves/Snes9x/Super Street Fighter II (USA).srm`. Renaming the zip keeps
+its saves.
+
 A battery save the game did not change is not written again — it is read
 out of the game once a minute, and every write would be a new version of
 the file.

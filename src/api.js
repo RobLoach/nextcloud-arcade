@@ -9,10 +9,13 @@ export { encodePath }
 // which is RetroArch's own first slot.
 export const AUTO_SLOT = -1
 
-// The core each game was started on, by its path. Saves are filed under
-// the name of the core, and for a zip only the player knows which that
-// is -- it looked inside -- so every request about a save says so.
+// The core each game was started on, and the name of the file it was
+// given, by its path. Saves are filed under the name of the core and
+// named after that file -- for a zip, the game inside it, as RetroArch
+// names them -- and only the player knows either, having looked inside,
+// so every request about a save says so.
 const cores = new Map()
+const names = new Map()
 
 /**
  * A file as the routes of the app take an upload: the data field of a
@@ -39,9 +42,14 @@ export function asUpload(blob, name = 'upload') {
  *
  * @param {string} romPath path identifying the game
  * @param {string} core the libretro name of the core, e.g. 'fceumm'
+ * @param {?string} [name] the name of the file the core was given, without
+ *                         its extension: for a zip, the game inside it
  */
-export function useCore(romPath, core) {
+export function useCore(romPath, core, name = null) {
 	cores.set(romPath, core)
+	if (name) {
+		names.set(romPath, name)
+	}
 }
 
 /**
@@ -52,6 +60,7 @@ export function useCore(romPath, core) {
  */
 export function stateUrl(route, romPath, slot = null) {
 	const core = cores.get(romPath) ?? null
+	const name = names.get(romPath) ?? null
 	let url = `/apps/arcade/arcade${route}?f={f}`
 	if (slot !== null) {
 		url += '&slot={slot}'
@@ -59,7 +68,10 @@ export function stateUrl(route, romPath, slot = null) {
 	if (core !== null) {
 		url += '&core={core}'
 	}
-	return generateUrl(url, { f: encodePath(romPath), slot, core })
+	if (name !== null) {
+		url += '&n={n}'
+	}
+	return generateUrl(url, { f: encodePath(romPath), slot, core, n: name === null ? null : encodePath(name) })
 }
 
 // How long an ordinary request is given. These carry a listing or a

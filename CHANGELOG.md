@@ -100,6 +100,9 @@ All notable changes to NextCloud Arcade. The format follows
   what each limit is currently set to.
 
 ### Fixed
+- The saves of a zipped game are named after the game inside the zip, as
+  RetroArch names them, so the two find each other's saves. They were
+  named after the zip, and RetroArch's were never found.
 - Saves reach the server behind a web application firewall. They were
   sent as a bare application/octet-stream body, which ModSecurity's
   OWASP Core Rule Set refuses as a body type it does not allow, so every

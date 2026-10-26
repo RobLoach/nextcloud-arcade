@@ -255,8 +255,10 @@ export async function launchRom({ element, romUrl, romName, settings = {}, syste
 	}
 	if (romPath !== '') {
 		// From here on every request about its saves says which core it
-		// is: the one its files are filed under.
-		useCore(romPath, coreForSystem(system.id))
+		// is, the one its files are filed under, and the name of the file
+		// the core is given, the one they are named after: for a zip, the
+		// game inside it, which is what RetroArch names them after too.
+		useCore(romPath, coreForSystem(system.id), rom.name.replace(/\.[^.]+$/, ''))
 	}
 	const sram = canSave ? await fetchSram(romPath, signal) : null
 	const bios = await fetchBios(system.id, signal)

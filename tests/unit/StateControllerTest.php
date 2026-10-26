@@ -54,6 +54,7 @@ class StateControllerTest extends TestCase {
 		string $contentLength = '',
 		string $core = '',
 		string $f = '',
+		string $n = '',
 	): TestableStateController {
 		$this->stateService = $this->createMock(StateService::class);
 		$settings = $this->createStub(SettingsService::class);
@@ -68,6 +69,7 @@ class StateControllerTest extends TestCase {
 			static fn (string $key, $default = null) => match ($key) {
 				'core' => $core,
 				'f' => $f,
+				'n' => $n,
 				default => $default,
 			},
 		);
@@ -368,5 +370,14 @@ class StateControllerTest extends TestCase {
 
 			$this->assertSame(Http::STATUS_BAD_REQUEST, $controller->save(self::GAME, 2)->getStatus());
 		}
+	}
+
+	public function testTheNameOfTheGameInAZipIsHandedOn(): void {
+		$encoded = rtrim(strtr(base64_encode('Super Street Fighter II (USA)'), '+/', '-_'), '=');
+		$controller = $this->controller(body: 'the state', n: $encoded);
+		$this->stateService->expects($this->once())->method('useName')
+			->with('alice', self::GAME, 'Super Street Fighter II (USA)');
+
+		$controller->save(self::GAME, 1);
 	}
 }

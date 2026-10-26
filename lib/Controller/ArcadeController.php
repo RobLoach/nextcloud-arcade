@@ -39,7 +39,16 @@ abstract class ArcadeController extends Controller {
 		if ($file !== '') {
 			return $file;
 		}
-		$encoded = $this->request->getParam('f', '');
+		return $this->encodedParam('f');
+	}
+
+	/**
+	 * A parameter the player sends in base64url -- names of games, which
+	 * carry the quotes and brackets a firewall refuses in a query string --
+	 * decoded; empty when it is missing or not base64url of UTF-8.
+	 */
+	protected function encodedParam(string $name): string {
+		$encoded = $this->request->getParam($name, '');
 		if (!is_string($encoded) || $encoded === '') {
 			return '';
 		}

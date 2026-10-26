@@ -66,20 +66,26 @@ class StateServiceTest extends TestCase {
 		$mapper = $this->createStub(GameMapper::class);
 		$mapper->method('entriesOf')->willReturnCallback(
 			fn (string $userId): array => array_map(
-				static fn (array $row): array => ['path' => $row['path'], 'md5' => $row['md5'], 'core' => $row['core'] ?? ''],
+				static fn (array $row): array => ['path' => $row['path'], 'md5' => $row['md5'], 'core' => $row['core'] ?? '', 'name' => $row['name'] ?? ''],
 				$this->games[$userId] ?? [],
 			),
 		);
 		$mapper->method('entryOf')->willReturnCallback(
 			function (string $userId, string $key): ?array {
 				$row = $this->games[$userId][$key] ?? null;
-				return $row === null ? null : ['path' => $row['path'], 'md5' => $row['md5'], 'core' => $row['core'] ?? ''];
+				return $row === null ? null : ['path' => $row['path'], 'md5' => $row['md5'], 'core' => $row['core'] ?? '', 'name' => $row['name'] ?? ''];
 			},
 		);
 		$mapper->method('set')->willReturnCallback(
-			function (string $userId, string $key, int $fileId, string $path, string $checksum, string $core = ''): void {
-				$was = $this->games[$userId][$key]['core'] ?? '';
-				$this->games[$userId][$key] = ['file_id' => $fileId, 'path' => $path, 'md5' => $checksum, 'core' => $core !== '' ? $core : $was];
+			function (string $userId, string $key, int $fileId, string $path, string $checksum, string $core = '', string $name = ''): void {
+				$was = $this->games[$userId][$key] ?? [];
+				$this->games[$userId][$key] = [
+					'file_id' => $fileId,
+					'path' => $path,
+					'md5' => $checksum,
+					'core' => $core !== '' ? $core : ($was['core'] ?? ''),
+					'name' => $name !== '' ? $name : ($was['name'] ?? ''),
+				];
 			},
 		);
 		$mapper->method('importEntry')->willReturnCallback(
@@ -857,5 +863,61 @@ class StateServiceTest extends TestCase {
 		);
 		$this->assertSame(4, $service->deleteAppDataSaves());
 		$this->assertSame(['files' => 0, 'bytes' => 0], $service->appDataSaves());
+	}
+
+	// The name the saves of a zipped game go by.
+
+	public function testAZippedGameSavesUnderTheGameInsideItAsRetroArchDoes(): void {
+		$this->files['Games/SNES/Super Street Fighter II.zip'] = 'zip';
+		$this->ids['Games/SNES/Super Street Fighter II.zip'] = 5;
+		$service = $this->service();
+		$service->useCore(self::USER, '/Games/SNES/Super Street Fighter II.zip', 'snes9x');
+		$service->useName(self::USER, '/Games/SNES/Super Street Fighter II.zip', 'Super Street Fighter II (USA)');
+		$service->save(self::USER, '/Games/SNES/Super Street Fighter II.zip', 1, 'state');
+		$service->saveSram(self::USER, '/Games/SNES/Super Street Fighter II.zip', 'sram');
+
+		$this->assertSame('state', $this->files['Saves/states/Snes9x/Super Street Fighter II (USA).state1']);
+		$this->assertSame('sram', $this->files['Saves/saves/Snes9x/Super Street Fighter II (USA).srm']);
+		$this->assertSame('Super Street Fighter II (USA)', $this->games[self::USER]['5']['name']);
+	}
+
+	public function testWhatRetroArchSavedForAZippedGameIsFound(): void {
+		$this->files['Saves/saves/Snes9x/Super Street Fighter II (USA).srm'] = 'from retroarch';
+		$service = $this->service();
+		$service->useCore(self::USER, '/Games/Super Street Fighter II.zip', 'snes9x');
+		$service->useName(self::USER, '/Games/Super Street Fighter II.zip', 'Super Street Fighter II (USA)');
+		$this->assertSame('from retroarch', $service->loadSram(self::USER, '/Games/Super Street Fighter II.zip'));
+	}
+
+	public function testTheNotedNameIsUsedWhenThePlayerDoesNotSay(): void {
+		$this->files['Games/Mystery.zip'] = 'zip';
+		$this->ids['Games/Mystery.zip'] = 9;
+		$player = $this->service();
+		$player->useCore(self::USER, '/Games/Mystery.zip', 'fceumm');
+		$player->useName(self::USER, '/Games/Mystery.zip', 'Inner Game (USA)');
+		$player->save(self::USER, '/Games/Mystery.zip', 2, 'state');
+
+		$sidebar = $this->service();
+		$this->assertSame([2], array_column($sidebar->list(self::USER, '/Games/Mystery.zip'), 'slot'));
+
+		// Renaming the zip keeps the game inside, and the saves with it.
+		unset($this->files['Games/Mystery.zip'], $this->ids['Games/Mystery.zip']);
+		$this->files['Games/Renamed.zip'] = 'zip';
+		$this->ids['Games/Renamed.zip'] = 9;
+		$this->assertSame('state', $this->service()->load(self::USER, '/Games/Renamed.zip', 2));
+		$this->assertArrayHasKey('Saves/states/FCEUmm/Inner Game (USA).state2', $this->files);
+
+		unset($this->files['Games/Renamed.zip'], $this->ids['Games/Renamed.zip']);
+		$this->service()->deleteAllForFileId(self::USER, 9);
+		$this->assertArrayNotHasKey('Saves/states/FCEUmm/Inner Game (USA).state2', $this->files);
+	}
+
+	public function testANameThatCouldReachAnotherFolderIsNotTakenAtItsWord(): void {
+		$service = $this->service();
+		foreach (['../Other', 'a/b', '.hidden', ''] as $name) {
+			$service->useName(self::USER, self::GAME, $name);
+		}
+		$service->save(self::USER, self::GAME, 1, 'state');
+		$this->assertSame('state', $this->files[self::STATES . '/Mario.state1']);
 	}
 }

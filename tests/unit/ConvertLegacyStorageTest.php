@@ -123,7 +123,7 @@ class ConvertLegacyStorageTest extends TestCase {
 		$mapper = $this->createStub(GameMapper::class);
 		$mapper->method('entriesOf')->willReturnCallback(
 			fn (string $userId): array => array_map(
-				static fn (array $row): array => ['path' => $row['path'], 'md5' => $row['md5'], 'core' => ''],
+				static fn (array $row): array => ['path' => $row['path'], 'md5' => $row['md5'], 'core' => '', 'name' => ''],
 				$this->games[$userId] ?? [],
 			),
 		);

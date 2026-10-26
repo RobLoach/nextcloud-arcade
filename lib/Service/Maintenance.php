@@ -24,7 +24,7 @@ class Maintenance {
 	 */
 	private const TABLES = [
 		'arcade_plays' => [],
-		'arcade_games' => ['core'],
+		'arcade_games' => ['core', 'name'],
 	];
 
 	public function __construct(

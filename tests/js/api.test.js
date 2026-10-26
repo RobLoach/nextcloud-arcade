@@ -36,4 +36,11 @@ describe('the address of a save', () => {
 		expect(form).toBeInstanceOf(FormData)
 		expect(await form.get('data').text()).toBe('a state')
 	})
+
+	test('says the name of the game inside a zip, encoded like the path', () => {
+		useCore('/Games/SSF2.zip', 'snes9x', 'Super Street Fighter II (USA)')
+
+		expect(stateUrl('/sram', '/Games/SSF2.zip')).toBe(
+			'/apps/arcade/arcade/sram?f=' + encodePath('/Games/SSF2.zip') + '&core=snes9x&n=' + encodePath('Super Street Fighter II (USA)'))
+	})
 })

@@ -24,11 +24,11 @@ class GameMapper extends QBMapper {
 	/**
 	 * Every game of a user, by the key its states are filed under.
 	 *
-	 * @return array<string, array{path: string, md5: string, core: string}>
+	 * @return array<string, array{path: string, md5: string, core: string, name: string}>
 	 */
 	public function entriesOf(string $userId): array {
 		$qb = $this->db->getQueryBuilder();
-		$qb->select('game_key', 'last_path', 'checksum', 'core')
+		$qb->select('game_key', 'last_path', 'checksum', 'core', 'name')
 			->from($this->getTableName())
 			->where($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)));
 		$result = $qb->executeQuery();
@@ -38,6 +38,7 @@ class GameMapper extends QBMapper {
 				'path' => (string)$row['last_path'],
 				'md5' => (string)$row['checksum'],
 				'core' => (string)$row['core'],
+				'name' => (string)$row['name'],
 			];
 		}
 		$result->closeCursor();
@@ -45,11 +46,11 @@ class GameMapper extends QBMapper {
 	}
 
 	/**
-	 * @return array{path: string, md5: string, core: string}|null
+	 * @return array{path: string, md5: string, core: string, name: string}|null
 	 */
 	public function entryOf(string $userId, string $key): ?array {
 		$qb = $this->db->getQueryBuilder();
-		$qb->select('last_path', 'checksum', 'core')
+		$qb->select('last_path', 'checksum', 'core', 'name')
 			->from($this->getTableName())
 			->where($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)))
 			->andWhere($qb->expr()->eq('game_key', $qb->createNamedParameter($key)));
@@ -63,6 +64,7 @@ class GameMapper extends QBMapper {
 			'path' => (string)$row['last_path'],
 			'md5' => (string)$row['checksum'],
 			'core' => (string)$row['core'],
+			'name' => (string)$row['name'],
 		];
 	}
 
@@ -87,13 +89,14 @@ class GameMapper extends QBMapper {
 	}
 
 	/**
-	 * Note where a game is now, what it hashes to, and the core the player
-	 * ran it on, replacing what was noted before. An empty core leaves the
-	 * one noted before alone: only the player knows it, and a write that
-	 * came from anywhere else has nothing to say about it.
+	 * Note where a game is now, what it hashes to, the core the player ran
+	 * it on and the name its saves go by, replacing what was noted before.
+	 * An empty core or name leaves the one noted before alone: only the
+	 * player knows them, and a write that came from anywhere else has
+	 * nothing to say about them.
 	 */
-	public function set(string $userId, string $key, int $fileId, string $path, string $checksum, string $core = ''): void {
-		if ($this->replace($userId, $key, $fileId, $path, $checksum, $core) > 0) {
+	public function set(string $userId, string $key, int $fileId, string $path, string $checksum, string $core = '', string $name = ''): void {
+		if ($this->replace($userId, $key, $fileId, $path, $checksum, $core, $name) > 0) {
 			return;
 		}
 		$game = new Game();
@@ -103,6 +106,7 @@ class GameMapper extends QBMapper {
 		$game->setLastPath($path);
 		$game->setChecksum($checksum);
 		$game->setCore($core === '' ? null : $core);
+		$game->setName($name === '' ? null : $name);
 		try {
 			$this->insert($game);
 		} catch (Exception $e) {
@@ -112,11 +116,11 @@ class GameMapper extends QBMapper {
 			// Another request noted it first. An update that changes nothing
 			// counts no rows on some databases, so this one may too; either
 			// way the entry is there.
-			$this->replace($userId, $key, $fileId, $path, $checksum, $core);
+			$this->replace($userId, $key, $fileId, $path, $checksum, $core, $name);
 		}
 	}
 
-	private function replace(string $userId, string $key, int $fileId, string $path, string $checksum, string $core): int {
+	private function replace(string $userId, string $key, int $fileId, string $path, string $checksum, string $core, string $name): int {
 		$qb = $this->db->getQueryBuilder();
 		$qb->update($this->getTableName())
 			->set('file_id', $qb->createNamedParameter($fileId, IQueryBuilder::PARAM_INT))
@@ -124,6 +128,9 @@ class GameMapper extends QBMapper {
 			->set('checksum', $qb->createNamedParameter($checksum));
 		if ($core !== '') {
 			$qb->set('core', $qb->createNamedParameter($core));
+		}
+		if ($name !== '') {
+			$qb->set('name', $qb->createNamedParameter($name));
 		}
 		$qb->where($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)))
 			->andWhere($qb->expr()->eq('game_key', $qb->createNamedParameter($key)));
