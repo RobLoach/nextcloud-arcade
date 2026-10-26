@@ -1,6 +1,7 @@
 import { translate as t } from '@nextcloud/l10n'
 import { AUTO_SLOT, api, stateUrl, wasGivenUpOn } from '../api.js'
 import { disableSramSync, enableSramSync } from '../player.js'
+import { watchCoreLog } from '../corelog.js'
 import { createStateCache } from '../statecache.js'
 import { waitAtMost } from '../wait.js'
 import { createPanel } from './panel.js'
@@ -15,6 +16,16 @@ const CORE_ANSWER_WAIT = 10 * 1000
 // What a wait that ran out answers with, which nothing the core hands
 // back could be mistaken for.
 const TIMED_OUT = Symbol('timed out')
+
+// How long a loaded state is given to be turned down. Handing the core a
+// state only asks it to load one; whether it could is said a few frames
+// later, and only when it could not -- RetroArch prints a line, nothing
+// more -- so the player is told it worked once this passes in silence.
+const LOAD_VERDICT_WAIT = 750
+
+// The line RetroArch prints when it cannot load a state: one made by a
+// build of the core too far from this one, or for another game.
+const LOAD_FAILED = 'Failed to load state'
 
 /**
  * What to tell the player when a save made in the background did not
@@ -163,7 +174,7 @@ export function createStatesPanel({ instance, romPath, flash, onDone, cache = nu
 			thumbnail = await waitAtMost(
 				instance.screenshot().catch(() => undefined), CORE_ANSWER_WAIT, undefined)
 		}
-		states.put(slot, state, thumbnail ?? null)
+		states.put(slot, state, thumbnail ?? null, { quiet })
 		if (!quiet) {
 			flash(slot === AUTO_SLOT
 				? t('arcade', 'Game saved')
@@ -187,11 +198,36 @@ export function createStatesPanel({ instance, romPath, flash, onDone, cache = nu
 				flash(t('arcade', 'That save state is empty, so there is nothing to load'), 'warning')
 				return
 			}
-			// A core can swallow a state the same way it can withhold one,
-			// and the game is left running either way.
-			const taken = await askCore(instance.loadState(state), 'loadState',
-				t('arcade', 'The game did not take the save state'))
-			if (taken === TIMED_OUT) {
+			// The core only says when it could not load a state, and in
+			// a log line naming a file the player never sees, so the line
+			// is listened for, and said in words of the player's instead.
+			let refused = false
+			let heard = () => {}
+			const verdict = new Promise((resolve) => {
+				heard = resolve
+			})
+			const stopWatching = watchCoreLog((line) => {
+				if (typeof line !== 'string' || !line.includes(LOAD_FAILED)) {
+					return false
+				}
+				refused = true
+				heard()
+				return true
+			})
+			try {
+				// A core can swallow a state the same way it can withhold
+				// one, and the game is left running either way.
+				const taken = await askCore(instance.loadState(state), 'loadState',
+					t('arcade', 'The game did not take the save state'))
+				if (taken === TIMED_OUT) {
+					return
+				}
+				await waitAtMost(verdict, LOAD_VERDICT_WAIT, undefined)
+			} finally {
+				stopWatching()
+			}
+			if (refused) {
+				flash(t('arcade', 'That save state would not load. It may have been made by another version of the emulator, as RetroArch on another device can be, or for another copy of the game.'), 'error')
 				return
 			}
 			flash(slot === AUTO_SLOT

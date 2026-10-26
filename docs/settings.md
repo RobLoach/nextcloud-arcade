@@ -87,8 +87,8 @@ play the same games with the same saves in RetroArch:
 
 Saves copied into the folder some other way — the desktop client, an
 upload in Files — are only in the manifest once something records them,
-and RetroArch does not fetch them until then. The weekly background job
-does, for everybody; the personal settings have a button under the saves
+and RetroArch does not fetch them until then. Opening a game does, at most
+once an hour; the weekly background job does, for everybody; the personal settings have a button under the saves
 folder that does it now, and `occ arcade:cloudsync` does it from the
 command line. Saves that are gone from the folder are recorded as deleted,
 so RetroArch deletes its copy too. A file the manifest already has, and
@@ -182,7 +182,9 @@ while a page waits:
   rescanned.
 - Fetching missing box art, when the button in the personal settings asks
   for it.
-- A weekly cleanup sweep, the same work as `occ arcade:cleanup` below.
+- A weekly cleanup sweep, the same work as `occ arcade:cleanup` below,
+  and putting every Cloud Sync manifest right, as `occ arcade:cloudsync`
+  does.
 
 A setup check on the administration overview says whether background jobs
 run the way the app needs them: it warns when they are set to AJAX, have
@@ -194,9 +196,9 @@ waiting in the queue.
 | Command | Does |
 | --- | --- |
 | `occ arcade:bios` | List, add or remove the BIOS files the instance offers to every player |
-| `occ arcade:cleanup` | Remove save states of games and users that no longer exist; `--dry-run` only reports |
+| `occ arcade:cleanup` | Remove save states of games and users that no longer exist; `--legacy` also removes the saves versions before 0.48.8 left in the app data, which nothing reads; `--dry-run` only reports |
 | `occ arcade:cloudsync` | Record in each user's Cloud Sync manifest the saves that got into the saves folder some other way, and the ones that are gone; `--user`, `--full` |
-| `occ arcade:status` | Report the save state storage and play activity of every user; `--json` for machines |
+| `occ arcade:status` | Report the games with saves and the play activity of every user, and what earlier versions left in the app data; `--json` for machines |
 | `occ arcade:uninstall` | Remove the settings, save states and mimetypes of the app, before removing the app itself; `--dry-run`, `--force` |
 
 What the app stores, and why `occ arcade:uninstall` should run before
@@ -265,3 +267,8 @@ save states and battery save, since it can be restored with the same file
 id. They go when the trash lets go of it. The weekly cleanup sweep — or
 `occ arcade:cleanup` — picks up whatever the event listeners could not
 catch, such as a whole folder of games deleted in one go.
+
+**Old saves in the app data.** Versions before 0.48.8 could keep saves in
+the app's internal storage. Nothing reads them now; `occ arcade:status`
+says how many there are and how much room they take, and
+`occ arcade:cleanup --legacy` removes them.

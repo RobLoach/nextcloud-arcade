@@ -241,13 +241,72 @@ describe('the save states held for a session', () => {
 	test('takes a delete back when the server would not do it', async () => {
 		const cache = createStateCache({ romPath: '/Games/Mario.nes' })
 		cache.put(1, new Blob(['state']))
-		await answerAll()
+		await answerAll(ok({ mtime: 7 }))
 		const removed = cache.remove(1)
 		await settle()
 		refuse(Object.assign(new Error('500'), { status: 500 }))
 
 		await expect(removed).rejects.toThrow('500')
-		expect(await (await cache.get(1)).text()).toBe('state')
+		// The listing taken before the load still has the slot, as written.
+		const loading = cache.get(1)
+		await settle()
+		requests.at(-1).answered = true
+		requests.at(-1).resolve(ok({ slots: 3, states: [{ slot: 1, size: 5, mtime: 7 }] }))
+		expect(await (await loading).text()).toBe('state')
+	})
+
+	test('asks the server again before loading from an old listing', async () => {
+		vi.useFakeTimers({ toFake: ['Date'] })
+		try {
+			const cache = createStateCache({ romPath: '/Games/Mario.nes' })
+			await listed(cache, [{ slot: 1, size: 5, mtime: 10, hasThumbnail: false }])
+			requests = []
+			cache.prefetch()
+			await answerAll()
+
+			// Fresh enough: answered at once.
+			requests = []
+			await cache.get(1)
+			expect(requests).toHaveLength(0)
+
+			// Half a minute on, RetroArch has synced a newer one.
+			vi.setSystemTime(Date.now() + 31 * 1000)
+			const loading = cache.get(1)
+			await settle()
+			expect(requests.map((request) => request.url)).toEqual(['/states?slot=null'])
+			requests[0].answered = true
+			requests[0].resolve(ok({ slots: 3, states: [{ slot: 1, size: 5, mtime: 20 }] }))
+			await answerAll()
+			await loading
+			expect(requests.map((request) => request.url)).toEqual(['/states?slot=null', '/state?slot=1'])
+		} finally {
+			vi.useRealTimers()
+		}
+	})
+
+	test('asks before the page is left for a save the player made, not a fresh autosave', async () => {
+		vi.useFakeTimers({ toFake: ['Date'] })
+		try {
+			const listening = vi.spyOn(window, 'addEventListener')
+			const cache = createStateCache({ romPath: '/Games/Mario.nes' })
+			const [, onBeforeUnload] = listening.mock.calls.find(([type]) => type === 'beforeunload')
+			listening.mockRestore()
+			const leave = () => {
+				const event = new Event('beforeunload', { cancelable: true })
+				onBeforeUnload(event)
+				return event.defaultPrevented
+			}
+
+			cache.put(-1, new Blob(['auto']), null, { quiet: true })
+			expect(leave()).toBe(false)
+			vi.setSystemTime(Date.now() + 6 * 1000)
+			expect(leave()).toBe(true)
+			await answerAll()
+			expect(leave()).toBe(false)
+			cache.dispose()
+		} finally {
+			vi.useRealTimers()
+		}
 	})
 
 	test('asks before the page is left while a save is on its way', async () => {

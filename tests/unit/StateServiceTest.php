@@ -833,4 +833,17 @@ class StateServiceTest extends TestCase {
 		$this->expectException(\RuntimeException::class);
 		$this->service()->reconcile(self::USER);
 	}
+
+	// What earlier versions left in the app data.
+
+	public function testWhatEarlierVersionsLeftIsMeasuredAndCanBeRemoved(): void {
+		$this->appData['states'] = ['flat-file' => '12345'];
+		$this->appData['states/' . StateService::userKey(self::USER)] = ['1-1.state' => 'abc', '1.srm' => 'de'];
+		$this->appData['states/' . hash('sha256', 'nobody')] = ['2-0.state' => 'f'];
+		$service = $this->service();
+
+		$this->assertSame(['files' => 4, 'bytes' => 11], $service->appDataSaves());
+		$this->assertSame(4, $service->deleteAppDataSaves());
+		$this->assertSame(['files' => 0, 'bytes' => 0], $service->appDataSaves());
+	}
 }

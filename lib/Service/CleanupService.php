@@ -34,10 +34,14 @@ class CleanupService {
 	 * users that no longer exist. Each removal is told to $report as it
 	 * happens; with $dryRun nothing is removed, only reported and counted.
 	 *
+	 * With $legacy, what versions before 0.48.8 left in the app data goes
+	 * too, all of it: nothing reads it any more.
+	 *
 	 * @param ?\Closure(string): void $report told about each removal
-	 * @return array{users: int, games: int, legacy: int}
+	 * @return array{users: int, games: int, appData: array{files: int, bytes: int}, appDataRemoved: int}
+	 *         appData is what is left there afterwards
 	 */
-	public function sweep(bool $dryRun = false, ?\Closure $report = null): array {
+	public function sweep(bool $dryRun = false, ?\Closure $report = null, bool $legacy = false): array {
 		$report ??= static function (string $line): void {
 		};
 
@@ -87,10 +91,21 @@ class CleanupService {
 			$games += $this->cleanUser($userId, $dryRun, $report);
 		}
 
+		$appData = $this->stateService->appDataSaves();
+		$appDataRemoved = 0;
+		if ($legacy && $appData['files'] > 0) {
+			$report("Removing the {$appData['files']} save files earlier versions left in the app data");
+			if (!$dryRun) {
+				$appDataRemoved = $this->stateService->deleteAppDataSaves();
+				$appData = $this->stateService->appDataSaves();
+			}
+		}
+
 		return [
 			'users' => $users,
 			'games' => $games,
-			'legacy' => $this->stateService->countLegacyFiles(),
+			'appData' => $appData,
+			'appDataRemoved' => $appDataRemoved,
 		];
 	}
 

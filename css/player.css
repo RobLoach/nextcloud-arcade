@@ -5,6 +5,10 @@
 
 .arcade-player-container {
 	position: relative;
+	/* The player is black wherever the game does not draw, and before it
+	   draws at all: the page behind it is white, and a game on its way
+	   would show a white box with the dark loading panel in it. */
+	background-color: #000;
 	/* The chrome stacks down from the top, so each piece needs to know how
 	   tall the one above it is. A pill is a 34px button in its padding,
 	   rounded up to leave a theme room to set the padding larger, and the

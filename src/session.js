@@ -1,5 +1,7 @@
 import { getCurrentUser } from '@nextcloud/auth'
 import { loadState } from '@nextcloud/initial-state'
+import { generateUrl } from '@nextcloud/router'
+import { api } from './api.js'
 import { uploadFailed } from './panels/states.js'
 import { davUrl, launchRom, recordRecent, startSramSync } from './player.js'
 import { showLoading } from './progress.js'
@@ -17,6 +19,36 @@ const settings = loadState('arcade', 'settings', {})
 // longer than the battery save is given -- but a line that has stopped
 // altogether must not keep the player in a game they closed.
 const STATES_FINAL_WAIT = 60 * 1000
+
+// How often opening a game also puts the Cloud Sync manifest right. Saves
+// copied into the folder some other way only reach RetroArch once they are
+// recorded, which the weekly job does by itself; a game opened is a good
+// moment not to wait for it, but every game opened would be too many.
+const RECONCILE_EVERY = 60 * 60 * 1000
+
+/**
+ * Record in the Cloud Sync manifest the saves that got into the saves
+ * folder some other way, at most once an hour from this browser. Only the
+ * quick check: files the manifest already has and that were not touched
+ * since are taken at their word.
+ */
+function recordCopiedSaves() {
+	const key = `arcade:cloudsync:${getCurrentUser()?.uid ?? ''}`
+	try {
+		if (Date.now() - Number(localStorage.getItem(key) ?? 0) < RECONCILE_EVERY) {
+			return
+		}
+		localStorage.setItem(key, String(Date.now()))
+	} catch {
+		// No storage to remember it in, so no telling when it last ran;
+		// the weekly job still does.
+		return
+	}
+	api(generateUrl('/apps/arcade/arcade/cloudsync'), { method: 'POST' }).catch((error) => {
+		// The weekly job tries again; nothing the player is doing waits on it.
+		console.error('Could not record the copied saves for RetroArch', error)
+	})
+}
 
 /**
  * Start a game and everything that goes with it: the save data, the
@@ -76,6 +108,9 @@ export async function startSession({ canvas, container, filename, basename, sour
 	const stateCache = canSave
 		? createStateCache({ romPath: filename, onUploadFailed: uploadFailed(flash) })
 		: null
+	if (canSave) {
+		recordCopiedSaves()
+	}
 
 	// The one way out, wherever it is asked for -- the close button, the
 	// Viewer being torn down, a new game taking this one's place. The

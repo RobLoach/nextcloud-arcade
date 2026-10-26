@@ -870,17 +870,36 @@ class StateService {
 	}
 
 	/**
-	 * How many files written before the states were kept per user are left.
-	 * They hold no record of whose they are, so they are only ever counted.
+	 * What versions before 0.48.8 left in the app data, which is no longer
+	 * read: every file under the states folder, of every user and of
+	 * nobody. The sizes come from the file cache; nothing is read.
+	 *
+	 * @return array{files: int, bytes: int}
 	 */
-	public function countLegacyFiles(): int {
-		$count = 0;
+	public function appDataSaves(): array {
+		$files = 0;
+		$bytes = 0;
 		foreach ($this->statesRoot()->getDirectoryListing() as $node) {
-			if (!$node instanceof ISimpleFolder) {
-				$count++;
+			foreach ($node instanceof ISimpleFolder ? $node->getDirectoryListing() : [$node] as $file) {
+				$files++;
+				$bytes += (int)$file->getSize();
 			}
 		}
-		return $count;
+		return ['files' => $files, 'bytes' => $bytes];
+	}
+
+	/**
+	 * Remove everything versions before 0.48.8 left in the app data. Says
+	 * how many files went.
+	 */
+	public function deleteAppDataSaves(): int {
+		$removed = 0;
+		foreach ($this->statesRoot()->getDirectoryListing() as $node) {
+			$removed += $node instanceof ISimpleFolder ? count($node->getDirectoryListing()) : 1;
+			$node->delete();
+		}
+		$this->userStates = [];
+		return $removed;
 	}
 
 	/** Remove what the app data holds of a game, under one of its keys. */

@@ -7,6 +7,19 @@ import { api, deadline, stateUrl, UPLOAD_WAIT } from './api.js'
 // whole. What is left out is still fetched the moment it is loaded.
 const PREFETCH_BUDGET = 64 * 1024 * 1024
 
+// How long an autosave may be on its way before leaving the page asks
+// first. One arrives every few minutes, unbidden, so a reload in the
+// moment it is sent should not be held up over it -- but one that has
+// been stuck for longer than an upload takes is worth a word.
+const QUIET_GRACE = 5 * 1000
+
+// How long a listing is trusted before a load asks again. The panel lists
+// as it opens, but a hotkey loads with no panel in sight, and a slot that
+// RetroArch synced over since must not be answered with the copy held
+// from before. A listing is a few hundred bytes, against megabytes for
+// the state, so asking costs a load next to nothing.
+const LISTING_FRESH_FOR = 30 * 1000
+
 /**
  * The save states of one game for the length of one session, held in the
  * browser.
@@ -45,14 +58,18 @@ export function createStateCache({ romPath, onUploadFailed = () => {} }) {
 	// slot rather than starting a second one.
 	const fetching = new Map()
 	let listing = { slots: 0, states: [], hasSram: false }
+	let listedAt = 0
 	let queue = Promise.resolve()
-	let pending = 0
+	// The writes not through yet, with whether anybody asked for them and
+	// since when they have been waiting.
+	const writing = new Set()
 	let prefetched = false
 
-	const enqueue = (work) => {
-		pending++
+	const enqueue = (work, quiet = false) => {
+		const write = { quiet, since: Date.now() }
+		writing.add(write)
 		const run = queue.then(work).finally(() => {
-			pending--
+			writing.delete(write)
 		})
 		// The queue goes on past a failure; the caller hears of it.
 		queue = run.catch(() => {})
@@ -60,11 +77,16 @@ export function createStateCache({ romPath, onUploadFailed = () => {} }) {
 	}
 
 	// Leaving the page while a save is still on its way would lose it, so
-	// the browser is asked to say so first.
+	// the browser is asked to say so first -- for a save the player asked
+	// for, or an autosave that has been stuck past the moment it takes.
 	const onBeforeUnload = (event) => {
-		if (pending > 0) {
-			event.preventDefault()
-			event.returnValue = ''
+		const now = Date.now()
+		for (const write of writing) {
+			if (!write.quiet || now - write.since > QUIET_GRACE) {
+				event.preventDefault()
+				event.returnValue = ''
+				return
+			}
 		}
 	}
 	window.addEventListener('beforeunload', onBeforeUnload)
@@ -188,25 +210,28 @@ export function createStateCache({ romPath, onUploadFailed = () => {} }) {
 		}
 	}
 
+	/**
+	 * The slots of the game, as the server lists them and as they stand
+	 * here.
+	 *
+	 * @param {?AbortSignal} [signal] abandons the request
+	 * @return {Promise<object>} slots, states and hasSram
+	 */
+	const list = async (signal = null) => {
+		const response = await api(stateUrl('/states', romPath), { signal })
+		const data = await response.json()
+		listing = {
+			slots: Number.isFinite(Number(data?.slots)) ? Number(data.slots) : 0,
+			states: Array.isArray(data?.states) ? data.states : [],
+			hasSram: data?.hasSram === true,
+		}
+		listedAt = Date.now()
+		forgetChanged()
+		return merged()
+	}
+
 	return {
-		/**
-		 * The slots of the game, as the server lists them and as they
-		 * stand here.
-		 *
-		 * @param {?AbortSignal} [signal] abandons the request
-		 * @return {Promise<object>} slots, states and hasSram
-		 */
-		async list(signal = null) {
-			const response = await api(stateUrl('/states', romPath), { signal })
-			const data = await response.json()
-			listing = {
-				slots: Number.isFinite(Number(data?.slots)) ? Number(data.slots) : 0,
-				states: Array.isArray(data?.states) ? data.states : [],
-				hasSram: data?.hasSram === true,
-			}
-			forgetChanged()
-			return merged()
-		},
+		list,
 
 		/**
 		 * Fetch the states of the game ahead of any load, the newest first,
@@ -246,7 +271,19 @@ export function createStateCache({ romPath, onUploadFailed = () => {} }) {
 		 * @return {Promise<Blob>} the state
 		 */
 		async get(slot) {
-			const entry = held.get(slot)
+			let entry = held.get(slot)
+			// A copy held from the server is only as good as the last
+			// listing; one saved here and not yet through is the newest
+			// there is, whatever the server says.
+			const fromServer = entry !== undefined && !entry.deleted && !(entry.local && !entry.synced)
+			if (fromServer && Date.now() - listedAt > LISTING_FRESH_FOR) {
+				try {
+					await list()
+				} catch {
+					// The server cannot say; the copy held is the best there is.
+				}
+				entry = held.get(slot)
+			}
 			if (entry !== undefined && !entry.deleted) {
 				return entry.state
 			}
@@ -259,10 +296,12 @@ export function createStateCache({ romPath, onUploadFailed = () => {} }) {
 		 * @param {number} slot the slot
 		 * @param {Blob} state the state
 		 * @param {?Blob} [thumbnail] its picture
+		 * @param {object} [options] options
+		 * @param {boolean} [options.quiet] nobody asked for it: an autosave
 		 * @return {Promise<void>} answers once the upload is through or has
 		 *                         failed; nobody needs to wait for it
 		 */
-		put(slot, state, thumbnail = null) {
+		put(slot, state, thumbnail = null, { quiet = false } = {}) {
 			const was = held.get(slot)
 			if (was?.thumbnailUrl) {
 				URL.revokeObjectURL(was.thumbnailUrl)
@@ -274,9 +313,10 @@ export function createStateCache({ romPath, onUploadFailed = () => {} }) {
 				mtime: Math.floor(Date.now() / 1000),
 				local: true,
 				failed: false,
+				quiet,
 			}
 			held.set(slot, entry)
-			return enqueue(() => upload(slot, entry))
+			return enqueue(() => upload(slot, entry), quiet)
 		},
 
 		/**
@@ -339,7 +379,7 @@ export function createStateCache({ romPath, onUploadFailed = () => {} }) {
 
 		/** @return {number} how many writes are still on their way */
 		pending() {
-			return pending
+			return writing.size
 		},
 
 		/**
@@ -352,7 +392,7 @@ export function createStateCache({ romPath, onUploadFailed = () => {} }) {
 			for (const [slot, entry] of held) {
 				if (entry.failed) {
 					entry.failed = false
-					enqueue(() => upload(slot, entry))
+					enqueue(() => upload(slot, entry), entry.quiet)
 				}
 			}
 			await queue

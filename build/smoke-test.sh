@@ -272,7 +272,13 @@ occ config:system:set trusted_domains 1 --value=127.0.0.1 >/dev/null
 
 step 'Installing the app into the container'
 docker exec "$CONTAINER" mkdir -p /var/www/html/apps/arcade
-git -C "$REPO_ROOT" ls-files -z \
+# What the working tree holds, not only what the index does: a rebuild
+# renames the bundles, and a run before staging it would otherwise ask tar
+# for files that are gone and leave out the ones that replaced them.
+git -C "$REPO_ROOT" ls-files -z --cached --others --exclude-standard \
+	| (cd "$REPO_ROOT" && while IFS= read -r -d '' file; do
+		[ -f "$file" ] && printf '%s\0' "$file"
+	done) \
 	| tar -C "$REPO_ROOT" --null -T - -cf - \
 	| docker exec -i "$CONTAINER" tar -xf - -C /var/www/html/apps/arcade
 docker exec "$CONTAINER" chown -R www-data:www-data /var/www/html/apps/arcade

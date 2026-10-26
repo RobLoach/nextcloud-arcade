@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Nextcloud 3.14159\n"
 "Report-Msgid-Bugs-To: translations\\@example.com\n"
-"POT-Creation-Date: 2026-10-09 19:18-0400\n"
+"POT-Creation-Date: 2026-10-25 20:50-0400\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -18,128 +18,128 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/lib/Activity/Provider.php:47
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/lib/Activity/Provider.php:47
 msgid "You played {game}"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/lib/Activity/Provider.php:51
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/lib/Activity/Provider.php:51
 #, php-format
 msgid "You played {game} for %1$s"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/lib/Activity/Provider.php:57
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/lib/Activity/Provider.php:57
 #, php-format
 msgid "You saved {game} to slot %1$d"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/lib/Activity/Provider.php:120
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/lib/Activity/Provider.php:120
 #, php-format
 msgid "%1$d h %2$d min"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/lib/Activity/Provider.php:121
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/lib/Activity/Provider.php:121
 #, php-format
 msgid "%1$d min"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/lib/Activity/Setting.php:29
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/lib/Activity/Setting.php:29
 msgid "Games you played in the Arcade"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/lib/Notification/Notifier.php:39
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/lib/Settings/AdminSection.php:24
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/lib/Settings/PersonalSection.php:24
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/specialAppInfoFakeDummyForL10nScript.php:2
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/files.js:194
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/lib/Notification/Notifier.php:39
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/lib/Settings/AdminSection.php:24
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/lib/Settings/PersonalSection.php:24
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/specialAppInfoFakeDummyForL10nScript.php:2
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:194
 msgid "Arcade"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/lib/Notification/Notifier.php:51
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/lib/Notification/Notifier.php:51
 msgid "Looked for box art: found {found}"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/lib/Notification/Notifier.php:52
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/lib/Notification/Notifier.php:52
 msgid "Looked for box art: none was found"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/lib/Settings/DeclarativeAdmin.php:57
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/lib/Settings/DeclarativeAdmin.php:57
 msgid "Box art and scanning"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/lib/Settings/DeclarativeAdmin.php:58
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/lib/Settings/DeclarativeAdmin.php:58
 msgid ""
 "What holds for every user of this server: box art lookups, ROM checksums, "
 "and how far a games library is scanned."
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/lib/Settings/DeclarativeAdmin.php:62
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/lib/Settings/DeclarativeAdmin.php:62
 msgid "Box art"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/lib/Settings/DeclarativeAdmin.php:63
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/lib/Settings/DeclarativeAdmin.php:63
 msgid "Let users look up box art on the libretro thumbnail server"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/lib/Settings/DeclarativeAdmin.php:64
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/lib/Settings/DeclarativeAdmin.php:64
 msgid ""
 "This is the only thing the app has the server itself fetch from the "
 "internet. Turned off, the button is gone and games are shown with the "
 "pictures in your own files."
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/lib/Settings/DeclarativeAdmin.php:70
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/lib/Settings/DeclarativeAdmin.php:70
 msgid "ROM checksums"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/lib/Settings/DeclarativeAdmin.php:71
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/lib/Settings/DeclarativeAdmin.php:71
 msgid "Work out the checksum of a ROM the server was not given one for"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/lib/Settings/DeclarativeAdmin.php:72
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/lib/Settings/DeclarativeAdmin.php:72
 msgid ""
 "Checksums that arrive with an upload are always kept. Working one out means "
 "reading the whole file, in the background, once per game — on object storage "
 "that is a download of each ROM."
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/lib/Settings/DeclarativeAdmin.php:78
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/lib/Settings/DeclarativeAdmin.php:78
 msgid "How long a scan is kept"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/lib/Settings/DeclarativeAdmin.php:79
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/lib/Settings/DeclarativeAdmin.php:79
 msgid ""
 "A scan is dropped as soon as anything in the games folder changes, so this "
 "is only how long an unchanged one may be reused. Refresh on the library page "
 "rebuilds it whatever this says."
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/lib/Settings/DeclarativeAdmin.php:110
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/lib/Settings/DeclarativeAdmin.php:110
 msgid "%n hour"
 msgid_plural "%n hours"
 msgstr[0] ""
 msgstr[1] ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/lib/Settings/DeclarativeAdmin.php:113
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/lib/Settings/DeclarativeAdmin.php:113
 msgid "%n day"
 msgid_plural "%n days"
 msgstr[0] ""
 msgstr[1] ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/lib/Settings/DeclarativeAdmin.php:115
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/lib/Settings/DeclarativeAdmin.php:115
 msgid "1 week"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/lib/Settings/DeclarativeAdmin.php:123
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/lib/Settings/DeclarativeAdmin.php:123
 msgid "%n second"
 msgid_plural "%n seconds"
 msgstr[0] ""
 msgstr[1] ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/lib/SetupChecks/ArcadeSetupCheck.php:53
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/lib/SetupChecks/ArcadeSetupCheck.php:53
 msgid "Arcade background jobs"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/lib/SetupChecks/ArcadeSetupCheck.php:60
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/lib/SetupChecks/ArcadeSetupCheck.php:60
 msgid ""
 "Background jobs are set to AJAX, which only runs while someone has the web "
 "interface open. Arcade reads what a game says about itself - system, title, "
@@ -147,45 +147,45 @@ msgid ""
 "cron."
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/lib/SetupChecks/ArcadeSetupCheck.php:69
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/lib/SetupChecks/ArcadeSetupCheck.php:69
 msgid ""
 "Background jobs have never run. Arcade reads what a game says about itself - "
 "system, title, checksum - in background jobs, so games stay unrecognized "
 "until they run."
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/lib/SetupChecks/ArcadeSetupCheck.php:76
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/lib/SetupChecks/ArcadeSetupCheck.php:76
 msgid ""
 "The last background job ran more than an hour ago. Arcade reads what a game "
 "says about itself in background jobs, so games stay unrecognized until they "
 "run again."
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/lib/SetupChecks/ArcadeSetupCheck.php:87
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/lib/SetupChecks/ArcadeSetupCheck.php:87
 msgid ""
 "No memory cache is configured, so Arcade rescans the game library on every "
 "request. Configure a memory cache such as APCu or Redis."
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/lib/SetupChecks/ArcadeSetupCheck.php:94
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/lib/SetupChecks/ArcadeSetupCheck.php:94
 msgid ""
 "Background jobs are running, and Arcade has work queued that will be handled "
 "by the next runs."
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/lib/SetupChecks/ArcadeSetupCheck.php:98
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/lib/SetupChecks/ArcadeSetupCheck.php:98
 msgid "Background jobs are running, and Arcade has no work waiting."
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/lib/SetupChecks/ArcadeSetupCheck.php:110
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/lib/SetupChecks/ArcadeSetupCheck.php:110
 msgid "Arcade has jobs waiting in the queue right now."
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/specialAppInfoFakeDummyForL10nScript.php:3
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/specialAppInfoFakeDummyForL10nScript.php:3
 msgid "Play retro games from your files"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/specialAppInfoFakeDummyForL10nScript.php:4
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/specialAppInfoFakeDummyForL10nScript.php:4
 msgid ""
 "Play retro console games straight from NextCloud.\n"
 "\n"
@@ -194,757 +194,882 @@ msgid ""
 "library you can browse by keyboard, mouse, touch or gamepad."
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/fileaction.js:107
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/fileaction.js:107
 msgid "Play with Arcade"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/files.js:39
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/library.js:428
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:39
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:473
 msgid "Played %n time"
 msgid_plural "Played %n times"
 msgstr[0] ""
 msgstr[1] ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/files.js:49
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:49
 msgid "Autosave"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/files.js:49
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:49
 msgid "Slot {slot}"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/files.js:83
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:83
 msgid "Play"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/files.js:89
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/library.js:368
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/library.js:582
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:89
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:413
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:627
 msgid "System"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/files.js:90
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:90
 msgid "Title"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/files.js:91
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:91
 msgid "Region"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/files.js:92
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:92
 msgid "Mapper"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/files.js:93
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:93
 msgid "Checksum"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/files.js:94
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:94
 msgid "CRC32"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/files.js:95
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/library.js:371
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:95
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:416
 msgid "Played"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/files.js:101
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/panels/states.js:32
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/toolbar.js:206
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:101
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:62
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:210
 msgid "Save states"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/files.js:118
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/panels/states.js:341
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:118
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:386
 msgid "made from another copy of this game"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/files.js:119
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/panels/states.js:342
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:119
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:387
 msgid ""
 "The ROM has changed since this state was saved, so loading it may go wrong."
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/files.js:168
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:168
 msgid "Nothing is known about this game yet"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/files.js:175
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:175
 msgid "Could not ask the server about this game."
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/files.js:178
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:178
 msgid "Try again"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/format.js:26
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/format.js:26
 msgid "{hours} h {minutes} min"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/format.js:27
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/format.js:27
 msgid "{minutes} min"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/format.js:36
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/format.js:36
 msgid "{hours}h {minutes}m played"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/format.js:37
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/format.js:37
 msgid "{minutes}m played"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/library.js:157
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:202
 msgid "ZIP archive"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/library.js:260
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:305
 msgid "Remove from favorites"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/library.js:261
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:306
 msgid "Add to favorites"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/library.js:274
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:319
 msgid "Could not change the favorites for {game}. Try again in a moment."
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/library.js:367
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:412
 msgid "Name"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/library.js:369
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:414
 msgid "Size"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/library.js:370
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:415
 msgid "Modified"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/library.js:455
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:500
 msgid "{first}–{last} of {total}"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/library.js:481
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:526
 msgid "Previous"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/library.js:492
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:537
 msgid "Next"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/library.js:500
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:545
 msgid "Games per page"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/library.js:504
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:549
 msgid "{count} per page"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/library.js:532
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:577
 msgid "Search games …"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/library.js:533
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:578
 msgid "Search games"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/library.js:551
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:596
 msgid "Filter by system"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/library.js:554
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:599
 msgid "All systems"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/library.js:580
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:625
 msgid "Name, A to Z"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/library.js:581
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:626
 msgid "Name, Z to A"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/library.js:583
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:628
 msgid "Newest first"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/library.js:584
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:629
 msgid "Oldest first"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/library.js:585
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:630
 msgid "Most played"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/library.js:586
-msgid "Largest first"
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:634
+msgid "Least played"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/library.js:590
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:638
 msgid "Sort games"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/library.js:617
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:645
+msgid "Sorted by the table"
+msgstr ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:673
 msgid "Filter by tag"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/library.js:620
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:676
 msgid "All tags"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/library.js:652
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:708
 msgid "Games library"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/library.js:659
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:715
 msgid "Grid view"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/library.js:660
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:716
 msgid "List view"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/library.js:661
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:717
 msgid "Table view"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/library.js:687
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:743
 msgid "The games library is being refreshed."
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/library.js:688
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:744
 msgid "Rescan the library folder"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/library.js:704
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:760
 msgid "Refreshing the games library in the background. This can take a while."
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/library.js:724
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:780
 msgid "%n game in {path}"
 msgid_plural "%n games in {path}"
 msgstr[0] ""
 msgstr[1] ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/library.js:734
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:790
 msgid "Use this folder"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/library.js:770
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:826
 msgid "No ROMs were found in your files yet. Upload some games, then rescan."
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/library.js:774
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:830
 msgid "ROMs were already found in these folders:"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/library.js:819
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:856
 msgid ""
 "The games library folder {folder} exists, but no games were found in it."
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/library.js:820
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:857
 msgid "The games library folder {folder} does not exist yet."
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/library.js:827
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:864
 msgid ""
 "Arcade lists the ROM files of retro consoles — like .nes, .sfc, .gba, .md or "
 "zipped games — and plays them right in the browser."
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/library.js:839
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:876
 msgid "Create {folder}"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/library.js:844
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:881
 msgid "Created {folder}. Put some games in it and rescan."
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/library.js:848
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:885
 msgid "Could not create {folder}"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/library.js:857
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:894
 msgid "Looking for ROMs in your files …"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/library.js:865
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:902
 msgid "Or pick a folder yourself in the Arcade personal settings."
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/library.js:927
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/library.js:932
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:964
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:969
 msgid "Could not load the games library."
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/library.js:1052
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:1089
 msgid "Favorites"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/library.js:1061
-msgid "Continue Playing"
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:1098
+msgid "Continue playing"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/library.js:1073
-msgid "Recently Added"
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:1110
+msgid "Recently added"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/library.js:1085
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:1122
 msgid "No games match the filters."
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/library.js:1086
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:1123
 msgid "No games on this page. Go back to see the rest."
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/library.js:1107
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:1144
 msgid "Only the first {count} games of the folder are listed."
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/main.js:39
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/player.js:176
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/viewer.js:93
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/main.js:39
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/player.js:240
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/viewer.js:93
 msgid "Unsupported ROM type: {file}"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/main.js:54
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/viewer.js:117
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/main.js:54
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/viewer.js:117
 msgid "Could not start the emulator: {error}"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/panels/gallery.js:21
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/toolbar.js:373
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/gallery.js:21
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:381
 msgid "Screenshots"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/panels/gallery.js:35
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/gallery.js:35
 msgid "Could not read the screenshots."
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/panels/gallery.js:38
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/panels/states.js:279
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/gallery.js:38
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:320
 msgid "Retry"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/panels/gallery.js:54
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/gallery.js:54
 msgid "Could not delete the screenshot"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/panels/gallery.js:72
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/gallery.js:72
 msgid ""
 "Set a screenshots folder in the Arcade settings to keep your screenshots."
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/panels/gallery.js:74
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/gallery.js:74
 msgid "No screenshots of this game yet."
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/panels/gallery.js:103
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/panels/states.js:366
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/gallery.js:103
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:411
 msgid "Delete"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/panels/gallery.js:106
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/gallery.js:106
 msgid "Delete {name}"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/panels/resume.js:43
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/resume.js:46
+msgid "Continue from the automatic save ({date})?"
+msgstr ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/resume.js:47
 msgid "Continue from slot {slot} ({date})?"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/panels/resume.js:59
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/resume.js:60
 msgid "Continue"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/panels/resume.js:68
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/resume.js:69
 msgid "Dismiss"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/panels/states.js:128
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:41
+msgid ""
+"Sending the save to the server took too long. It is kept for now and sent "
+"again when the game closes."
+msgstr ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:42
+msgid ""
+"Could not send the save to the server. It is kept for now and sent again "
+"when the game closes."
+msgstr ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:164
 msgid "The game did not hand over a save state, so the slot is unchanged"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/panels/states.js:160
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:180
 msgid "Game saved"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/panels/states.js:161
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:181
 msgid "State saved to slot {slot}"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/panels/states.js:169
-msgid "Saving took too long and was stopped, so the slot is unchanged"
-msgstr ""
-
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/panels/states.js:170
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:186
 msgid "Could not save the state"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/panels/states.js:182
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:198
 msgid "That save state is empty, so there is nothing to load"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/panels/states.js:188
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:221
 msgid "The game did not take the save state"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/panels/states.js:193
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:230
+msgid ""
+"That save state would not load. It may have been made by another version of "
+"the emulator, as RetroArch on another device can be, or for another copy of "
+"the game."
+msgstr ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:234
 msgid "Game restored"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/panels/states.js:194
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:235
 msgid "State loaded from slot {slot}"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/panels/states.js:198
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:239
 msgid "Loading took too long and was stopped"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/panels/states.js:199
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:240
 msgid "Could not load the state"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/panels/states.js:209
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:250
 msgid "Could not delete the state"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/panels/states.js:224
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:265
 msgid "Battery save deleted — reopen the game to start over"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/panels/states.js:229
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:270
 msgid "Could not delete the battery save"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/panels/states.js:242
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:283
 msgid "No battery save"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/panels/states.js:245
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:286
 msgid "Battery save"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/panels/states.js:248
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:289
 msgid "Delete battery save"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/panels/states.js:249
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:290
 msgid "Really delete?"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/panels/states.js:277
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:318
 msgid "Could not read the save states."
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/panels/states.js:327
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:372
 msgid "Auto — {date}"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/panels/states.js:329
-msgid "{date}, from an older version"
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:374
+msgid "Slot {slot} — {date}"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/panels/states.js:332
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:377
 msgid "Slot {slot} — empty"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/panels/states.js:350
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:395
 msgid "Save"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/panels/states.js:353
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:398
 msgid "Save to slot {slot}"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/panels/states.js:357
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:402
 msgid "Load"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/panels/states.js:361
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:406
 msgid "Load the automatic save"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/panels/states.js:362
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:407
 msgid "Load slot {slot}"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/panels/states.js:370
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:415
 msgid "Delete the automatic save"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/panels/states.js:371
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:416
 msgid "Delete slot {slot}"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/player.js:138
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/player.js:190
 msgid "No supported ROM found in the archive"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/player.js:184
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/player.js:253
 msgid "No BIOS files found for {system}. Games may run worse without them."
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/settings.js:45
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/progress.js:130
+msgid "Downloading {name} …"
+msgstr ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/progress.js:156
+msgid "{loaded} of {total}"
+msgstr ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/progress.js:179
+msgid "Starting the emulator …"
+msgstr ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:45
 msgid "Choose a folder"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/settings.js:50
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:50
 msgid "Choose"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/settings.js:105
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:105
 msgid "Saving …"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/settings.js:118
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/settings.js:476
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:118
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:510
 msgid "Saved"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/settings.js:121
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:121
 msgid "Could not save the settings"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/settings.js:213
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:213
 msgid "Press a key, or Escape to leave it be"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/settings.js:251
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:251
 msgid "The emulator has no name for that key, try another one"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/settings.js:255
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:255
 msgid "The player leaves Control, Alt and Meta to the browser, try another one"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/settings.js:272
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:272
 msgid "No key was pressed, so this one was left as it was"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/settings.js:348
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:348
 msgid ""
 "Another button of the controller has this key too, so both are pressed at "
 "once"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/settings.js:349
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:349
 msgid "Another hotkey has this key too, so only one of the two ever runs"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/settings.js:351
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:351
 msgid "This key works a button of the controller, so the game gets it instead"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/settings.js:367
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:367
 msgid "Starting …"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/settings.js:372
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:372
 msgid "The settings could not be saved, so nothing was started."
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/settings.js:378
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:378
 msgid "Looking for box art in the background. It carries on without this page."
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/settings.js:381
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:381
 msgid "Could not start looking. A thumbnails folder has to be set first."
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/settings.js:398
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:396
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:130
+msgid "Checking …"
+msgstr ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:403
+msgid "Everything was already recorded."
+msgstr ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:405
+msgid "Recorded %n save."
+msgid_plural "Recorded %n saves."
+msgstr[0] ""
+msgstr[1] ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:406
+msgid "Recorded %n save as deleted."
+msgid_plural "Recorded %n saves as deleted."
+msgstr[0] ""
+msgstr[1] ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:411
+msgid ""
+"The manifest.server in the saves folder cannot be read, so it was left as it "
+"is."
+msgstr ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:412
+msgid "Could not record the saves."
+msgstr ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:429
 msgid "{message}, still going"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/settings.js:439
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:470
 msgid "Missing"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/settings.js:441
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:472
 msgid "Present ({size}, instance store, managed with occ arcade:bios)"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/settings.js:444
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:475
 msgid "Present ({size})"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/settings.js:465
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:496
 msgid "That file is too big to be a BIOS"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/settings.js:469
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:500
 msgid "Uploading …"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/settings.js:479
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:513
 msgid "Could not upload the file"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/settings.js:494
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:528
 msgid "Removing …"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/settings.js:499
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:533
 msgid "Removed"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/settings.js:504
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:538
 msgid "This file comes from the instance store; manage it with occ arcade:bios"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/settings.js:507
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:541
 msgid "Could not remove the file"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/toolbar.js:102
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/toolbar.js:116
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:104
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:118
 msgid "Pause"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/toolbar.js:116
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:118
 msgid "Resume"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/toolbar.js:150
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:152
 msgid "Restarted"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/toolbar.js:251
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:259
 msgid "Touch controls"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/toolbar.js:269
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/toolbar.js:279
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:277
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:287
 msgid "Mute"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/toolbar.js:279
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:287
 msgid "Unmute"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/toolbar.js:285
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:293
 msgid "Fast-forward"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/toolbar.js:303
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/toolbar.js:466
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:311
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:474
 msgid "RetroArch menu"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/toolbar.js:304
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/toolbar.js:467
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:312
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:475
 msgid "Restart"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/toolbar.js:324
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:332
 msgid "The game did not hand over a picture"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/toolbar.js:333
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:341
 msgid "Screenshot saved to {folder}"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/toolbar.js:350
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:358
 msgid "Could not take a screenshot"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/toolbar.js:361
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/toolbar.js:465
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:369
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:473
 msgid "Screenshot"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/toolbar.js:387
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:395
 msgid "Fullscreen"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/toolbar.js:401
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:409
 msgid "Could not go fullscreen"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/toolbar.js:464
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:472
 msgid "Full screen"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/toolbar.js:492
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/toolbar.js:505
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:500
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:513
 msgid "Open sidebar"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/toolbar.js:505
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:513
 msgid "Details"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/toolbar.js:511
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:519
 msgid "Settings"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/toolbar.js:516
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:524
 msgid "Download"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/toolbar.js:519
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:527
 msgid "Actions"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/src/toolbar.js:557
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:565
 msgid "Close"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/templates/admin.php:19
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/templates/settings.php:166
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:20
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/settings.php:165
 msgid "Folders"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/templates/admin.php:20
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:21
 msgid ""
 "The folders users start with. Everybody can pick their own afterwards. Each "
 "path is read inside every user's own files, so Browse is only picking the "
 "name — a folder only you have leaves everybody else with nothing to show."
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/templates/admin.php:24
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/templates/settings.php:176
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:25
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/settings.php:175
 msgid "Games library folder"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/templates/admin.php:25
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/templates/settings.php:180
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:26
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/settings.php:179
 msgid "Thumbnails folder"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/templates/admin.php:26
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/templates/settings.php:184
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:27
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/settings.php:183
 msgid "Saves folder"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/templates/admin.php:27
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/templates/settings.php:192
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:28
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/settings.php:191
 msgid "Screenshots folder"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/templates/admin.php:28
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:29
 msgid "System folder, for BIOS files"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/templates/admin.php:41
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/templates/settings.php:205
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:42
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/settings.php:204
 msgid "Browse …"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/templates/admin.php:63
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:64
 msgid "Games listed at most"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/templates/admin.php:74
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:75
 msgid "Folders deep at most"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/templates/admin.php:91
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:91
+msgid "RetroArch Cloud Sync"
+msgstr ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:92
+msgid ""
+"The Saves folder of every player is kept the way RetroArch keeps its own "
+"saves and states, with the manifest.server its Cloud Sync reads. So "
+"RetroArch on a computer, a phone or a handheld can sync with it over WebDAV, "
+"and a game saved there carries on in Arcade, and the other way around."
+msgstr ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:95
+msgid ""
+"Set a Saves folder above, or have the player set their own in their personal "
+"settings."
+msgstr ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:96
+msgid ""
+"In the personal security settings, create an app password for RetroArch."
+msgstr ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:97
+msgid ""
+"In RetroArch, open Settings → Saving → Cloud Sync, turn on Cloud Sync, and "
+"choose the webdav backend."
+msgstr ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:99
+msgid ""
+"Set the Cloud Storage URL to the Saves folder over WebDAV, with the trailing "
+"slash. Each player finds their own in their personal settings:"
+msgstr ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:100
+msgid "USERNAME"
+msgstr ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:100
+msgid "Saves"
+msgstr ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:102
+msgid ""
+"Enter the user name and the app password, keep Sync Saves on, then restart "
+"RetroArch."
+msgstr ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:104
+msgid ""
+"Keep RetroArch's \"Sort Saves into Folders by Core Name\" and \"Sort Save "
+"States into Folders by Core Name\" on, as they are by default: Arcade files "
+"new saves under the name of the core. Saves RetroArch already filed without "
+"them are read and written where they are. Arcade offers slots 1 to 3 and the "
+"automatic slot; any other slot RetroArch saved into can be loaded in Arcade "
+"too."
+msgstr ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:114
 msgid "BIOS"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/templates/admin.php:92
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:115
 msgid ""
 "A few consoles will not start without the firmware file of the real "
 "hardware. Copy these files from a console you own; they go into your System "
@@ -952,229 +1077,238 @@ msgid ""
 "player as a fallback."
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/templates/admin.php:107
-msgid "Checking …"
-msgstr ""
-
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/templates/admin.php:109
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:132
 #, php-format
 msgid "Upload %s"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/templates/admin.php:112
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:135
 #, php-format
 msgid "Remove %s"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/templates/admin.php:113
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:136
 msgid "Remove"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/templates/admin.php:123
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:146
 msgid "Core options"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/templates/admin.php:124
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:147
 msgid ""
 "Options of the emulator cores themselves. Left on \"Core default\", the core "
 "decides."
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/templates/admin.php:142
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:165
 msgid "%n option changed"
 msgid_plural "%n options changed"
 msgstr[0] ""
 msgstr[1] ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/templates/admin.php:154
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:177
 msgid "Core default"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/templates/admin.php:166
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:189
 msgid "Reset this core to defaults"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/templates/admin.php:179
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:202
 msgid "Pictures"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/templates/admin.php:180
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:203
 msgid ""
-"What a game of each system is shown with to begin with. Everybody can pick "
-"their own afterwards; which file each kind comes out of is in the usage "
-"guide."
+"What a game of each system is shown with, for everybody on this instance. "
+"Which file each kind comes out of is in the usage guide."
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/templates/settings.php:15
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/settings.php:14
 msgid "Player"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/templates/settings.php:17
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/settings.php:16
 msgid "Configure how the Arcade retro game player behaves."
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/templates/settings.php:19
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/settings.php:18
 msgid "Smooth video filtering (bilinear)"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/templates/settings.php:20
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/settings.php:19
 msgid "Capture gamepad and keyboard input for the whole page while playing"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/templates/settings.php:21
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/settings.php:20
 msgid "Pixel-perfect scaling (whole pixels, with borders)"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/templates/settings.php:22
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/settings.php:21
 msgid ""
 "Rewind support, going back while the rewind key is held (costs some "
 "performance)"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/templates/settings.php:23
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/settings.php:22
 msgid "Pause the game while the tab is in the background"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/templates/settings.php:24
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/settings.php:23
 msgid "Continue from the latest save when a game starts, without asking"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/templates/settings.php:33
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/settings.php:32
 msgid "Save the game to the Auto slot every"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/templates/settings.php:36
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/settings.php:35
 msgid "Never"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/templates/settings.php:37
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/settings.php:36
 msgid "30 seconds"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/templates/settings.php:38
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/settings.php:37
 msgid "Minute"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/templates/settings.php:39
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/settings.php:38
 msgid "2 minutes"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/templates/settings.php:40
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/settings.php:39
 msgid "5 minutes"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/templates/settings.php:41
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/settings.php:40
 msgid "10 minutes"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/templates/settings.php:51
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/settings.php:50
 msgid "Run-ahead, hides input lag at the cost of CPU"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/templates/settings.php:54
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/settings.php:53
 msgid "Off"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/templates/settings.php:55
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/settings.php:54
 msgid "1 frame"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/templates/settings.php:56
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/settings.php:55
 msgid "2 frames"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/templates/settings.php:57
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/settings.php:56
 msgid "3 frames"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/templates/settings.php:67
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/settings.php:66
 msgid "Fast-forward speed"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/templates/settings.php:77
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/settings.php:76
 msgid "Volume"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/templates/settings.php:84
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/settings.php:83
 msgid "Audio latency, raise it if the sound crackles"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/templates/settings.php:94
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/settings.php:93
 msgid "Controls"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/templates/settings.php:96
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/settings.php:95
 msgid ""
 "Click a key to set it, then press the one to use. A key that works a button "
 "of the controller is left to the game."
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/templates/settings.php:127
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/settings.php:126
 msgid "Put this one back to its default"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/templates/settings.php:130
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/settings.php:129
 msgid "Leave this one on no key at all"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/templates/settings.php:143
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/settings.php:142
 msgid "Keys"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/templates/settings.php:149
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/settings.php:148
 msgid "Put the keys back to their defaults"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/templates/settings.php:153
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/settings.php:152
 msgid "Hot Keys"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/templates/settings.php:159
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/settings.php:158
 msgid "Put the hot keys back to their defaults"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/templates/settings.php:177
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/settings.php:176
 msgid "Games in this folder are listed on the Arcade page."
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/templates/settings.php:181
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/settings.php:180
 msgid ""
 "Images in this folder are used as game thumbnails, matched by file name: "
 "Mario.png is the thumbnail of Mario.nes. Leave empty to disable."
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/templates/settings.php:185
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/settings.php:184
 msgid ""
-"Save states and battery saves are stored here, under the system and the "
-"game. Without a folder, a game cannot be saved at all and the player says so."
+"Save states and battery saves are stored here, in a saves and a states "
+"folder laid out the way RetroArch keeps its own, so RetroArch can share them "
+"through Cloud Sync. Without a folder, a game cannot be saved at all and the "
+"player says so."
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/templates/settings.php:188
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/settings.php:187
 msgid "System folder"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/templates/settings.php:189
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/settings.php:188
 msgid ""
 "BIOS files are read from this folder, by the name the core expects, such as "
 "colecovision.rom. Leave empty if no game needs one."
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/templates/settings.php:193
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/settings.php:192
 msgid ""
 "Screenshots taken in the player are saved here, under the system. Leave "
 "empty to download them instead."
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/templates/settings.php:207
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/settings.php:206
 msgid "Look for missing box art"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/templates/settings.php:216
-msgid "Picture shown for each system"
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/settings.php:210
+msgid ""
+"To play with the same saves in RetroArch, open Settings → Saving → Cloud "
+"Sync there, choose the webdav backend, and give it this address, your user "
+"name and an app password:"
 msgstr ""
 
-#: /home/rob/workspace/project/98514b4129e140b08b99d79217952f67/templates/settings.php:217
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/settings.php:216
 msgid ""
-"Which of the pictures in your thumbnails folder a system is shown with, when "
-"it has more than one."
+"Saves copied into the folder some other way, such as with the desktop "
+"client, reach RetroArch once they are recorded. That happens by itself once "
+"a week, or now:"
+msgstr ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/settings.php:217
+msgid "Record saves for RetroArch"
+msgstr ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/settings.php:219
+msgid "Check every file, not only the new ones"
 msgstr ""

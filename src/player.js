@@ -278,6 +278,14 @@ export async function launchRom({ element, romUrl, romName, settings = {}, syste
 		...(sram === null ? {} : { sram }),
 		respondToGlobalEvents: settings.respond_to_global_events !== false,
 		retroarchConfig: {
+			// RetroArch prints nothing at all unless asked to, and what it
+			// prints is how the player hears of a save state the core
+			// turned down, or anything else gone wrong (see corelog.js).
+			// Errors only: its warnings at every launch are about the
+			// graphics driver of the browser, nothing a player can act on.
+			log_verbosity: true,
+			frontend_log_level: 3,
+			libretro_log_level: 3,
 			...inputConfig(settings.buttons),
 			...rewindConfig(settings),
 			// Run-ahead runs the core past the shown frame to hide input

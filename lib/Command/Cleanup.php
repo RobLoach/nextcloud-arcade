@@ -30,7 +30,8 @@ class Cleanup extends Command {
 		$this
 			->setName('arcade:cleanup')
 			->setDescription('Remove save states of games and users that no longer exist')
-			->addOption('dry-run', null, InputOption::VALUE_NONE, 'Only report what would be removed');
+			->addOption('dry-run', null, InputOption::VALUE_NONE, 'Only report what would be removed')
+			->addOption('legacy', null, InputOption::VALUE_NONE, 'Also remove the saves versions before 0.48.8 left in the app data, which are no longer read');
 	}
 
 	protected function execute(InputInterface $input, OutputInterface $output): int {
@@ -39,20 +40,26 @@ class Cleanup extends Command {
 			$output->writeln('<comment>Dry run, nothing is removed.</comment>');
 		}
 
+		$legacy = (bool)$input->getOption('legacy');
 		$counts = $this->cleanupService->sweep(
 			$dryRun,
 			static function (string $line) use ($output): void {
 				$output->writeln($line);
 			},
+			$legacy,
 		);
 
 		$output->writeln(
 			"Removed the states of <info>{$counts['users']}</info> users and <info>{$counts['games']}</info> games",
 		);
-		if ($counts['legacy'] > 0) {
+		if ($counts['appDataRemoved'] > 0) {
+			$output->writeln("Removed <info>{$counts['appDataRemoved']}</info> save files earlier versions left in the app data");
+		}
+		$left = $counts['appData']['files'];
+		if ($left > 0 && !($legacy && !$dryRun)) {
 			$output->writeln(
-				"<comment>{$counts['legacy']} files written before the states were kept per user are left. "
-				. 'They hold no record of whose they are, so they are only counted, never touched.</comment>',
+				"<comment>$left save files earlier versions left in the app data are no longer read"
+				. ($legacy ? '.' : '. Run with --legacy to remove them.') . '</comment>',
 			);
 		}
 		return 0;

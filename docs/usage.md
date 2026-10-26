@@ -160,7 +160,12 @@ since — and a save is
 held at once and sent to the server in the background; should that fail,
 the player says so, and tries again when the game closes. Closing the
 game waits for every save to arrive, and the browser asks before a tab
-with one still on its way is closed.
+with one still on its way is closed — for a save made by hand, or an
+automatic one that has been on its way for more than a few seconds.
+
+A state the emulator cannot load — one RetroArch made with another
+version of the core, or one made for another copy of the game — is said
+to be so, and the game carries on as it was.
 
 Above the slots sits the Auto slot, which the player writes itself, at an
 interval while playing if one is set. When a game has save states, the

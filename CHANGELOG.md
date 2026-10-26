@@ -29,6 +29,10 @@ All notable changes to NextCloud Arcade. The format follows
   A slot written meanwhile by RetroArch or another tab is fetched anew.
 - A battery save the game did not change is no longer sent and written
   again every minute, which made a new version of the file each time.
+- A save state the emulator turns down says so in plain words, instead of
+  a success message followed by RetroArch's own log line.
+- `occ arcade:cleanup --legacy` removes the saves earlier versions left in
+  the app data, and `occ arcade:status` says how many there are.
 - "Least played", alongside "Most played", for the games you have started
   and not come back to. The ones never started stay behind them either
   way, so it is not a list of everything untouched.
@@ -44,6 +48,10 @@ All notable changes to NextCloud Arcade. The format follows
   would do next.
 
 ### Changed
+- `occ arcade:status` reports the games with saves and the plays of each
+  user; the files and sizes it used to list were those of the app data,
+  where saves no longer live.
+- Psalm 6, which runs on PHP 8.5.
 - Saves are no longer read from the old `Saves/<System>/<Game>/` layout,
   nor from the app data of versions before saves folders: save states
   and battery saves start afresh under the new one. The automatic slot is
@@ -82,6 +90,11 @@ All notable changes to NextCloud Arcade. The format follows
   what each limit is currently set to.
 
 ### Fixed
+- What the emulator has to say for itself now reaches the player.
+  RetroArch prints nothing unless told to, and it never was, so the
+  messages meant to pass its errors on never had any to pass. It is now
+  told to print its errors, and the two the browser build prints on
+  every launch are left out.
 - What the app gives up on is now written to the log. Six places caught
   every possible failure and carried on without a word — among them the
   one that hid two bugs fixed just before this, where a single unreadable

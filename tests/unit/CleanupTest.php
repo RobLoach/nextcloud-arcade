@@ -75,7 +75,16 @@ class CleanupTest extends TestCase {
 				$this->deletedUsers[] = $userId;
 			},
 		);
-		$stateService->method('countLegacyFiles')->willReturnCallback(fn (): int => $this->legacy);
+		$stateService->method('appDataSaves')->willReturnCallback(
+			fn (): array => ['files' => $this->legacy, 'bytes' => $this->legacy * 100],
+		);
+		$stateService->method('deleteAppDataSaves')->willReturnCallback(
+			function (): int {
+				$removed = $this->legacy;
+				$this->legacy = 0;
+				return $removed;
+			},
+		);
 
 		$userManager = $this->createStub(IUserManager::class);
 		$userManager->method('callForSeenUsers')->willReturnCallback(
@@ -175,13 +184,36 @@ class CleanupTest extends TestCase {
 		$this->assertStringContainsString('Removed the states of 2 users and 1 games', $display);
 	}
 
-	public function testLegacyFilesAreOnlyCounted(): void {
+	public function testWhatEarlierVersionsLeftIsOnlyCountedUnlessAsked(): void {
 		$this->legacy = 4;
 
 		$tester = $this->tester();
 		$tester->execute([]);
 
-		$this->assertStringContainsString('4 files written before', $tester->getDisplay());
+		$this->assertStringContainsString('4 save files earlier versions left in the app data', $tester->getDisplay());
+		$this->assertStringContainsString('Run with --legacy to remove them', $tester->getDisplay());
+		$this->assertSame(4, $this->legacy);
+	}
+
+	public function testWhatEarlierVersionsLeftGoesWhenAsked(): void {
+		$this->legacy = 4;
+
+		$tester = $this->tester();
+		$tester->execute(['--legacy' => true]);
+
+		$this->assertSame(0, $this->legacy);
+		$this->assertStringContainsString('Removed 4 save files earlier versions left', $tester->getDisplay());
+		$this->assertStringNotContainsString('--legacy to remove', $tester->getDisplay());
+	}
+
+	public function testADryRunOnlySaysWhatEarlierVersionsLeftWouldGo(): void {
+		$this->legacy = 4;
+
+		$tester = $this->tester();
+		$tester->execute(['--legacy' => true, '--dry-run' => true]);
+
+		$this->assertSame(4, $this->legacy);
+		$this->assertStringContainsString('Removing the 4 save files', $tester->getDisplay());
 	}
 
 	public function testNothingToDoSaysSoQuietly(): void {
@@ -192,6 +224,6 @@ class CleanupTest extends TestCase {
 			'Removed the states of 0 users and 0 games',
 			$tester->getDisplay(),
 		);
-		$this->assertStringNotContainsString('files written before', $tester->getDisplay());
+		$this->assertStringNotContainsString('left in the app data', $tester->getDisplay());
 	}
 }

@@ -24,5 +24,11 @@
 		<!-- Controllers and listeners are instantiated by Nextcloud itself. -->
 		<UnusedClass errorLevel="suppress" />
 		<PossiblyUnusedMethod errorLevel="suppress" />
+		<!-- New in Psalm 6, and a matter of style rather than of anything
+		     that goes wrong: every overriding method would carry the
+		     attribute, and classes Nextcloud extends by name would be
+		     made final. -->
+		<MissingOverrideAttribute errorLevel="suppress" />
+		<ClassMustBeFinal errorLevel="suppress" />
 	</issueHandlers>
 </psalm>

@@ -24,6 +24,7 @@ vi.mock('@nextcloud/l10n', () => ({
 }))
 
 const { createStatesPanel } = await import('../../src/panels/states.js')
+const { createCoreLog } = await import('../../src/corelog.js')
 
 // A core that answers when the test says so, so one call can be held open
 // while another is attempted.
@@ -184,6 +185,9 @@ describe('the save states panel', () => {
 		await vi.advanceTimersByTimeAsync(0)
 		expect(calls[1].name).toBe('loadState')
 		expect(api.mock.calls.length).toBe(asked)
+		// Seen through, so it stops listening to the core.
+		calls[1].resolve()
+		await vi.advanceTimersByTimeAsync(1000)
 	})
 
 	test('lists the slots RetroArch saved into beyond the ones offered', async () => {
@@ -203,5 +207,49 @@ describe('the save states panel', () => {
 		expect(labels[0]).toContain('Slot 1')
 		expect(labels[3]).toContain('Slot 0')
 		expect(labels[4]).toContain('Slot 990')
+	})
+
+	test('says in words of its own when the core turns a state down', async () => {
+		const { calls, instance } = heldCore()
+		const { panel, flash } = panelWith(instance)
+		api.mockResolvedValue({
+			json: async () => ({ slots: 3, states: [{ slot: 990, mtime: 1, size: 5 }], hasSram: false }),
+			blob: async () => new Blob(['from another build']),
+		})
+		await panel.refresh()
+		// What the player would otherwise be shown, raw.
+		const shown = vi.fn()
+		const coreSays = createCoreLog(shown)
+
+		panel.load(990)
+		await vi.advanceTimersByTimeAsync(0)
+		calls[0].resolve()
+		await vi.advanceTimersByTimeAsync(0)
+		coreSays('[ERROR] [State] Failed to load state from "/home/web_user/retroarch/userdata/states/Mario.state".')
+		// Well short of the wait: the refusal is what ends it.
+		await vi.advanceTimersByTimeAsync(10)
+
+		expect(flash).toHaveBeenCalledWith(expect.stringContaining('would not load'), 'error')
+		expect(flash).not.toHaveBeenCalledWith(expect.stringContaining('loaded'), 'success')
+		expect(shown).not.toHaveBeenCalled()
+	})
+
+	test('says a state loaded once the core has had a moment to turn it down', async () => {
+		const { calls, instance } = heldCore()
+		const { panel, flash } = panelWith(instance)
+		api.mockResolvedValue({
+			json: async () => ({ slots: 3, states: [{ slot: 1, mtime: 1, size: 5 }], hasSram: false }),
+			blob: async () => new Blob(['a state']),
+		})
+		await panel.refresh()
+
+		panel.load(1)
+		await vi.advanceTimersByTimeAsync(0)
+		calls[0].resolve()
+		await vi.advanceTimersByTimeAsync(0)
+		expect(flash).not.toHaveBeenCalled()
+
+		await vi.advanceTimersByTimeAsync(750)
+		expect(flash).toHaveBeenCalledWith('State loaded from slot 1', 'success')
 	})
 })

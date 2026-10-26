@@ -466,7 +466,7 @@ class SettingsService {
 		// Decibels are a gain: every 20 of them is a factor of ten. The
 		// boost the old setting allowed has nowhere to go above a
 		// hundred, so it lands there.
-		$stored['volume'] = max(0, min(100, (int)round(100 * (10 ** ((float)$stored['audio_volume'] / 20)))));
+		$stored['volume'] = max(0, min(100, (int)round(100.0 * (10.0 ** ((float)$stored['audio_volume'] / 20.0)))));
 		unset($stored['audio_volume']);
 		return $stored;
 	}
