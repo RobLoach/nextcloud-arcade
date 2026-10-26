@@ -333,6 +333,15 @@ class CoreMap {
 	}
 
 	/**
+	 * The system a core plays, when it plays only the one: Gambatte plays
+	 * the Game Boy and the Game Boy Color alike, so it says neither.
+	 */
+	public static function systemForCore(string $core): ?string {
+		$systems = array_keys(array_filter(self::SYSTEMS, static fn (array $system): bool => $system['core'] === $core));
+		return count($systems) === 1 ? $systems[0] : null;
+	}
+
+	/**
 	 * What a system is called on screen: its compact name, which is the
 	 * short one unless the short one is the folder's to keep rather than
 	 * anything a player would recognise.

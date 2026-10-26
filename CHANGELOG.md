@@ -67,6 +67,10 @@ All notable changes to NextCloud Arcade. The format follows
   latest screenshots. Opened from the library, it links to the game in
   Files. A game the background pass has not read yet is read there and
   then, so its title and region show straight away.
+- Zipped games get the Arcade tab too: a zip, .bin or .rom in the games
+  library, or in a folder that names a system. A zip played before says
+  its system and emulator from the core that ran it, and which game in
+  it the saves are named after.
 - A Details button on every game of the library -- in the corner of a
   card, at the end of a row of the list and the table -- opening the
   Files sidebar on it, with its tags, shares, versions and Arcade tab,

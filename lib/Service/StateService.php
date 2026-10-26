@@ -513,6 +513,17 @@ class StateService {
 	 *
 	 * @return array{core: string, name: string}
 	 */
+	/**
+	 * What was noted of a game when it was last saved: the core the player
+	 * ran it on, and for a zip the name of the game inside. Empty strings
+	 * for what was never said.
+	 *
+	 * @return array{core: string, name: string}
+	 */
+	public function noted(string $userId, string $romPath): array {
+		return $this->notedOf($userId, $romPath);
+	}
+
 	private function notedOf(string $userId, string $romPath): array {
 		if (!isset($this->noted[$userId][$romPath])) {
 			$entry = $this->gameMapper->entryOf($userId, $this->key($userId, $romPath));

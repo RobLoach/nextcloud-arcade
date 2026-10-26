@@ -35,6 +35,11 @@
 
 .arcade-sidebar .arcade-sidebar-details dt {
 	color: var(--color-text-maxcontrast);
+	/* The sidebar of Nextcloud 35 gives every label a fixed width that
+	   does not wrap, so a long one ran into its value. */
+	width: auto;
+	max-width: 10em;
+	white-space: normal;
 }
 
 .arcade-sidebar .arcade-sidebar-details dd {

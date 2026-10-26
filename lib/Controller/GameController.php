@@ -63,29 +63,44 @@ class GameController extends ArcadeController {
 			return new JSONResponse([], Http::STATUS_NOT_FOUND);
 		}
 
+		$extension = strtolower(pathinfo($node->getPath(), PATHINFO_EXTENSION));
+		$archive = $extension === 'zip';
 		$known = $this->metadataOf($node->getId());
 		// A game the background pass has not reached yet is read now, for
 		// this one file: a sidebar of System and nothing else says less
-		// than the cartridge would have, a moment later.
-		if (!$known['read']) {
+		// than the cartridge would have, a moment later. Not a zip, though:
+		// the front of an archive is the archive's own, and says nothing of
+		// the game in it.
+		if (!$known['read'] && !$archive) {
 			$known = $this->readNow($node) ?? $known;
 		}
 		// The mark inside the file has the last word; the name and the
 		// folder answer for the games that have not been read yet.
 		$system = $known['system'] !== '' ? $known['system'] : (CoreMap::systemForPath($node->getPath()) ?? '');
-		if ($system === '') {
+		// A zip, a .bin or a .rom is a game whatever it says, or does not:
+		// the player looks inside to find out, and what it found -- the
+		// core it ran -- is noted with the saves.
+		if ($system === '' && !isset(CoreMap::libraryExtensions()[$extension])) {
 			// Not a game, as far as the app can tell.
 			return new JSONResponse([], Http::STATUS_NOT_FOUND);
 		}
+		$noted = $this->stateService->noted($userId, $file);
+		if ($system === '' && $noted['core'] !== '') {
+			$system = CoreMap::systemForCore($noted['core']) ?? '';
+		}
+		$core = $noted['core'] !== '' ? $noted['core'] : (CoreMap::SYSTEMS[$system]['core'] ?? '');
 
 		$stats = $this->recentService->stats($userId)[$node->getId()]
 			?? ['plays' => 0, 'seconds' => 0, 'time' => 0];
 
 		return new JSONResponse([
-			'system' => [
+			'system' => $system === '' ? null : [
 				'id' => $system,
 				'name' => $this->systemName($system),
 			],
+			// The game inside a zip, as the player found it and its saves
+			// are named.
+			'inside' => $archive ? $noted['name'] : '',
 			'title' => $known['title'],
 			'region' => $known['region'],
 			'mapper' => $known['mapper'],
@@ -95,8 +110,8 @@ class GameController extends ArcadeController {
 			'crc32' => $known['crc32'],
 			'playtime' => $stats,
 			'states' => $this->stateService->list($userId, $file),
-			'emulator' => CoreMap::CORE_NAMES[CoreMap::SYSTEMS[$system]['core'] ?? ''] ?? '',
-			'bios' => $this->biosOf($userId, $system),
+			'emulator' => CoreMap::CORE_NAMES[$core] ?? '',
+			'bios' => $system === '' ? [] : $this->biosOf($userId, $system),
 		]);
 	}
 

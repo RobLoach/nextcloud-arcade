@@ -1,10 +1,11 @@
+import { loadState } from '@nextcloud/initial-state'
 import { translate as t, translatePlural as n } from '@nextcloud/l10n'
 import { generateUrl } from '@nextcloud/router'
 import { AUTO_SLOT, api, encodePath, stateUrl } from './api.js'
 import { formatPlayTime } from './format.js'
 import { ICONS, icon } from './icons.js'
 import { playGame, previewUrl } from './play.js'
-import { romMimes } from './systems.js'
+import { isPlayable, romMimes, systemForFile, systemForFolderPath } from './systems.js'
 
 /**
  * The Arcade tab of the Files sidebar: what the app knows about a ROM --
@@ -112,6 +113,7 @@ function render(game, file, mime, fileId) {
 	list.className = 'arcade-sidebar-details'
 	addRow(list, t('arcade', 'System'), game.system?.name ?? '')
 	addRow(list, t('arcade', 'Emulator'), game.emulator ?? '')
+	addRow(list, t('arcade', 'Game in the archive'), game.inside ?? '')
 	addRow(list, t('arcade', 'Title'), game.title ?? '')
 	addRow(list, t('arcade', 'Region'), game.region ?? '')
 	addRow(list, t('arcade', 'Mapper'), game.mapper ?? '')
@@ -430,6 +432,33 @@ class ArcadeSidebarTab extends HTMLElement {
 }
 
 /**
+ * Whether a file is a game the tab is for. A ROM says so by its type; a
+ * zip, a .bin or a .rom has none to say it with, and counts when its
+ * folder names a system -- Games/SNES/NHL 96.zip -- or it lies in the
+ * user's games library, as everything the library shows does.
+ *
+ * @param {?object} node the file the sidebar is open on
+ * @return {boolean}
+ */
+export function isGame(node) {
+	if (romMimes().includes(node?.mime ?? '')) {
+		return true
+	}
+	const path = typeof node?.path === 'string' ? node.path : ''
+	const name = path.split('/').pop() ?? ''
+	// Only the names that say nothing: a .nes carries its type, and a
+	// README.md in the library is no Mega Drive game.
+	if (path === '' || !isPlayable(name) || systemForFile(name) !== null) {
+		return false
+	}
+	if (systemForFolderPath(path) !== null) {
+		return true
+	}
+	const library = String(loadState('arcade', 'libraryFolder', '')).replace(/\/+$/, '')
+	return library !== '' && `/${path.replace(/^\/+/, '')}`.startsWith(`/${library.replace(/^\/+/, '')}/`)
+}
+
+/**
  * The sidebar renders a tab as a web component and keeps the tabs in the global scope of @nextcloud/files 4 -- written
  * to directly here, as the library would, rather than carrying a second
  * major version of it onto every Files page for one map.
@@ -449,7 +478,7 @@ function registerWebComponent() {
 		// After the Files app's own tabs.
 		order: 90,
 		tagName: TAG_NAME,
-		enabled: ({ node }) => romMimes().includes(node?.mime ?? ''),
+		enabled: ({ node }) => isGame(node),
 		onInit: async () => {},
 	})
 }

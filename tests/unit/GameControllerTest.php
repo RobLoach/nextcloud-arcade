@@ -63,6 +63,7 @@ class GameControllerTest extends TestCase {
 		$recentService->method('stats')->willReturn($stats);
 		$stateService = $this->createStub(StateService::class);
 		$stateService->method('list')->willReturn($states);
+		$stateService->method('noted')->willReturn(['core' => '', 'name' => '']);
 
 		return new GameController(
 			'arcade',
@@ -107,6 +108,7 @@ class GameControllerTest extends TestCase {
 			// What it is called on screen, which is not the name of the
 			// folder its saves go in -- see CoreMap::displayName().
 			'system' => ['id' => 'nes', 'name' => 'NES'],
+			'inside' => '',
 			'title' => 'SUPER MARIO',
 			'region' => 'Japan, USA',
 			'mapper' => 'MMC3',
@@ -162,7 +164,54 @@ class GameControllerTest extends TestCase {
 		$this->assertSame([['name' => 'gba_bios.bin', 'present' => true, 'source' => 'folder']], $data['bios']);
 	}
 
-	private function controllerWith(IFilesMetadataManager $metadataManager, File $node, ?BiosService $bios = null): GameController {
+	public function testAZipNothingNamesIsStillAGameKnownByWhatThePlayerRan(): void {
+		$metadataManager = $this->createMock(IFilesMetadataManager::class);
+		$metadataManager->method('getMetadata')->willThrowException(new \Exception('nothing filed'));
+		// The front of an archive is the archive's, not the game's.
+		$metadataManager->expects($this->never())->method('refreshMetadata');
+		$states = $this->createStub(StateService::class);
+		$states->method('noted')->willReturn(['core' => 'snes9x', 'name' => 'Chrono Trigger (USA)']);
+
+		$response = $this->controllerWith($metadataManager, $this->rom('/alice/files/Downloads/chrono.zip'), states: $states)
+			->game('/Downloads/chrono.zip');
+
+		$this->assertSame(Http::STATUS_OK, $response->getStatus());
+		$data = $response->getData();
+		$this->assertSame('snes', $data['system']['id'] ?? null);
+		$this->assertSame('Snes9x', $data['emulator']);
+		$this->assertSame('Chrono Trigger (USA)', $data['inside']);
+	}
+
+	public function testAZipNeverPlayedAndNamedByNothingSaysWhatLittleThereIs(): void {
+		$metadataManager = $this->createStub(IFilesMetadataManager::class);
+		$metadataManager->method('getMetadata')->willThrowException(new \Exception('nothing filed'));
+		$states = $this->createStub(StateService::class);
+		$states->method('noted')->willReturn(['core' => '', 'name' => '']);
+
+		$response = $this->controllerWith($metadataManager, $this->rom('/alice/files/Games/pack.zip'), states: $states)
+			->game('/Games/pack.zip');
+
+		$this->assertSame(Http::STATUS_OK, $response->getStatus());
+		$this->assertNull($response->getData()['system']);
+		$this->assertSame('', $response->getData()['emulator']);
+	}
+
+	public function testAFileThatIsNoGameIsNotDescribed(): void {
+		$metadataManager = $this->createStub(IFilesMetadataManager::class);
+		$metadataManager->method('getMetadata')->willThrowException(new \Exception('nothing filed'));
+
+		$response = $this->controllerWith($metadataManager, $this->rom('/alice/files/Documents/notes.txt'))->game('/Documents/notes.txt');
+
+		$this->assertSame(Http::STATUS_NOT_FOUND, $response->getStatus());
+	}
+
+	private function nothingNoted(): StateService {
+		$states = $this->createStub(StateService::class);
+		$states->method('noted')->willReturn(['core' => '', 'name' => '']);
+		return $states;
+	}
+
+	private function controllerWith(IFilesMetadataManager $metadataManager, File $node, ?BiosService $bios = null, ?StateService $states = null): GameController {
 		$userFolder = $this->createStub(Folder::class);
 		$userFolder->method('get')->willReturn($node);
 		$rootFolder = $this->createStub(IRootFolder::class);
@@ -173,7 +222,7 @@ class GameControllerTest extends TestCase {
 			$rootFolder,
 			$metadataManager,
 			$this->createStub(RecentService::class),
-			$this->createStub(StateService::class),
+			$states ?? $this->nothingNoted(),
 			$bios ?? $this->createStub(BiosService::class),
 			$this->createStub(LoggerInterface::class),
 			'alice',

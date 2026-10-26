@@ -200,4 +200,11 @@ class CoreMapTest extends TestCase {
 		$this->assertArrayHasKey('application/x-wonderswan-color-rom', CoreMap::romMimes());
 		$this->assertSame([], CoreMap::mimesOf('unknown'));
 	}
+
+	public function testACoreNamesItsSystemOnlyWhenItPlaysOne(): void {
+		$this->assertSame('snes', CoreMap::systemForCore('snes9x'));
+		// Gambatte plays the Game Boy and the Game Boy Color alike.
+		$this->assertNull(CoreMap::systemForCore('gambatte'));
+		$this->assertNull(CoreMap::systemForCore('nothing'));
+	}
 }
