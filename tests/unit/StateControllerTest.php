@@ -42,6 +42,7 @@ class StateControllerTest extends TestCase {
 		bool $fileExists = true,
 		string $contentLength = '',
 		string $core = '',
+		string $f = '',
 	): TestableStateController {
 		$this->stateService = $this->createMock(StateService::class);
 		$settings = $this->createStub(SettingsService::class);
@@ -53,7 +54,11 @@ class StateControllerTest extends TestCase {
 		$request = $this->createStub(IRequest::class);
 		$request->method('getHeader')->willReturn($contentLength);
 		$request->method('getParam')->willReturnCallback(
-			static fn (string $key, $default = null) => $key === 'core' ? $core : $default,
+			static fn (string $key, $default = null) => match ($key) {
+				'core' => $core,
+				'f' => $f,
+				default => $default,
+			},
 		);
 		$controller = new TestableStateController(
 			'arcade',
@@ -301,5 +306,26 @@ class StateControllerTest extends TestCase {
 
 		$this->assertSame(Http::STATUS_NOT_FOUND, $controller->reconcile()->getStatus());
 		$this->assertSame(Http::STATUS_CONFLICT, $controller->reconcile()->getStatus());
+	}
+
+	/**
+	 * The player sends the path in base64url, so a name like this one is
+	 * not turned away by a firewall in front of the server.
+	 */
+	public function testThePathCanArriveInBase64Url(): void {
+		$path = "/ROMs/NES/Kirby's Adventure (USA) (Rev 1).nes";
+		$encoded = rtrim(strtr(base64_encode($path), '+/', '-_'), '=');
+		$controller = $this->controller(body: 'the state', f: $encoded);
+		$this->stateService->expects($this->once())->method('save')
+			->with('alice', $path, 2, 'the state');
+
+		$controller->save('', 2);
+	}
+
+	public function testAPathThatIsNotBase64UrlIsNoPath(): void {
+		$controller = $this->controller(body: 'the state', f: '!!not base64!!');
+		$this->stateService->expects($this->never())->method('save');
+
+		$this->assertSame(Http::STATUS_BAD_REQUEST, $controller->save('', 2)->getStatus());
 	}
 }

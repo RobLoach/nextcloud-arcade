@@ -1,5 +1,8 @@
 import { getRequestToken } from '@nextcloud/auth'
 import { generateUrl } from '@nextcloud/router'
+import { encodePath } from './paths.js'
+
+export { encodePath }
 
 // The slot the player writes by itself, on the clock in the settings:
 // RetroArch's .state.auto, which StateService knows as AUTO_SLOT. Not 0,
@@ -29,14 +32,14 @@ export function useCore(romPath, core) {
  */
 export function stateUrl(route, romPath, slot = null) {
 	const core = cores.get(romPath) ?? null
-	let url = `/apps/arcade/arcade${route}?file={file}`
+	let url = `/apps/arcade/arcade${route}?f={f}`
 	if (slot !== null) {
 		url += '&slot={slot}'
 	}
 	if (core !== null) {
 		url += '&core={core}'
 	}
-	return generateUrl(url, { file: romPath, slot, core })
+	return generateUrl(url, { f: encodePath(romPath), slot, core })
 }
 
 // How long an ordinary request is given. These carry a listing or a

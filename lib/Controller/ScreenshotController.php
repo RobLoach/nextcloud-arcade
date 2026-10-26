@@ -39,6 +39,7 @@ class ScreenshotController extends ArcadeController {
 	#[NoAdminRequired]
 	#[FrontpageRoute(verb: 'GET', url: '/arcade/screenshots')]
 	public function list(string $file = ''): JSONResponse {
+		$file = $this->romPath($file);
 		if ($this->userId === null || $file === '') {
 			return new JSONResponse([], Http::STATUS_BAD_REQUEST);
 		}

@@ -1,7 +1,7 @@
 import { loadState } from '@nextcloud/initial-state'
 import { translate as t, translatePlural as n } from '@nextcloud/l10n'
 import { generateUrl } from '@nextcloud/router'
-import { api } from './api.js'
+import { api, encodePath } from './api.js'
 import { formatDuration, formatPlayTime, formatSize } from './format.js'
 import { ICONS, icon } from './icons.js'
 import { attachLibraryGamepad } from './librarypad.js'
@@ -239,8 +239,8 @@ function thumbnailFor(game, size) {
 	}
 	if (game.fallback?.type === 'state') {
 		image.className = 'arcade-library-thumbnail arcade-library-thumbnail-snap'
-		image.src = generateUrl('/apps/arcade/arcade/state/thumbnail?file={file}&slot={slot}', {
-			file: game.path,
+		image.src = generateUrl('/apps/arcade/arcade/state/thumbnail?f={f}&slot={slot}', {
+			f: encodePath(game.path),
 			slot: game.fallback.slot,
 		})
 		return image
@@ -310,7 +310,7 @@ function renderCard(game, reload, scope) {
 	favorite.addEventListener('click', async (event) => {
 		event.preventDefault()
 		try {
-			await post('/apps/arcade/arcade/favorite', { file: game.path })
+			await post('/apps/arcade/arcade/favorite', { f: encodePath(game.path) })
 			reload(true)
 		} catch (error) {
 			// The star does not move on its own, so without a word here the

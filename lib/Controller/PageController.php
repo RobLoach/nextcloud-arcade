@@ -55,6 +55,7 @@ class PageController extends ArcadeController {
 	#[NoAdminRequired]
 	#[FrontpageRoute(verb: 'GET', url: '/')]
 	public function index(string $file = '', int $fileId = 0): TemplateResponse {
+		$file = $this->romPath($file);
 		// Play links carry the file id, which survives renames and moves;
 		// ?file= keeps working for old bookmarks. The frontend is path-based
 		// throughout, so the id is resolved to a path right here, and an id

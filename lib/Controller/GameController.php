@@ -47,6 +47,7 @@ class GameController extends ArcadeController {
 	#[NoAdminRequired]
 	#[FrontpageRoute(verb: 'GET', url: '/arcade/game')]
 	public function game(string $file = ''): JSONResponse {
+		$file = $this->romPath($file);
 		$userId = $this->userId;
 		if ($userId === null || $file === '') {
 			return new JSONResponse([], Http::STATUS_NOT_FOUND);

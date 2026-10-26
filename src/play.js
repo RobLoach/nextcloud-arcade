@@ -1,4 +1,5 @@
 import { generateUrl } from '@nextcloud/router'
+import { encodePath } from './paths.js'
 import { romMimes } from './systems.js'
 
 /**
@@ -13,7 +14,7 @@ import { romMimes } from './systems.js'
 export function playUrl(path, fileId) {
 	return fileId
 		? generateUrl('/apps/arcade/?fileId={fileId}', { fileId })
-		: generateUrl('/apps/arcade/?file={file}', { file: path })
+		: generateUrl('/apps/arcade/?f={f}', { f: encodePath(path) })
 }
 
 /**

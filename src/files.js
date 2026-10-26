@@ -1,6 +1,6 @@
 import { translate as t, translatePlural as n } from '@nextcloud/l10n'
 import { generateUrl } from '@nextcloud/router'
-import { AUTO_SLOT, api } from './api.js'
+import { AUTO_SLOT, api, encodePath } from './api.js'
 import { formatPlayTime } from './format.js'
 import { ICONS, icon } from './icons.js'
 import { playGame } from './play.js'
@@ -144,7 +144,7 @@ async function show(fileInfo) {
 	const file = pathOf(fileInfo)
 	mountPoint.textContent = ''
 	try {
-		const response = await api(generateUrl('/apps/arcade/arcade/game?file={file}', { file }))
+		const response = await api(generateUrl('/apps/arcade/arcade/game?f={f}', { f: encodePath(file) }))
 		const game = await response.json()
 		if (mine !== generation || mountPoint === null) {
 			return

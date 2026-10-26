@@ -50,6 +50,7 @@ class StateController extends ArcadeController {
 	#[NoAdminRequired]
 	#[FrontpageRoute(verb: 'GET', url: '/arcade/states')]
 	public function list(string $file = ''): JSONResponse {
+		$file = $this->romPath($file);
 		if (!$this->isValidRequest($file, StateService::AUTO_SLOT)) {
 			return new JSONResponse([], Http::STATUS_BAD_REQUEST);
 		}
@@ -63,6 +64,7 @@ class StateController extends ArcadeController {
 	#[NoAdminRequired]
 	#[FrontpageRoute(verb: 'GET', url: '/arcade/state')]
 	public function get(string $file = '', int $slot = 1): Response {
+		$file = $this->romPath($file);
 		if (!$this->isValidRequest($file, $slot)) {
 			return new JSONResponse([], Http::STATUS_BAD_REQUEST);
 		}
@@ -80,6 +82,7 @@ class StateController extends ArcadeController {
 	#[UserRateLimit(limit: 60, period: 60)]
 	#[FrontpageRoute(verb: 'POST', url: '/arcade/state')]
 	public function save(string $file = '', int $slot = 1): JSONResponse {
+		$file = $this->romPath($file);
 		if (!$this->isWritableSlot($file, $slot)) {
 			return new JSONResponse([], Http::STATUS_BAD_REQUEST);
 		}
@@ -127,6 +130,7 @@ class StateController extends ArcadeController {
 	#[NoCSRFRequired]
 	#[FrontpageRoute(verb: 'GET', url: '/arcade/state/thumbnail')]
 	public function getThumbnail(string $file = '', int $slot = 1): Response {
+		$file = $this->romPath($file);
 		if (!$this->isValidRequest($file, $slot)) {
 			return new JSONResponse([], Http::STATUS_BAD_REQUEST);
 		}
@@ -152,6 +156,7 @@ class StateController extends ArcadeController {
 	#[UserRateLimit(limit: 60, period: 60)]
 	#[FrontpageRoute(verb: 'POST', url: '/arcade/state/thumbnail')]
 	public function saveThumbnail(string $file = '', int $slot = 1): JSONResponse {
+		$file = $this->romPath($file);
 		if (!$this->isWritableSlot($file, $slot)) {
 			return new JSONResponse([], Http::STATUS_BAD_REQUEST);
 		}
@@ -166,6 +171,7 @@ class StateController extends ArcadeController {
 	#[NoAdminRequired]
 	#[FrontpageRoute(verb: 'GET', url: '/arcade/sram')]
 	public function getSram(string $file = ''): Response {
+		$file = $this->romPath($file);
 		if (!$this->isValidRequest($file, StateService::AUTO_SLOT)) {
 			return new JSONResponse([], Http::STATUS_BAD_REQUEST);
 		}
@@ -182,6 +188,7 @@ class StateController extends ArcadeController {
 	#[UserRateLimit(limit: 30, period: 60)]
 	#[FrontpageRoute(verb: 'POST', url: '/arcade/sram')]
 	public function saveSram(string $file = ''): JSONResponse {
+		$file = $this->romPath($file);
 		if (!$this->isValidRequest($file, StateService::AUTO_SLOT)) {
 			return new JSONResponse([], Http::STATUS_BAD_REQUEST);
 		}
@@ -199,6 +206,7 @@ class StateController extends ArcadeController {
 	#[UserRateLimit(limit: 30, period: 60)]
 	#[FrontpageRoute(verb: 'DELETE', url: '/arcade/sram')]
 	public function deleteSram(string $file = ''): JSONResponse {
+		$file = $this->romPath($file);
 		if (!$this->isPlausibleRequest($file, StateService::AUTO_SLOT)) {
 			return new JSONResponse([], Http::STATUS_BAD_REQUEST);
 		}
@@ -214,6 +222,7 @@ class StateController extends ArcadeController {
 	#[UserRateLimit(limit: 30, period: 60)]
 	#[FrontpageRoute(verb: 'DELETE', url: '/arcade/state')]
 	public function delete(string $file = '', int $slot = 1): JSONResponse {
+		$file = $this->romPath($file);
 		if (!$this->isPlausibleRequest($file, $slot)) {
 			return new JSONResponse([], Http::STATUS_BAD_REQUEST);
 		}

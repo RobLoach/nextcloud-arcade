@@ -4,7 +4,7 @@ import { getCurrentUser } from '@nextcloud/auth'
 import { defaultRemoteURL, defaultRootPath } from '@nextcloud/files/dav'
 import { translate as t } from '@nextcloud/l10n'
 import { generateFilePath, generateUrl } from '@nextcloud/router'
-import { api, dav, deadline, stateUrl, UPLOAD_WAIT, useCore } from './api.js'
+import { api, dav, deadline, encodePath, stateUrl, UPLOAD_WAIT, useCore } from './api.js'
 import { createCoreLog } from './corelog.js'
 import { createProgressTracker, lengthOf, readWithProgress } from './progress.js'
 import { inputConfig, retroarchKey } from './keys.js'
@@ -496,8 +496,8 @@ export function recordRecent(romPath) {
  * @param {number} seconds how long it was played, 0 when starting
  */
 function report(romPath, seconds) {
-	api(generateUrl('/apps/arcade/arcade/recent?file={file}&seconds={seconds}', {
-		file: romPath,
+	api(generateUrl('/apps/arcade/arcade/recent?f={f}&seconds={seconds}', {
+		f: encodePath(romPath),
 		seconds,
 	}), {
 		method: 'POST',

@@ -107,6 +107,13 @@ img/cores/                  Emulator cores
 
 All of them are user-scoped and require a session.
 
+Every route that takes a game's path takes it two ways: as `file`, the
+path itself, or as `f`, the same path in base64url without padding. The
+player sends `f`. ROM names carry quotes and brackets -- "Kirby's
+Adventure (USA)" -- which a web application firewall in front of the
+server reads as SQL and refuses in a query string, so the path travels as
+nothing but letters, digits, `-` and `_`. `file` stays for old bookmarks.
+
 | Method | Route | Purpose |
 | --- | --- | --- |
 | GET | `/apps/arcade/` | The app page; `?fileId=` plays a game, `?file=` still works for old bookmarks |

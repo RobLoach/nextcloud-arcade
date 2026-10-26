@@ -101,6 +101,12 @@ All notable changes to NextCloud Arcade. The format follows
   what each limit is currently set to.
 
 ### Fixed
+- Saving a game whose name has a quote or brackets in it, like "Kirby's
+  Adventure (USA)", no longer fails behind a web application firewall.
+  The name went into the address of every request about the game, where
+  a firewall takes a quote and brackets for SQL and refuses the request
+  before Nextcloud sees it. The player now sends the name encoded, as
+  letters and digits only; the old form is still understood.
 - `occ arcade:status` says which table is missing and how to repair it,
   instead of failing with the database's own error.
 - The cleanup now finds the app-data folders of users who no longer

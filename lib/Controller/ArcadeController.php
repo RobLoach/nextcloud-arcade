@@ -26,6 +26,28 @@ abstract class ArcadeController extends Controller {
 	}
 
 	/**
+	 * The path of the game a request is about: from the file parameter as
+	 * it arrived, or else from f, the same path in base64url.
+	 *
+	 * The player sends f. ROMs are named like "Kirby's Adventure (USA)",
+	 * and a quote with brackets in a query string is what a web application
+	 * firewall in front of the server takes for SQL being smuggled in: it
+	 * turns the request away before Nextcloud sees it, and the save is
+	 * lost. Letters, digits, - and _ give it nothing to object to.
+	 */
+	protected function romPath(string $file): string {
+		if ($file !== '') {
+			return $file;
+		}
+		$encoded = $this->request->getParam('f', '');
+		if (!is_string($encoded) || $encoded === '') {
+			return '';
+		}
+		$decoded = base64_decode(strtr($encoded, '-_', '+/'), true);
+		return is_string($decoded) && mb_check_encoding($decoded, 'UTF-8') ? $decoded : '';
+	}
+
+	/**
 	 * The request body as it arrived, up to $limit bytes. The one place
 	 * php://input is read, and overridable so tests can stand in for it:
 	 * it cannot be written to from a test.
