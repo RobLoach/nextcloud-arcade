@@ -154,7 +154,9 @@ the menu and returns to the game. Slots RetroArch saved into beyond
 those three are listed below them, to be loaded or deleted.
 
 Saving and loading take no longer than the core does. The states of a
-game are fetched as it starts and held while it is played, and a save is
+game are fetched as it starts and held while it is played — and fetched
+anew when the menu opens on a slot that RetroArch, or another tab, wrote
+since — and a save is
 held at once and sent to the server in the background; should that fail,
 the player says so, and tries again when the game closes. Closing the
 game waits for every save to arrive, and the browser asks before a tab

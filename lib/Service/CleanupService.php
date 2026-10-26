@@ -16,6 +16,9 @@ use OCP\IUserManager;
  * deleted in one go, or anything removed while the app was disabled, leaves
  * states behind that nothing points at any more. The same sweep answers to
  * `occ arcade:cleanup` and to the weekly background job.
+ *
+ * The weekly job also puts the Cloud Sync manifests right, which is the
+ * other thing that drifts while nobody is looking.
  */
 class CleanupService {
 	public function __construct(
@@ -89,6 +92,50 @@ class CleanupService {
 			'games' => $games,
 			'legacy' => $this->stateService->countLegacyFiles(),
 		];
+	}
+
+	/**
+	 * Bring the Cloud Sync manifest of every user with a saves folder, or
+	 * of the one named, in line with what the folder holds: the files that
+	 * got there some other way than through the player are recorded, and
+	 * the ones that are gone recorded as deleted.
+	 *
+	 * @param ?string $userId the one user, or null for everybody seen
+	 * @param bool $full whether to hash every file, not only the new ones
+	 * @param ?\Closure(string): void $report told about each user put right
+	 * @return array{users: int, recorded: int, removed: int}
+	 */
+	public function reconcileManifests(?string $userId = null, bool $full = false, ?\Closure $report = null): array {
+		$report ??= static function (string $line): void {
+		};
+		$userIds = [];
+		if ($userId !== null) {
+			$userIds[] = $userId;
+		} else {
+			$this->userManager->callForSeenUsers(function ($user) use (&$userIds): void {
+				$userIds[] = $user->getUID();
+			});
+		}
+
+		$totals = ['users' => 0, 'recorded' => 0, 'removed' => 0];
+		foreach ($userIds as $each) {
+			try {
+				$counts = $this->stateService->reconcile($each, $full);
+			} catch (\Throwable $e) {
+				// One user's broken manifest is theirs to sort out, and no
+				// reason to leave everybody else's as it is.
+				$report("Could not put the Cloud Sync manifest of $each right: {$e->getMessage()}");
+				continue;
+			}
+			if ($counts === null || ($counts['recorded'] === 0 && $counts['removed'] === 0)) {
+				continue;
+			}
+			$report("Recorded {$counts['recorded']} and marked {$counts['removed']} as deleted in the Cloud Sync manifest of $each");
+			$totals['users']++;
+			$totals['recorded'] += $counts['recorded'];
+			$totals['removed'] += $counts['removed'];
+		}
+		return $totals;
 	}
 
 	/**

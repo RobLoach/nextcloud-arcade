@@ -154,8 +154,8 @@ class ConvertLegacyStorage implements IRepairStep {
 	 * that is already taken was written since and is not touched, and a path
 	 * that no longer resolves keeps everything as it is.
 	 *
-	 * @param array<string, array{path: string, md5: string}> $entries
-	 * @return array<string, array{path: string, md5: string}>
+	 * @param array<string, array{path: string, md5: string, core: string}> $entries
+	 * @return array<string, array{path: string, md5: string, core: string}>
 	 */
 	private function renameToFileIds(string $userId, ISimpleFolder $folder, array $entries): array {
 		foreach ($entries as $key => $entry) {
@@ -198,7 +198,7 @@ class ConvertLegacyStorage implements IRepairStep {
 	 * the current name. Unmatched flat files stay put.
 	 *
 	 * @param array<string, true> $flat
-	 * @param array<string, array{path: string, md5: string}> $entries
+	 * @param array<string, array{path: string, md5: string, core: string}> $entries
 	 */
 	private function adoptFlatFiles(string $userId, ISimpleFolder $folder, ISimpleFolder $root, array &$flat, array $entries): void {
 		if ($flat === []) {

@@ -4,7 +4,7 @@ import { getCurrentUser } from '@nextcloud/auth'
 import { defaultRemoteURL, defaultRootPath } from '@nextcloud/files/dav'
 import { translate as t } from '@nextcloud/l10n'
 import { generateFilePath, generateUrl } from '@nextcloud/router'
-import { api, dav, deadline, stateUrl, UPLOAD_WAIT } from './api.js'
+import { api, dav, deadline, stateUrl, UPLOAD_WAIT, useCore } from './api.js'
 import { createCoreLog } from './corelog.js'
 import { createProgressTracker, lengthOf, readWithProgress } from './progress.js'
 import { inputConfig, retroarchKey } from './keys.js'
@@ -34,6 +34,29 @@ const KEEPALIVE_LIMIT = 60 * 1024
 // there is nothing left to fetch.
 const sramSyncStopped = new Set()
 
+// What the server holds of each game's battery save, as far as this page
+// knows: what was fetched at launch, then what was last sent. The save is
+// read out of the core once a minute whether the game wrote to it or not,
+// and one that has not changed is not sent again.
+const sramOnServer = new Map()
+
+/**
+ * @param {Uint8Array} a some bytes
+ * @param {?Uint8Array} b some others, if any
+ * @return {boolean} whether they are the same
+ */
+function sameBytes(a, b) {
+	if (b === null || b === undefined || a.length !== b.length) {
+		return false
+	}
+	for (let i = 0; i < a.length; i++) {
+		if (a[i] !== b[i]) {
+			return false
+		}
+	}
+	return true
+}
+
 /**
  * Stop uploading the battery save of a game for the rest of the session,
  * after its server copy was deleted. Opening the game again resumes it.
@@ -42,6 +65,8 @@ const sramSyncStopped = new Set()
  */
 export function disableSramSync(romPath) {
 	sramSyncStopped.add(romPath)
+	// Whatever the server held is going, so nothing is the same as it.
+	sramOnServer.delete(romPath)
 }
 
 /**
@@ -213,6 +238,11 @@ export async function launchRom({ element, romUrl, romName, settings = {}, syste
 	const { rom, system } = await resolveRom(blob, romName, systemHint)
 	if (system === null) {
 		throw new Error(t('arcade', 'Unsupported ROM type: {file}', { file: romName }))
+	}
+	if (romPath !== '') {
+		// From here on every request about its saves says which core it
+		// is: the one its files are filed under.
+		useCore(romPath, coreForSystem(system.id))
 	}
 	const sram = canSave ? await fetchSram(romPath, signal) : null
 	const bios = await fetchBios(system.id, signal)
@@ -473,7 +503,11 @@ async function fetchSram(romPath, signal = null) {
 		// on and the catch below reads as the same "nothing stored".
 		const response = await api(stateUrl('/sram', romPath), { signal })
 		const blob = await response.blob()
-		return blob.size > 0 ? blob : null
+		if (blob.size === 0) {
+			return null
+		}
+		sramOnServer.set(romPath, new Uint8Array(await blob.arrayBuffer()))
+		return blob
 	} catch (error) {
 		// A game that has never written one answers 404, which is an
 		// answer rather than a fault: it starts with a fresh cartridge.
@@ -509,6 +543,10 @@ export function startSramSync(instance, romPath, canSave = true) {
 			if (sram === undefined || sram.size === 0) {
 				return
 			}
+			const bytes = new Uint8Array(await sram.arrayBuffer())
+			if (sameBytes(bytes, sramOnServer.get(romPath))) {
+				return
+			}
 			// Asked again, because reading the save out of the core takes
 			// long enough for it to have been deleted meanwhile: the check
 			// above the read is not the one that decides.
@@ -527,6 +565,7 @@ export function startSramSync(instance, romPath, canSave = true) {
 				// case it cannot outlive, which beats never arriving.
 				keepalive: sram.size <= KEEPALIVE_LIMIT,
 			})
+			sramOnServer.set(romPath, bytes)
 		} catch (error) {
 			console.error('Could not save the SRAM', error)
 		}

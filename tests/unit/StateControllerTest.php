@@ -41,6 +41,7 @@ class StateControllerTest extends TestCase {
 		string $body = '',
 		bool $fileExists = true,
 		string $contentLength = '',
+		string $core = '',
 	): TestableStateController {
 		$this->stateService = $this->createMock(StateService::class);
 		$settings = $this->createStub(SettingsService::class);
@@ -51,6 +52,9 @@ class StateControllerTest extends TestCase {
 		$rootFolder->method('getUserFolder')->willReturn($userFolder);
 		$request = $this->createStub(IRequest::class);
 		$request->method('getHeader')->willReturn($contentLength);
+		$request->method('getParam')->willReturnCallback(
+			static fn (string $key, $default = null) => $key === 'core' ? $core : $default,
+		);
 		$controller = new TestableStateController(
 			'arcade',
 			$request,
@@ -67,12 +71,15 @@ class StateControllerTest extends TestCase {
 	public function testSavingHandsTheBodyToTheSlot(): void {
 		$controller = $this->controller(body: 'the state');
 		$this->stateService->expects($this->once())->method('save')
-			->with('alice', self::GAME, 2, 'the state');
+			->with('alice', self::GAME, 2, 'the state')
+			->willReturn(1234);
 
 		$response = $controller->save(self::GAME, 2);
 
 		$this->assertSame(Http::STATUS_OK, $response->getStatus());
-		$this->assertSame(['size' => strlen('the state')], $response->getData());
+		// The moment it was written, which the player tells its own save
+		// apart from somebody else's later one by.
+		$this->assertSame(['size' => strlen('the state'), 'mtime' => 1234], $response->getData());
 	}
 
 	public function testSavingRefusesAnEmptyBody(): void {
@@ -266,5 +273,33 @@ class StateControllerTest extends TestCase {
 
 		$this->assertSame(Http::STATUS_NOT_FOUND, $controller->get(self::GAME, 990)->getStatus());
 		$this->assertSame(Http::STATUS_BAD_REQUEST, $controller->get(self::GAME, StateService::HIGHEST_SLOT + 1)->getStatus());
+	}
+
+	public function testTheCoreThePlayerRanIsHandedOn(): void {
+		$controller = $this->controller(body: 'the state', core: 'snes9x');
+		$this->stateService->expects($this->once())->method('useCore')->with('alice', self::GAME, 'snes9x');
+
+		$controller->save(self::GAME, 1);
+	}
+
+	public function testTheManifestIsPutRightOnRequest(): void {
+		$controller = $this->controller();
+		$this->stateService->expects($this->once())->method('reconcile')->with('alice', true)
+			->willReturn(['recorded' => 3, 'removed' => 1]);
+
+		$response = $controller->reconcile(true);
+
+		$this->assertSame(['recorded' => 3, 'removed' => 1], $response->getData());
+	}
+
+	public function testPuttingTheManifestRightSaysWhyItCannot(): void {
+		$controller = $this->controller();
+		$this->stateService->method('reconcile')->willReturnOnConsecutiveCalls(
+			null,
+			$this->throwException(new \RuntimeException('unreadable')),
+		);
+
+		$this->assertSame(Http::STATUS_NOT_FOUND, $controller->reconcile()->getStatus());
+		$this->assertSame(Http::STATUS_CONFLICT, $controller->reconcile()->getStatus());
 	}
 }

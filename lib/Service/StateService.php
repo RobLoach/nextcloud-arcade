@@ -89,6 +89,19 @@ class StateService {
 	 * @var array<string, array<string, true>>
 	 */
 	private array $followed = [];
+	/**
+	 * The core the player said it ran each game on, this request, by user
+	 * then ROM path: the libretro name, such as "fceumm".
+	 *
+	 * @var array<string, array<string, string>>
+	 */
+	private array $cores = [];
+	/**
+	 * The core noted with each game, once looked up this request.
+	 *
+	 * @var array<string, array<string, string>>
+	 */
+	private array $notedCores = [];
 
 	public function __construct(
 		private IAppDataFactory $appDataFactory,
@@ -101,9 +114,25 @@ class StateService {
 	) {
 	}
 
-	public function save(string $userId, string $romPath, int $slot, string $data): void {
-		$this->write($userId, $romPath, self::STATES, self::stateName(self::stemOf($romPath), $slot), $data);
+	/**
+	 * Say which core the player ran a game on, so its saves are filed under
+	 * that core rather than the one its path suggests -- which for a zip is
+	 * a guess at best. It is noted with the game when it is next saved, for
+	 * the requests that come from anywhere but the player.
+	 */
+	public function useCore(string $userId, string $romPath, string $core): void {
+		if (isset(CoreMap::CORE_NAMES[$core])) {
+			$this->cores[$userId][$romPath] = $core;
+		}
+	}
+
+	/**
+	 * @return int when the state was written, as the listing will say it
+	 */
+	public function save(string $userId, string $romPath, int $slot, string $data): int {
+		$mtime = $this->write($userId, $romPath, self::STATES, self::stateName(self::stemOf($romPath), $slot), $data);
 		$this->remember($userId, $romPath);
+		return $mtime;
 	}
 
 	public function saveThumbnail(string $userId, string $romPath, int $slot, string $data): void {
@@ -170,11 +199,13 @@ class StateService {
 		// PHP turns array keys that look like numbers into numbers, and the
 		// file id keys are exactly that; the files are named by the string.
 		$keys = array_map(strval(...), array_keys($keys));
+		// Before the registry forgets it: that is where the core is noted.
+		$core = $this->coreNameOf($userId, $romPath);
 		foreach ($keys as $key) {
 			$this->deleteLegacy($userId, $key);
 		}
 		$this->forgetKeys($userId, ...$keys);
-		$this->removeGame($userId, $romPath);
+		$this->removeGame($userId, $romPath, $core);
 	}
 
 	/**
@@ -184,10 +215,10 @@ class StateService {
 	 */
 	public function deleteAllForFileId(string $userId, int $fileId): void {
 		$key = (string)$fileId;
-		$was = $this->gamesOf($userId)[$key] ?? null;
+		$entry = $this->gameMapper->entryOf($userId, $key);
 		$this->deleteLegacy($userId, $key);
-		if (is_string($was)) {
-			$this->removeGame($userId, $was);
+		if ($entry !== null && $entry['path'] !== '') {
+			$this->removeGame($userId, $entry['path'], self::coreName($entry['core'], $entry['path']));
 		}
 		$this->forgetKeys($userId, $key);
 	}
@@ -222,7 +253,7 @@ class StateService {
 		$stem = self::stemOf($romPath);
 
 		$states = [];
-		foreach (self::dirsOf($romPath, self::STATES) as $dir) {
+		foreach ($this->dirs($userId, $romPath, self::STATES) as $dir) {
 			$files = $this->filesIn($root, $dir);
 			foreach ($files as $name => $file) {
 				$parsed = self::parseStateName($stem, $name);
@@ -251,6 +282,18 @@ class StateService {
 	}
 
 	/**
+	 * Bring the Cloud Sync manifest of a user in line with what their saves
+	 * folder holds. Null when there is no saves folder to look at.
+	 *
+	 * @return ?array{recorded: int, removed: int}
+	 * @throws \RuntimeException when the manifest cannot be read
+	 */
+	public function reconcile(string $userId, bool $full = false): ?array {
+		$root = $this->root($userId, false);
+		return $root === null ? null : $this->manifest->reconcile($root, $full);
+	}
+
+	/**
 	 * The most recent save state screenshot of each of the given games, to
 	 * stand in for a missing thumbnail.
 	 *
@@ -262,12 +305,20 @@ class StateService {
 		if ($root === null) {
 			return [];
 		}
+		// The cores the player noted, all at once rather than a game at a
+		// time: a page of the library asks about dozens.
+		$noted = [];
+		foreach ($this->gameMapper->entriesOf($userId) as $entry) {
+			if ($entry['core'] !== '') {
+				$noted[$entry['path']] = $entry['core'];
+			}
+		}
 		// Each folder is listed once, however many games are asked about.
 		$indexes = [];
 		$found = [];
 		foreach ($romPaths as $path) {
 			$stem = self::stemOf($path);
-			foreach (self::dirsOf($path, self::STATES) as $dir) {
+			foreach (self::dirsFor(self::coreName($noted[$path] ?? '', $path), self::STATES) as $dir) {
 				$indexes[$dir] ??= $this->screenshotsIn($root, $dir);
 				$shot = $indexes[$dir][$stem] ?? null;
 				if ($shot !== null && ($found[$path]['mtime'] ?? -1) < $shot['mtime']) {
@@ -364,9 +415,33 @@ class StateService {
 	 * @param string $kind self::SAVES or self::STATES
 	 * @return list<string>
 	 */
-	public static function dirsOf(string $romPath, string $kind): array {
-		$core = CoreMap::coreNameForPath($romPath);
+	private function dirs(string $userId, string $romPath, string $kind): array {
+		return self::dirsFor($this->coreNameOf($userId, $romPath), $kind);
+	}
+
+	/**
+	 * @param string $core the name the core gives itself, or '' for none
+	 * @param string $kind self::SAVES or self::STATES
+	 * @return list<string>
+	 */
+	private static function dirsFor(string $core, string $kind): array {
 		return $core === '' ? [$kind] : ["$kind/$core", $kind];
+	}
+
+	/**
+	 * The name of the core a game is filed under: the one the player said
+	 * it ran, this request or when it last saved, or else the one its path
+	 * suggests.
+	 */
+	private function coreNameOf(string $userId, string $romPath): string {
+		$core = $this->cores[$userId][$romPath]
+			?? ($this->notedCores[$userId][$romPath] ??= $this->gameMapper->entryOf($userId, $this->key($userId, $romPath))['core'] ?? '');
+		return self::coreName($core, $romPath);
+	}
+
+	/** The name of a core by its libretro name, or the one the path suggests. */
+	private static function coreName(string $core, string $romPath): string {
+		return CoreMap::CORE_NAMES[$core] ?? CoreMap::coreNameForPath($romPath);
 	}
 
 	private static function sramName(string $romPath): string {
@@ -408,14 +483,15 @@ class StateService {
 			return null;
 		}
 		$this->follow($userId, $romPath, $root);
-		return $this->locate($root, $romPath, $kind, $name)[0] ?? null;
+		return $this->locate($root, $this->dirs($userId, $romPath, $kind), $name)[0] ?? null;
 	}
 
 	/**
+	 * @param list<string> $dirs the folders to look in, in order
 	 * @return array{0: File, 1: string}|null the file and its path under the root
 	 */
-	private function locate(Folder $root, string $romPath, string $kind, string $name): ?array {
-		foreach (self::dirsOf($romPath, $kind) as $dir) {
+	private function locate(Folder $root, array $dirs, string $name): ?array {
+		foreach ($dirs as $dir) {
 			try {
 				$node = $root->get("$dir/$name");
 			} catch (NotFoundException) {
@@ -431,19 +507,29 @@ class StateService {
 	/**
 	 * Write a file of a game: over the one there is, wherever that is, or
 	 * into the folder of its core when there is none yet.
+	 *
+	 * @return int when it was written, read back from the server: a player
+	 *             holding the save tells a later listing of somebody else's
+	 *             apart from its own by it
 	 */
-	private function write(string $userId, string $romPath, string $kind, string $name, string $data): void {
+	private function write(string $userId, string $romPath, string $kind, string $name, string $data): int {
 		$root = $this->root($userId, true);
 		if ($root === null) {
 			throw new NotFoundException('The saves folder cannot be made');
 		}
 		$this->follow($userId, $romPath, $root);
-		$found = $this->locate($root, $romPath, $kind, $name);
+		$dirs = $this->dirs($userId, $romPath, $kind);
+		$found = $this->locate($root, $dirs, $name);
 		if ($found !== null) {
 			[$file, $path] = $found;
-			$file->putContent($data);
+			// The battery save is sent once a minute whether the game wrote
+			// to it or not, and every write is a new version of the file.
+			// One that changes nothing is not made.
+			if ($file->hash('md5') !== md5($data)) {
+				$file->putContent($data);
+			}
 		} else {
-			$dir = self::dirsOf($romPath, $kind)[0];
+			$dir = $dirs[0];
 			$folder = $this->makeFolder($root, $dir);
 			if ($folder === null) {
 				throw new NotFoundException("$dir is not a folder");
@@ -452,6 +538,11 @@ class StateService {
 			$path = "$dir/$name";
 		}
 		$this->record($root, [$path => md5($data)]);
+		try {
+			return $root->get($path)->getMTime();
+		} catch (NotFoundException) {
+			return 0;
+		}
 	}
 
 	/** Remove a file of a game from every folder it may be in. */
@@ -461,7 +552,7 @@ class StateService {
 			return false;
 		}
 		$removed = [];
-		foreach (self::dirsOf($romPath, $kind) as $dir) {
+		foreach ($this->dirs($userId, $romPath, $kind) as $dir) {
 			try {
 				$root->get("$dir/$name")->delete();
 				$removed["$dir/$name"] = '';
@@ -473,16 +564,24 @@ class StateService {
 		return $removed !== [];
 	}
 
-	/** Remove every state, screenshot and battery save of a game. */
-	private function removeGame(string $userId, string $romPath): void {
+	/**
+	 * Remove every state, screenshot and battery save of a game -- unless
+	 * another game of the user goes by the same files, which it does when
+	 * it has the same name and plays on the same core: a Tetris.gb and a
+	 * Tetris.gbc, or the same game in two folders. Its saves are its own
+	 * as much as the deleted one's.
+	 *
+	 * @param string $core the name of the core the game is filed under
+	 */
+	private function removeGame(string $userId, string $romPath, string $core): void {
 		$root = $this->root($userId, false);
-		if ($root === null) {
+		if ($root === null || $this->sharedWithAnother($userId, $romPath, $core)) {
 			return;
 		}
 		$stem = self::stemOf($romPath);
 		$removed = [];
 		foreach ([self::STATES, self::SAVES] as $kind) {
-			foreach (self::dirsOf($romPath, $kind) as $dir) {
+			foreach (self::dirsFor($core, $kind) as $dir) {
 				foreach ($this->filesIn($root, $dir) as $name => $file) {
 					if (self::belongsTo($stem, $kind, $name)) {
 						$file->delete();
@@ -492,6 +591,40 @@ class StateService {
 			}
 		}
 		$this->record($root, $removed);
+	}
+
+	/**
+	 * Whether another game the user still has goes by the same saves: one
+	 * the registry knows, or one lying next to the deleted game.
+	 */
+	private function sharedWithAnother(string $userId, string $romPath, string $core): bool {
+		$stem = self::stemOf($romPath);
+		foreach ($this->gameMapper->entriesOf($userId) as $entry) {
+			$path = $entry['path'];
+			if ($path !== '' && $path !== $romPath && self::stemOf($path) === $stem
+				&& self::coreName($entry['core'], $path) === $core
+				&& Folders::has($this->rootFolder, $userId, $path)) {
+				return true;
+			}
+		}
+		$parent = dirname($romPath);
+		// Only games: a Tetris.png lying next to Tetris.gb is its picture,
+		// and has no saves to keep.
+		$extensions = CoreMap::libraryExtensions();
+		try {
+			$folder = Folders::forUser($this->rootFolder, $userId, $parent === '.' ? '/' : $parent);
+			foreach ($folder?->getDirectoryListing() ?? [] as $node) {
+				$path = rtrim($parent, '/') . '/' . $node->getName();
+				if ($node instanceof File && $path !== $romPath && self::stemOf($path) === $stem
+					&& isset($extensions[strtolower(pathinfo($path, PATHINFO_EXTENSION))])
+					&& CoreMap::coreNameForPath($path) === $core) {
+					return true;
+				}
+			}
+		} catch (\Throwable) {
+			// A folder that cannot be listed has no sibling to keep.
+		}
+		return false;
 	}
 
 	/** Whether a file of a folder of saves or states is one of a game. */
@@ -529,16 +662,19 @@ class StateService {
 		}
 		$this->followed[$userId][$romPath] = true;
 		$id = $this->fileIdOf($userId, $romPath);
-		$was = $id === null ? null : ($this->gamesOf($userId)[(string)$id] ?? null);
-		if ($was === null || $was === $romPath) {
+		$entry = $id === null ? null : $this->gameMapper->entryOf($userId, (string)$id);
+		$was = $entry['path'] ?? '';
+		if ($was === '' || $was === $romPath) {
 			return;
 		}
+		// The same file, so the same core noted with it, if any.
+		$oldCore = self::coreName($entry['core'] ?? '', $was);
 		$oldStem = self::stemOf($was);
 		$newStem = self::stemOf($romPath);
 		$moved = [];
 		foreach ([self::STATES, self::SAVES] as $kind) {
-			$targets = self::dirsOf($romPath, $kind);
-			foreach (self::dirsOf($was, $kind) as $dir) {
+			$targets = $this->dirs($userId, $romPath, $kind);
+			foreach (self::dirsFor($oldCore, $kind) as $dir) {
 				// What RetroArch filed by core goes to the folder of the
 				// core of the game now; what it filed flat stays flat.
 				$target = $dir === $kind ? $kind : $targets[0];
@@ -616,7 +752,14 @@ class StateService {
 	/** Notes where a game is now, so it can be followed if it moves. */
 	private function remember(string $userId, string $romPath): void {
 		$key = $this->key($userId, $romPath);
-		$this->gameMapper->set($userId, $key, $this->fileIdOfKey($key), $romPath, $this->checksumOf($userId, $romPath));
+		$this->gameMapper->set(
+			$userId,
+			$key,
+			$this->fileIdOfKey($key),
+			$romPath,
+			$this->checksumOf($userId, $romPath),
+			$this->cores[$userId][$romPath] ?? '',
+		);
 	}
 
 	/**

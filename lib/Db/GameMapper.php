@@ -24,11 +24,11 @@ class GameMapper extends QBMapper {
 	/**
 	 * Every game of a user, by the key its states are filed under.
 	 *
-	 * @return array<string, array{path: string, md5: string}>
+	 * @return array<string, array{path: string, md5: string, core: string}>
 	 */
 	public function entriesOf(string $userId): array {
 		$qb = $this->db->getQueryBuilder();
-		$qb->select('game_key', 'last_path', 'checksum')
+		$qb->select('game_key', 'last_path', 'checksum', 'core')
 			->from($this->getTableName())
 			->where($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)));
 		$result = $qb->executeQuery();
@@ -37,6 +37,7 @@ class GameMapper extends QBMapper {
 			$entries[(string)$row['game_key']] = [
 				'path' => (string)$row['last_path'],
 				'md5' => (string)$row['checksum'],
+				'core' => (string)$row['core'],
 			];
 		}
 		$result->closeCursor();
@@ -44,11 +45,11 @@ class GameMapper extends QBMapper {
 	}
 
 	/**
-	 * @return array{path: string, md5: string}|null
+	 * @return array{path: string, md5: string, core: string}|null
 	 */
 	public function entryOf(string $userId, string $key): ?array {
 		$qb = $this->db->getQueryBuilder();
-		$qb->select('last_path', 'checksum')
+		$qb->select('last_path', 'checksum', 'core')
 			->from($this->getTableName())
 			->where($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)))
 			->andWhere($qb->expr()->eq('game_key', $qb->createNamedParameter($key)));
@@ -61,6 +62,7 @@ class GameMapper extends QBMapper {
 		return [
 			'path' => (string)$row['last_path'],
 			'md5' => (string)$row['checksum'],
+			'core' => (string)$row['core'],
 		];
 	}
 
@@ -85,11 +87,13 @@ class GameMapper extends QBMapper {
 	}
 
 	/**
-	 * Note where a game is now and what it hashes to, replacing what was
-	 * noted before.
+	 * Note where a game is now, what it hashes to, and the core the player
+	 * ran it on, replacing what was noted before. An empty core leaves the
+	 * one noted before alone: only the player knows it, and a write that
+	 * came from anywhere else has nothing to say about it.
 	 */
-	public function set(string $userId, string $key, int $fileId, string $path, string $checksum): void {
-		if ($this->replace($userId, $key, $fileId, $path, $checksum) > 0) {
+	public function set(string $userId, string $key, int $fileId, string $path, string $checksum, string $core = ''): void {
+		if ($this->replace($userId, $key, $fileId, $path, $checksum, $core) > 0) {
 			return;
 		}
 		$game = new Game();
@@ -98,6 +102,7 @@ class GameMapper extends QBMapper {
 		$game->setFileId($fileId);
 		$game->setLastPath($path);
 		$game->setChecksum($checksum);
+		$game->setCore($core);
 		try {
 			$this->insert($game);
 		} catch (Exception $e) {
@@ -107,17 +112,20 @@ class GameMapper extends QBMapper {
 			// Another request noted it first. An update that changes nothing
 			// counts no rows on some databases, so this one may too; either
 			// way the entry is there.
-			$this->replace($userId, $key, $fileId, $path, $checksum);
+			$this->replace($userId, $key, $fileId, $path, $checksum, $core);
 		}
 	}
 
-	private function replace(string $userId, string $key, int $fileId, string $path, string $checksum): int {
+	private function replace(string $userId, string $key, int $fileId, string $path, string $checksum, string $core): int {
 		$qb = $this->db->getQueryBuilder();
 		$qb->update($this->getTableName())
 			->set('file_id', $qb->createNamedParameter($fileId, IQueryBuilder::PARAM_INT))
 			->set('last_path', $qb->createNamedParameter($path))
-			->set('checksum', $qb->createNamedParameter($checksum))
-			->where($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)))
+			->set('checksum', $qb->createNamedParameter($checksum));
+		if ($core !== '') {
+			$qb->set('core', $qb->createNamedParameter($core));
+		}
+		$qb->where($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)))
 			->andWhere($qb->expr()->eq('game_key', $qb->createNamedParameter($key)));
 		return $qb->executeStatement();
 	}

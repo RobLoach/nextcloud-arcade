@@ -16,11 +16,19 @@ All notable changes to NextCloud Arcade. The format follows
   personal settings give each player their own address.
 - Any slot RetroArch saved into is listed in the player, and can be
   loaded and deleted there.
+- `occ arcade:cloudsync`, a button in the personal settings, and the
+  weekly background job record in the manifest the saves that got into
+  the saves folder some other way — the desktop client, an upload in
+  Files — so RetroArch fetches them, and the ones that are gone as
+  deleted.
 - A progress bar while a game downloads, and then a word that the
   emulator is starting.
 - Save states load and save at once. The states of a game are fetched
   as it starts and held for the session; a save is held at once and sent
   to the server in the background, and closing the game waits for it.
+  A slot written meanwhile by RetroArch or another tab is fetched anew.
+- A battery save the game did not change is no longer sent and written
+  again every minute, which made a new version of the file each time.
 - "Least played", alongside "Most played", for the games you have started
   and not come back to. The ones never started stay behind them either
   way, so it is not a list of everything untouched.

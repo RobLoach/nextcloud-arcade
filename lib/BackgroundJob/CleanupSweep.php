@@ -61,5 +61,15 @@ class CleanupSweep extends TimedJob {
 		} else {
 			$this->logger->debug($summary);
 		}
+
+		// Saves that reached a saves folder some other way than through the
+		// player, which RetroArch would otherwise never hear of.
+		try {
+			$this->cleanupService->reconcileManifests(null, false, function (string $line): void {
+				$this->logger->info($line);
+			});
+		} catch (\Throwable $e) {
+			$this->logger->error('Putting the Cloud Sync manifests right failed', ['exception' => $e]);
+		}
 	}
 }

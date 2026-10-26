@@ -22,10 +22,12 @@ const PREFETCH_BUDGET = 64 * 1024 * 1024
  * upload it was meant to undo. A slot saved again before its last upload
  * started only sends the newer one.
  *
- * What is held is not checked against the server again. Within a session
- * nothing else writes these slots but this player -- unless the same game
- * is open in another tab, or RetroArch syncs meanwhile, in which case the
- * last one to write wins, as it did before.
+ * What is held is checked against the server whenever the slots are
+ * listed -- as the panel opens -- and a slot written meanwhile by anybody
+ * else, another tab or RetroArch syncing, is let go of, so the next load
+ * fetches what is there now. Each copy is known by when the server wrote
+ * it: the listing's time for one fetched, the upload's answer for one
+ * saved here.
  *
  * @param {object} options options
  * @param {string} options.romPath path identifying the game
@@ -82,12 +84,17 @@ export function createStateCache({ romPath, onUploadFailed = () => {} }) {
 		// take twice what either of them allows.
 		const budget = deadline(UPLOAD_WAIT)
 		try {
-			await api(stateUrl('/state', romPath, slot), {
+			const response = await api(stateUrl('/state', romPath, slot), {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/octet-stream' },
 				body: entry.state,
 				signal: budget,
 			})
+			const answer = await response.json().catch(() => ({}))
+			// When the server wrote it, which the listing will say too as
+			// long as nobody has written the slot since.
+			entry.mtime = Number.isFinite(answer?.mtime) ? answer.mtime : entry.mtime
+			entry.synced = true
 			if (entry.thumbnail !== null) {
 				// A picture is the one part worth going without.
 				await api(stateUrl('/state/thumbnail', romPath, slot), {
@@ -122,7 +129,8 @@ export function createStateCache({ romPath, onUploadFailed = () => {} }) {
 					// Kept only when nothing newer came in while it was on
 					// its way: a save made meanwhile is the slot now.
 					if (!held.has(slot)) {
-						held.set(slot, { state, thumbnail: null, thumbnailUrl: null, mtime: null, local: false })
+						const listed = listing.states.find((each) => each.slot === slot)
+						held.set(slot, { state, thumbnail: null, thumbnailUrl: null, mtime: listed?.mtime ?? null, local: false })
 					}
 					return state
 				})
@@ -132,6 +140,27 @@ export function createStateCache({ romPath, onUploadFailed = () => {} }) {
 			fetching.set(slot, request)
 		}
 		return fetching.get(slot)
+	}
+
+	/**
+	 * Let go of every copy the server no longer agrees with: a slot written
+	 * since by somebody else, or deleted. A save still on its way, or one
+	 * whose upload failed, is this player's newest word on the slot, and
+	 * stays; so does a delete still waiting its turn.
+	 */
+	const forgetChanged = () => {
+		const listed = new Map(listing.states.map((state) => [state.slot, state.mtime]))
+		for (const [slot, entry] of held) {
+			if (entry.deleted || (entry.local && !entry.synced)) {
+				continue
+			}
+			if (listed.get(slot) !== entry.mtime) {
+				if (entry.thumbnailUrl) {
+					URL.revokeObjectURL(entry.thumbnailUrl)
+				}
+				held.delete(slot)
+			}
+		}
 	}
 
 	/**
@@ -175,6 +204,7 @@ export function createStateCache({ romPath, onUploadFailed = () => {} }) {
 				states: Array.isArray(data?.states) ? data.states : [],
 				hasSram: data?.hasSram === true,
 			}
+			forgetChanged()
 			return merged()
 		},
 
@@ -271,6 +301,12 @@ export function createStateCache({ romPath, onUploadFailed = () => {} }) {
 					}))
 				if (was?.thumbnailUrl) {
 					URL.revokeObjectURL(was.thumbnailUrl)
+				}
+				// Deleted on the server too, so the next listing says so by
+				// itself -- and says so if somebody saves the slot again.
+				if (held.get(slot) === tombstone) {
+					held.delete(slot)
+					listing = { ...listing, states: listing.states.filter((state) => state.slot !== slot) }
 				}
 			} catch (error) {
 				// Not deleted after all, so it is what it was.

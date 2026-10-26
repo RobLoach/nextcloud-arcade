@@ -119,6 +119,7 @@ All of them are user-scoped and require a session.
 | GET/POST/DELETE | `/apps/arcade/arcade/state` | A save state slot |
 | GET/POST | `/apps/arcade/arcade/state/thumbnail` | The screenshot of a slot |
 | GET/POST/DELETE | `/apps/arcade/arcade/sram` | The in-game battery save |
+| POST | `/apps/arcade/arcade/cloudsync` | Bring the Cloud Sync manifest in line with the saves folder; `full` hashes every file |
 | POST | `/apps/arcade/arcade/recent` | Remember a game as played, and for how long |
 | POST | `/apps/arcade/arcade/favorite` | Make a game a favorite, or stop |
 | GET/POST | `/apps/arcade/arcade/thumbnails/fetch` | Ask for missing box art, and how it went |
@@ -175,7 +176,7 @@ Outside of the files of a user, the app writes:
 | `oc_preferences` | Personal settings, and how a box art run went |
 | `oc_appconfig` | Core options, thumbnail types, and the folder defaults of the instance |
 | `oc_arcade_plays` | When and how long each game was played, per user and file id |
-| `oc_arcade_games` | The games that have save states |
+| `oc_arcade_games` | The games that have save states, and the core the player ran each on |
 | `oc_jobs` | A queued box art lookup while one is running, and the weekly save state cleanup sweep |
 | `oc_mimetypes`, `oc_filecache` | The ROM mimetypes, and the files given them |
 | `oc_files_metadata` | The system, title, region, MD5 and CRC32 of each ROM, by file id |

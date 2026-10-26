@@ -474,6 +474,28 @@ else
 	fail 'manifest.server cannot be read over WebDAV'
 fi
 
+# A save copied in some other way -- the desktop client, here WebDAV --
+# reaches RetroArch once something records it, which the button in the
+# personal settings asks for.
+curl -sS -o /dev/null -X MKCOL -b "$COOKIES" -H "requesttoken: $TOKEN" \
+	"$BASE/remote.php/dav/files/$ADMIN_USER/Saves/saves" || true
+curl -sSf -o /dev/null -X PUT -b "$COOKIES" -H "requesttoken: $TOKEN" \
+	--data-binary 'a battery save from elsewhere' \
+	"$BASE/remote.php/dav/files/$ADMIN_USER/Saves/saves/Zelda.srm" \
+	|| fail 'could not copy a save into the saves folder over WebDAV'
+if expect_status 'the manifest is put right' 200 -X POST \
+	"$BASE/index.php/apps/arcade/arcade/cloudsync"; then
+	assert_json 'the copied save is recorded' '
+if data.get("recorded", 0) < 1:
+    raise SystemExit(f"nothing was recorded: {data}")
+'
+fi
+if occ arcade:cloudsync --user "$ADMIN_USER" --full > "$BODY" 2>&1; then
+	echo 'ok: arcade:cloudsync'
+else
+	fail "occ arcade:cloudsync exited non-zero: $(head -c 300 "$BODY")"
+fi
+
 # From here the game itself goes away, and the endpoint that lists states
 # turns away a request naming a game the user does not have -- so the save
 # is watched where it actually lives: in the user's own files.

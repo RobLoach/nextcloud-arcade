@@ -32,11 +32,11 @@ const ok = (body = {}) => ({
 const settle = () => new Promise((resolve) => setTimeout(resolve, 0))
 
 /** Answer every request that is open, and those that follow, one by one. */
-const answerAll = async () => {
+const answerAll = async (answer = ok()) => {
 	await settle()
 	for (let open = requests.find((each) => !each.answered); open; open = requests.find((each) => !each.answered)) {
 		open.answered = true
-		open.resolve(ok())
+		open.resolve(answer)
 		await settle()
 	}
 }
@@ -117,20 +117,74 @@ describe('the save states held for a session', () => {
 	test('lists what was saved and deleted here on top of what the server said', async () => {
 		const cache = createStateCache({ romPath: '/Games/Mario.nes' })
 		cache.put(3, new Blob(['new']), new Blob(['png']))
-		const removed = cache.remove(2)
-		await answerAll()
-		await removed
-		requests = []
-
-		const { states } = await listed(cache, [
-			{ slot: -1, size: 5, mtime: 10, hasThumbnail: false },
-			{ slot: 2, size: 5, mtime: 10, hasThumbnail: false },
-		])
-
-		expect(states.map((state) => state.slot)).toEqual([-1, 3])
-		expect(states[1].hasThumbnail).toBe(true)
+		// An upload still on its way is shown, whatever the server lists.
+		const pending = await listed(cache, [{ slot: -1, size: 5, mtime: 10, hasThumbnail: false }])
+		expect(pending.states.map((state) => state.slot)).toEqual([-1, 3])
+		expect(pending.states[1].hasThumbnail).toBe(true)
 		expect(cache.thumbnailUrl(3)).toMatch(/^blob:/)
 		expect(cache.thumbnailUrl(-1)).toBeNull()
+
+		// The upload answers when it was written, and the server lists the
+		// slot at that time from then on: still the copy held here.
+		await answerAll(ok({ mtime: 50 }))
+		requests = []
+		const { states } = await listed(cache, [
+			{ slot: -1, size: 5, mtime: 10, hasThumbnail: false },
+			{ slot: 3, size: 3, mtime: 50, hasThumbnail: true },
+		])
+		expect(states.map((state) => state.slot)).toEqual([-1, 3])
+		expect(await (await cache.get(3)).text()).toBe('new')
+		expect(requests).toHaveLength(1)
+	})
+
+	test('hides a slot being deleted, and lists it again once somebody saves it anew', async () => {
+		const cache = createStateCache({ romPath: '/Games/Mario.nes' })
+		await listed(cache, [{ slot: 2, size: 5, mtime: 10, hasThumbnail: false }])
+		requests = []
+		const removed = cache.remove(2)
+		const during = cache.list()
+		await settle()
+		requests.find((request) => request.method === 'GET').answered = true
+		requests.find((request) => request.method === 'GET').resolve(ok({ slots: 3, states: [{ slot: 2, size: 5, mtime: 10 }] }))
+		expect((await during).states).toEqual([])
+		await answerAll()
+		await removed
+
+		requests = []
+		const { states } = await listed(cache, [{ slot: 2, size: 5, mtime: 99, hasThumbnail: false }])
+		expect(states.map((state) => state.slot)).toEqual([2])
+	})
+
+	test('lets go of a state somebody else wrote since, and fetches it anew', async () => {
+		const cache = createStateCache({ romPath: '/Games/Mario.nes' })
+		await listed(cache, [{ slot: 1, size: 5, mtime: 10, hasThumbnail: false }])
+		requests = []
+		cache.prefetch()
+		await answerAll()
+		await cache.get(1)
+		expect(requests).toHaveLength(1)
+
+		// RetroArch synced a newer one meanwhile.
+		requests = []
+		await listed(cache, [{ slot: 1, size: 5, mtime: 20, hasThumbnail: false }])
+		requests = []
+		const loading = cache.get(1)
+		await answerAll()
+		await loading
+		expect(requests.map((request) => request.url)).toEqual(['/state?slot=1'])
+	})
+
+	test('keeps a save whose upload failed, whatever the server lists', async () => {
+		const cache = createStateCache({ romPath: '/Games/Mario.nes', onUploadFailed: () => {} })
+		cache.put(1, new Blob(['mine']))
+		await settle()
+		refuse(new Error('500'))
+		await settle()
+		requests = []
+
+		await listed(cache, [{ slot: 1, size: 5, mtime: 10, hasThumbnail: false }])
+
+		expect(await (await cache.get(1)).text()).toBe('mine')
 	})
 
 	test('fetches the newest states ahead, one at a time, and loads them from then on', async () => {

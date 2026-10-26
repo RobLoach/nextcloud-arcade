@@ -6,6 +6,21 @@ import { generateUrl } from '@nextcloud/router'
 // which is RetroArch's own first slot.
 export const AUTO_SLOT = -1
 
+// The core each game was started on, by its path. Saves are filed under
+// the name of the core, and for a zip only the player knows which that
+// is -- it looked inside -- so every request about a save says so.
+const cores = new Map()
+
+/**
+ * Note the core a game runs on, for the save requests about it.
+ *
+ * @param {string} romPath path identifying the game
+ * @param {string} core the libretro name of the core, e.g. 'fceumm'
+ */
+export function useCore(romPath, core) {
+	cores.set(romPath, core)
+}
+
 /**
  * @param {string} route the app route, e.g. '/state'
  * @param {string} romPath path identifying the game
@@ -13,9 +28,15 @@ export const AUTO_SLOT = -1
  * @return {string} the endpoint URL
  */
 export function stateUrl(route, romPath, slot = null) {
-	return slot === null
-		? generateUrl(`/apps/arcade/arcade${route}?file={file}`, { file: romPath })
-		: generateUrl(`/apps/arcade/arcade${route}?file={file}&slot={slot}`, { file: romPath, slot })
+	const core = cores.get(romPath) ?? null
+	let url = `/apps/arcade/arcade${route}?file={file}`
+	if (slot !== null) {
+		url += '&slot={slot}'
+	}
+	if (core !== null) {
+		url += '&core={core}'
+	}
+	return generateUrl(url, { file: romPath, slot, core })
 }
 
 // How long an ordinary request is given. These carry a listing or a

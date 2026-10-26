@@ -209,6 +209,15 @@ $cloudSyncUrl = $_['cloudSyncUrl'];
 				<?php if ($key === 'saves_folder' && $cloudSyncUrl !== ''): ?>
 					<br><em><?php p($l->t('To play with the same saves in RetroArch, open Settings → Saving → Cloud Sync there, choose the webdav backend, and give it this address, your user name and an app password:')); ?></em>
 					<br><code class="arcade-cloudsync-url"><?php p($cloudSyncUrl); ?></code>
+					<?php /* Saves put into the folder some other way -- the desktop
+					        client, an upload in Files -- are not in the manifest
+					        RetroArch reads until something records them. The
+					        weekly background job does; this does it now. */ ?>
+					<br><em><?php p($l->t('Saves copied into the folder some other way, such as with the desktop client, reach RetroArch once they are recorded. That happens by itself once a week, or now:')); ?></em>
+					<br><button type="button" id="arcade-cloudsync-check"><?php p($l->t('Record saves for RetroArch')); ?></button>
+					<input type="checkbox" id="arcade-cloudsync-full" class="checkbox">
+					<label for="arcade-cloudsync-full"><?php p($l->t('Check every file, not only the new ones')); ?></label>
+					<br><span id="arcade-cloudsync-status" aria-live="polite"></span>
 				<?php endif; ?>
 			</p>
 		<?php endforeach; ?>

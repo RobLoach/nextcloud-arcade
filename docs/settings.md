@@ -52,8 +52,15 @@ saves folder, a game cannot be saved at all, and the player says so.
 
 Games played on the same core share its folder, so two games of the same
 name on it — a `Tetris.gb` and a `Tetris.gbc` — share their saves, as they
-do in RetroArch. A game whose system cannot be told from its name or its
-folder saves straight into `saves/` and `states/`.
+do in RetroArch. Deleting one of them leaves the saves alone for as long
+as the other is still there. A zip is filed under the core the player
+found inside it, which is noted with the game, so the Files sidebar and
+the cleanup find it there too; a game whose system cannot be told at all
+saves straight into `saves/` and `states/`.
+
+A battery save the game did not change is not written again — it is read
+out of the game once a minute, and every write would be a new version of
+the file.
 
 Saves from versions before 0.48.8, in `Saves/<System>/<Game>/` or the
 app's internal storage, are not read any more. Changing the saves folder
@@ -77,6 +84,16 @@ play the same games with the same saves in RetroArch:
    folder: `https://cloud.example.com/remote.php/dav/files/USERNAME/Saves/`
 5. Enter your user name and the app password, keep Sync Saves on, and
    restart RetroArch.
+
+Saves copied into the folder some other way — the desktop client, an
+upload in Files — are only in the manifest once something records them,
+and RetroArch does not fetch them until then. The weekly background job
+does, for everybody; the personal settings have a button under the saves
+folder that does it now, and `occ arcade:cloudsync` does it from the
+command line. Saves that are gone from the folder are recorded as deleted,
+so RetroArch deletes its copy too. A file the manifest already has, and
+that has not been touched since the manifest was written, is taken at its
+word; checking every file, or `--full`, hashes them all.
 
 Keep RetroArch's "Sort Saves into Folders by Core Name" and "Sort Save
 States into Folders by Core Name" on, as they are by default; saves it
@@ -178,6 +195,7 @@ waiting in the queue.
 | --- | --- |
 | `occ arcade:bios` | List, add or remove the BIOS files the instance offers to every player |
 | `occ arcade:cleanup` | Remove save states of games and users that no longer exist; `--dry-run` only reports |
+| `occ arcade:cloudsync` | Record in each user's Cloud Sync manifest the saves that got into the saves folder some other way, and the ones that are gone; `--user`, `--full` |
 | `occ arcade:status` | Report the save state storage and play activity of every user; `--json` for machines |
 | `occ arcade:uninstall` | Remove the settings, save states and mimetypes of the app, before removing the app itself; `--dry-run`, `--force` |
 

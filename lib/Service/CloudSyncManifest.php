@@ -34,6 +34,13 @@ class CloudSyncManifest {
 	private const LOCK_TRIES = 50;
 	private const LOCK_WAIT_US = 100_000;
 
+	/** The folders under the root that the player keeps, and so answers for. */
+	private const SCOPE = ['saves', 'states'];
+
+	// How far below saves/ and states/ a file is looked for: the core, and
+	// the content directory RetroArch can sort by as well.
+	private const MAX_DEPTH = 3;
+
 	public function __construct(
 		private ILockingProvider $lockingProvider,
 		private LoggerInterface $logger,
@@ -41,7 +48,8 @@ class CloudSyncManifest {
 	}
 
 	/**
-	 * Record changes to the files under a sync root.
+	 * Record changes to the files under a sync root. A change the manifest
+	 * already says is no change, and leaves the manifest unwritten.
 	 *
 	 * @param Folder $root the folder RetroArch syncs with
 	 * @param array<string, string> $changes path relative to the root =>
@@ -52,19 +60,7 @@ class CloudSyncManifest {
 		if ($changes === []) {
 			return;
 		}
-		$lock = 'arcade/cloudsync/' . $root->getId();
-		$locked = $this->lock($lock);
-		try {
-			$file = $this->manifestOf($root);
-			$entries = self::parse($file?->getContent() ?? '');
-			if ($entries === null) {
-				// Not something RetroArch can read either, but written by
-				// somebody, and not this app's to throw away.
-				$this->logger->warning('The Cloud Sync manifest cannot be read, so it is left alone', [
-					'path' => $file?->getPath(),
-				]);
-				return;
-			}
+		$this->update($root, function (array $entries) use ($changes): array {
 			foreach ($changes as $path => $hash) {
 				// A delete of something never synced leaves nothing to say.
 				if ($hash === '' && !isset($entries[$path])) {
@@ -72,7 +68,125 @@ class CloudSyncManifest {
 				}
 				$entries[$path] = $hash;
 			}
-			$content = self::render($entries);
+			return $entries;
+		});
+	}
+
+	/**
+	 * Bring the manifest in line with what saves/ and states/ actually
+	 * hold, for the files that got there some other way than through the
+	 * player -- the desktop client, an upload in Files -- and for an entry
+	 * lost when RetroArch wrote the manifest over one of the player's.
+	 *
+	 * A file the manifest already has, and that has not been touched since
+	 * the manifest was last written, is taken at its word; the rest are
+	 * hashed. Asked to be thorough, every file is. A file that is gone is
+	 * recorded as deleted, so RetroArch deletes its own copy too. What the
+	 * manifest says of anything else -- RetroArch's configs, say -- is left
+	 * as it is.
+	 *
+	 * @param Folder $root the folder RetroArch syncs with
+	 * @param bool $full whether to hash every file
+	 * @return array{recorded: int, removed: int} how many files were
+	 *                                             recorded, and how many
+	 *                                             recorded as deleted
+	 * @throws \RuntimeException when the manifest cannot be read
+	 */
+	public function reconcile(Folder $root, bool $full = false): array {
+		$counts = ['recorded' => 0, 'removed' => 0];
+		$this->update($root, function (array $entries, ?File $manifest) use ($root, $full, &$counts): array {
+			$since = $full || $manifest === null ? null : $manifest->getMTime();
+			$seen = [];
+			foreach (self::SCOPE as $kind) {
+				foreach ($this->filesUnder($root, $kind) as $path => $file) {
+					$seen[$path] = true;
+					$known = $entries[$path] ?? '';
+					if ($since !== null && $known !== '' && $file->getMTime() <= $since) {
+						continue;
+					}
+					$hash = (string)$file->hash('md5');
+					if ($hash !== $known) {
+						$entries[$path] = $hash;
+						$counts['recorded']++;
+					}
+				}
+			}
+			foreach ($entries as $path => $hash) {
+				$path = (string)$path;
+				if ($hash !== '' && !isset($seen[$path]) && self::inScope($path)) {
+					$entries[$path] = '';
+					$counts['removed']++;
+				}
+			}
+			return $entries;
+		}, true);
+		return $counts;
+	}
+
+	private static function inScope(string $path): bool {
+		foreach (self::SCOPE as $kind) {
+			if (str_starts_with($path, "$kind/")) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * Every file under a folder of the root, by its path from the root.
+	 *
+	 * @return array<string, File>
+	 */
+	private function filesUnder(Folder $root, string $path, int $depth = 0): array {
+		$folder = Folders::folderAt($root, $path);
+		$files = [];
+		foreach ($folder?->getDirectoryListing() ?? [] as $node) {
+			$name = $node->getName();
+			if ($name === '' || $name[0] === '.') {
+				continue;
+			}
+			if ($node instanceof File) {
+				$files["$path/$name"] = $node;
+			} elseif ($node instanceof Folder && $depth < self::MAX_DEPTH) {
+				$files += $this->filesUnder($root, "$path/$name", $depth + 1);
+			}
+		}
+		return $files;
+	}
+
+	/**
+	 * Read the manifest, change it, and write it back if anything changed,
+	 * holding the lock throughout.
+	 *
+	 * @param callable(array<string, string>, ?File): array<string, string> $change
+	 * @param bool $strict whether a manifest that cannot be read is an error
+	 *                     for the caller, rather than a warning in the log
+	 */
+	private function update(Folder $root, callable $change, bool $strict = false): void {
+		$lock = 'arcade/cloudsync/' . $root->getId();
+		$locked = $this->lock($lock);
+		try {
+			$file = $this->manifestOf($root);
+			$entries = self::parse($file?->getContent() ?? '');
+			if ($entries === null) {
+				if ($strict) {
+					throw new \RuntimeException('The Cloud Sync manifest cannot be read');
+				}
+				// Not something RetroArch can read either, but written by
+				// somebody, and not this app's to throw away.
+				$this->logger->warning('The Cloud Sync manifest cannot be read, so it is left alone', [
+					'path' => $file?->getPath(),
+				]);
+				return;
+			}
+			$changed = $change($entries, $file);
+			// Written only when it says something new: every write is a new
+			// version of the file, and a battery save synced once a minute
+			// would otherwise make one a minute of a list that never changed.
+			if ($changed === $entries) {
+				return;
+			}
+			$content = self::render($changed);
 			if ($file === null) {
 				$root->newFile(self::FILE, $content);
 			} else {

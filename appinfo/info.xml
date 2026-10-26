@@ -63,6 +63,7 @@ NextCloud Arcade runs RetroArch libretro cores in the browser. Seventeen systems
 		<command>OCA\Arcade\Command\Uninstall</command>
 		<command>OCA\Arcade\Command\Bios</command>
 		<command>OCA\Arcade\Command\Status</command>
+		<command>OCA\Arcade\Command\CloudSync</command>
 	</commands>
 	<settings>
 		<admin>OCA\Arcade\Settings\Admin</admin>

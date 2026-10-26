@@ -87,12 +87,38 @@ class StateController extends ArcadeController {
 		if ($state === null) {
 			return new JSONResponse([], Http::STATUS_BAD_REQUEST);
 		}
-		$this->stateService->save($this->userId, $file, $slot, $state);
+		$mtime = $this->stateService->save($this->userId, $file, $slot, $state);
 		// Only here: a state saved by hand is worth a stream entry, the
 		// autosaves and the thumbnail and SRAM writes are not. The
 		// publisher additionally keeps the auto slot out.
 		$this->activityPublisher->stateSaved($this->userId, $file, $slot);
-		return new JSONResponse(['size' => strlen($state)]);
+		return new JSONResponse(['size' => strlen($state), 'mtime' => $mtime]);
+	}
+
+	/**
+	 * Bring the user's Cloud Sync manifest in line with their saves folder,
+	 * for the button in the personal settings: saves that got there some
+	 * other way than through the player are recorded, so RetroArch fetches
+	 * them, and the ones that are gone recorded as deleted.
+	 */
+	// A button pressed by hand, and with $full a walk that hashes every
+	// save the user has: a few a minute is plenty.
+	#[NoAdminRequired]
+	#[UserRateLimit(limit: 6, period: 60)]
+	#[FrontpageRoute(verb: 'POST', url: '/arcade/cloudsync')]
+	public function reconcile(bool $full = false): JSONResponse {
+		if ($this->userId === null) {
+			return new JSONResponse([], Http::STATUS_UNAUTHORIZED);
+		}
+		try {
+			$counts = $this->stateService->reconcile($this->userId, $full);
+		} catch (\RuntimeException) {
+			return new JSONResponse(['error' => 'unreadable'], Http::STATUS_CONFLICT);
+		}
+		if ($counts === null) {
+			return new JSONResponse(['error' => 'no-saves-folder'], Http::STATUS_NOT_FOUND);
+		}
+		return new JSONResponse($counts);
 	}
 
 	// Thumbnails load through plain <img> tags, which cannot send the CSRF
@@ -226,7 +252,7 @@ class StateController extends ArcadeController {
 	 * @psalm-assert-if-true string $this->userId
 	 */
 	private function isPlausibleRequest(string $file, int $slot): bool {
-		return $this->userId !== null
+		$plausible = $this->userId !== null
 			&& $file !== ''
 			// Saves live in the files of the user, so there has to be a
 			// folder to put them in.
@@ -234,6 +260,14 @@ class StateController extends ArcadeController {
 			// The automatic slot, or one RetroArch could have saved into.
 			&& $slot >= StateService::AUTO_SLOT
 			&& $slot <= StateService::HIGHEST_SLOT;
+		if ($plausible) {
+			// Every route of a save takes the core the player ran the game
+			// on, which decides the folder its files are under. Said here,
+			// once, rather than by each of them; an unknown one is ignored.
+			$core = $this->request->getParam('core', '');
+			$this->stateService->useCore($this->userId, $file, is_string($core) ? $core : '');
+		}
+		return $plausible;
 	}
 
 	/**
