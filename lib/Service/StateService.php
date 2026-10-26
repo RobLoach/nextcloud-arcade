@@ -41,7 +41,11 @@ use Psr\Log\LoggerInterface;
  * its game or its user.
  */
 class StateService {
-	/** The numbered slots the player offers to save into: 1 to this. */
+	/**
+	 * How many numbered slots the player offers to save into: 0 and on, as
+	 * RetroArch numbers them -- slot 0 is its default, Game.state, and the
+	 * one its quick save writes.
+	 */
 	public const SLOTS = 3;
 	/** The slot the player writes by itself: RetroArch's .state.auto. */
 	public const AUTO_SLOT = -1;

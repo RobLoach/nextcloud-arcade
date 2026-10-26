@@ -46,7 +46,8 @@ Saves/states/Snes9x/Mario.state1.png
 Saves/states/Snes9x/Mario.state.auto
 ```
 
-with slots 1 to 3 as `.state1` to `.state3`, and the automatic one as
+with slots 0 to 2 as `.state`, `.state1` and `.state2`, numbered as
+RetroArch numbers them, and the automatic one as
 `.state.auto`. They sync to your devices like anything else. Without a
 saves folder, a game cannot be saved at all, and the player says so.
 
@@ -104,8 +105,8 @@ been touched since the manifest was written, is taken at its word;
 Keep RetroArch's "Sort Saves into Folders by Core Name" and "Sort Save
 States into Folders by Core Name" on, as they are by default; saves it
 already filed without them, straight in `saves/` or `states/`, are read
-and written where they are. Arcade offers slots 1 to 3 and the automatic
-slot, and lists any other slot RetroArch saved into — slot 0, or 990 — to
+and written where they are. Arcade offers slots 0 to 2 and the automatic
+slot, and lists any other slot RetroArch saved into — slot 5, or 990 — to
 be loaded or deleted.
 
 A save state belongs to the core that made it, at the version that made

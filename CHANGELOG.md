@@ -65,7 +65,9 @@ All notable changes to NextCloud Arcade. The format follows
 - Saves are no longer read from the old `Saves/<System>/<Game>/` layout,
   nor from the app data of versions before saves folders: save states
   and battery saves start afresh under the new one. The automatic slot is
-  RetroArch's `.state.auto`, and slots 1 to 3 its `.state1` to `.state3`.
+  RetroArch's `.state.auto`, and slots 0 to 2 its `.state` to `.state2`,
+  numbered from 0 as RetroArch numbers them; the save and load hotkeys
+  use slot 0, as RetroArch's quick save does.
 - Which picture a system is shown with is now set once for the instance,
   in the administration settings, where it sat alongside a personal copy
   of the same choice. A value an earlier version stored for a user is no

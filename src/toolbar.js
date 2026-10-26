@@ -600,8 +600,10 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 		pause: () => pauseButton.click(),
 		fastForward: () => fastForwardButton.click(),
 		fullscreen: () => fullscreenButton.click(),
-		saveState: () => (statesPanel === null ? sayWhySavingIsOff() : statesPanel.save(1)),
-		loadState: () => (statesPanel === null ? sayWhySavingIsOff() : statesPanel.load(1)),
+		// Slot 0, as RetroArch's own quick save and load: its default slot,
+		// Game.state.
+		saveState: () => (statesPanel === null ? sayWhySavingIsOff() : statesPanel.save(0)),
+		loadState: () => (statesPanel === null ? sayWhySavingIsOff() : statesPanel.load(0)),
 		// Straight to the handler, not through a button: on the app page
 		// there is no button any more, only the actions entry.
 		screenshot: takeScreenshot,

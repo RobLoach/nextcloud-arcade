@@ -16,7 +16,7 @@ This file is generated from multiple sources. Included packages:
 	- version: 3.2.0
 	- license: GPL-3.0-or-later
 - @robloach/nextcloud-arcade
-	- version: 0.48.11
+	- version: 0.48.12
 	- license: AGPL-3.0-or-later
 - dompurify
 	- version: 3.4.15

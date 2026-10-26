@@ -107,8 +107,8 @@ button of the controller is left to the game.
 | Fast-forward | T |
 | Rewind (hold) | Backspace |
 | Fullscreen | F |
-| Save to slot 1 | F2 |
-| Load slot 1 | F4 |
+| Save to slot 0 | F2 |
+| Load slot 0 | F4 |
 | Screenshot | P |
 | Close the game | Escape |
 
@@ -147,7 +147,8 @@ and can be dismissed.
 
 ### Save states
 
-The save state menu has three slots per game, each with a screenshot
+The save state menu has three slots per game, numbered 0 to 2 as
+RetroArch numbers them, each with a screenshot
 thumbnail; a filled slot is labeled with its date alone, since the
 screenshot already says which game it is. Saving or loading a slot closes
 the menu and returns to the game. Slots RetroArch saved into beyond

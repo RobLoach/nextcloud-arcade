@@ -920,4 +920,11 @@ class StateServiceTest extends TestCase {
 		$service->save(self::USER, self::GAME, 1, 'state');
 		$this->assertSame('state', $this->files[self::STATES . '/Mario.state1']);
 	}
+
+	public function testSlotZeroIsRetroArchsDefaultState(): void {
+		$service = $this->service();
+		$service->save(self::USER, self::GAME, 0, 'quick save');
+		$this->assertSame('quick save', $this->files[self::STATES . '/Mario.state']);
+		$this->assertSame([0], array_column($service->list(self::USER, self::GAME), 'slot'));
+	}
 }

@@ -290,6 +290,6 @@ class StateController extends ArcadeController {
 	 */
 	private function isWritableSlot(string $file, int $slot): bool {
 		return $this->isValidRequest($file, $slot)
-			&& ($slot === StateService::AUTO_SLOT || ($slot >= 1 && $slot <= StateService::SLOTS));
+			&& ($slot === StateService::AUTO_SLOT || ($slot >= 0 && $slot < StateService::SLOTS));
 	}
 }

@@ -75,9 +75,11 @@ describe('the save states panel', () => {
 
 		const labels = [...panel.element.querySelectorAll('.arcade-states-label')]
 			.map((node) => node.textContent)
-		// Three slots and the battery save beneath them.
+		// Three slots, numbered from 0 as RetroArch numbers them, and the
+		// battery save beneath them.
 		expect(labels.length).toBe(4)
-		expect(labels[0]).toContain('Slot 1')
+		expect(labels[0]).toContain('Slot 0')
+		expect(labels[2]).toContain('Slot 2')
 	})
 
 	test('holds every slot while one is being written, not just its own', async () => {
@@ -198,7 +200,7 @@ describe('the save states panel', () => {
 		api.mockResolvedValue({
 			json: async () => ({
 				slots: 3,
-				states: [{ slot: 0, mtime: 1, size: 5 }, { slot: 990, mtime: 1, size: 5 }],
+				states: [{ slot: 5, mtime: 1, size: 5 }, { slot: 990, mtime: 1, size: 5 }],
 				hasSram: false,
 			}),
 		})
@@ -207,8 +209,8 @@ describe('the save states panel', () => {
 
 		const labels = [...panel.element.querySelectorAll('.arcade-states-label')]
 			.map((node) => node.textContent)
-		expect(labels[0]).toContain('Slot 1')
-		expect(labels[3]).toContain('Slot 0')
+		expect(labels[0]).toContain('Slot 0')
+		expect(labels[3]).toContain('Slot 5')
 		expect(labels[4]).toContain('Slot 990')
 	})
 

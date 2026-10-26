@@ -357,14 +357,15 @@ export function createStatesPanel({ instance, romPath, flash, onDone, cache = nu
 		const listed = Array.isArray(data?.states) ? data.states : []
 		const slotCount = Number.isFinite(Number(data?.slots)) ? Number(data.slots) : 0
 		const bySlot = new Map(listed.map((state) => [state.slot, state]))
-		const offered = (slot) => slot >= 1 && slot <= slotCount
+		// Numbered from 0, as RetroArch numbers them.
+		const offered = (slot) => slot >= 0 && slot < slotCount
 		// The slots offered, plus any other RetroArch saved into, so those
 		// saves are reachable here too.
 		const slots = []
 		if (bySlot.has(AUTO_SLOT)) {
 			slots.push(AUTO_SLOT)
 		}
-		for (let slot = 1; slot <= slotCount; slot++) {
+		for (let slot = 0; slot < slotCount; slot++) {
 			slots.push(slot)
 		}
 		for (const state of listed) {
