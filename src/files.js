@@ -11,8 +11,10 @@ import { romMimes } from './systems.js'
  * its system, what the cartridge calls itself, what it has been played
  * for, the saves waiting in its slots -- and a button that plays it.
  *
- * Registered through the plain-DOM callbacks of OCA.Files.Sidebar, so no
- * Vue is carried onto the Files page for a definition list.
+ * Registered two ways, as Nextcloud has two sidebars: through the plain-DOM
+ * callbacks of OCA.Files.Sidebar up to Nextcloud 34, and as a web component
+ * from Nextcloud 35 on, which replaced that sidebar. Either way no Vue is
+ * carried onto the Files page for a definition list.
  */
 
 const TAB_ID = 'arcade'
@@ -127,32 +129,32 @@ function render(game, file, mime, fileId) {
 	return container
 }
 
-/** Where the tab renders, and which request is still the current one. */
-let mountPoint = null
-let generation = 0
+// Which request each tab is waiting on: a tab switched to another file
+// before the answer came drops the answer that is no longer its own.
+const generations = new WeakMap()
 
 /**
- * Fetches what the app knows and fills the tab with it.
+ * Fetches what the app knows about a game and fills a tab with it.
  *
- * @param {object} fileInfo what the sidebar was opened on
+ * @param {HTMLElement} mountPoint the element of the tab
+ * @param {{path: string, mime: string, id: number|string}} target the game
  */
-async function show(fileInfo) {
-	if (mountPoint === null) {
-		return
-	}
-	const mine = ++generation
-	const file = pathOf(fileInfo)
+async function show(mountPoint, target) {
+	const mine = (generations.get(mountPoint) ?? 0) + 1
+	generations.set(mountPoint, mine)
+	const current = () => generations.get(mountPoint) === mine && mountPoint.isConnected !== false
+	const file = target.path
 	mountPoint.textContent = ''
 	try {
 		const response = await api(generateUrl('/apps/arcade/arcade/game?f={f}', { f: encodePath(file) }))
 		const game = await response.json()
-		if (mine !== generation || mountPoint === null) {
+		if (!current()) {
 			return
 		}
 		mountPoint.textContent = ''
-		mountPoint.appendChild(render(game, file, fileInfo?.mimetype ?? '', fileInfo?.id ?? 0))
+		mountPoint.appendChild(render(game, file, target.mime, target.id))
 	} catch (error) {
-		if (mine !== generation || mountPoint === null) {
+		if (!current()) {
 			return
 		}
 		mountPoint.textContent = ''
@@ -176,19 +178,31 @@ async function show(fileInfo) {
 		const retry = document.createElement('button')
 		retry.type = 'button'
 		retry.textContent = t('arcade', 'Try again')
-		retry.addEventListener('click', () => show(fileInfo))
+		retry.addEventListener('click', () => show(mountPoint, target))
 		mountPoint.append(message, retry)
 	}
 }
 
 /**
+ * @param {object} fileInfo what the old sidebar was opened on
+ * @return {{path: string, mime: string, id: number|string}} the game
+ */
+function fromFileInfo(fileInfo) {
+	return { path: pathOf(fileInfo), mime: fileInfo?.mimetype ?? '', id: fileInfo?.id ?? 0 }
+}
+
+/**
+ * The sidebar of Nextcloud 34 and before, which calls a tab back with an
+ * element to fill.
+ *
  * @return {boolean} whether the tab was registered
  */
-function register() {
+function registerLegacy() {
 	const Sidebar = window.OCA?.Files?.Sidebar
 	if (Sidebar?.registerTab === undefined || Sidebar?.Tab === undefined) {
 		return false
 	}
+	let mountPoint = null
 	Sidebar.registerTab(new Sidebar.Tab({
 		id: TAB_ID,
 		name: t('arcade', 'Arcade'),
@@ -200,16 +214,18 @@ function register() {
 
 		async mount(el, fileInfo) {
 			mountPoint = el
-			await show(fileInfo)
+			await show(el, fromFileInfo(fileInfo))
 		},
 
 		async update(fileInfo) {
-			await show(fileInfo)
+			if (mountPoint !== null) {
+				await show(mountPoint, fromFileInfo(fileInfo))
+			}
 		},
 
 		destroy() {
-			generation++
 			if (mountPoint !== null) {
+				generations.delete(mountPoint)
 				mountPoint.textContent = ''
 				mountPoint = null
 			}
@@ -218,6 +234,95 @@ function register() {
 	return true
 }
 
-if (!register()) {
-	document.addEventListener('DOMContentLoaded', register)
+// The web component the sidebar of Nextcloud 35 renders the tab as, given
+// the file it is open on as its node.
+const TAG_NAME = 'arcade-files-sidebar-tab'
+
+/**
+ * The tab as Nextcloud 35 renders it: an element it hands the node of the
+ * file to, and tells when the tab is the one showing.
+ */
+class ArcadeSidebarTab extends HTMLElement {
+	constructor() {
+		super()
+		this._node = null
+		this._shown = null
+	}
+
+	connectedCallback() {
+		// Set on the element before it was defined, a property hides the
+		// setter below; taken back so it goes through it.
+		for (const name of ['node', 'active']) {
+			if (Object.prototype.hasOwnProperty.call(this, name)) {
+				const value = this[name]
+				delete this[name]
+				this[name] = value
+			}
+		}
+		this.refresh()
+	}
+
+	get node() {
+		return this._node
+	}
+
+	set node(node) {
+		this._node = node ?? null
+		this.refresh()
+	}
+
+	get active() {
+		return this._active === true
+	}
+
+	set active(active) {
+		this._active = active === true
+		this.refresh()
+	}
+
+	refresh() {
+		const node = this._node
+		if (!this.isConnected || node === null) {
+			return
+		}
+		// Asked once per file, not every time the sidebar sets a property.
+		if (this._shown === node.source) {
+			return
+		}
+		this._shown = node.source
+		show(this, { path: node.path, mime: node.mime ?? '', id: node.fileid ?? node.id ?? 0 })
+	}
+}
+
+/**
+ * The sidebar of Nextcloud 35 on, which renders a tab as a web component
+ * and keeps the tabs in the global scope of @nextcloud/files 4 -- written
+ * to directly here, as the library would, rather than carrying a second
+ * major version of it onto every Files page for one map.
+ */
+function registerWebComponent() {
+	if (!customElements.get(TAG_NAME)) {
+		customElements.define(TAG_NAME, ArcadeSidebarTab)
+	}
+	window._nc_files_scope ??= {}
+	window._nc_files_scope.v4_0 ??= {}
+	const scope = window._nc_files_scope.v4_0
+	scope.filesSidebarTabs ??= new Map()
+	scope.filesSidebarTabs.set(TAB_ID, {
+		id: TAB_ID,
+		displayName: t('arcade', 'Arcade'),
+		iconSvgInline: icon(ICONS.gamepad),
+		// After the Files app's own tabs.
+		order: 90,
+		tagName: TAG_NAME,
+		enabled: ({ node }) => romMimes().includes(node?.mime ?? ''),
+		onInit: async () => {},
+	})
+}
+
+// Both, where both may be: the old sidebar is only there to be found once
+// the page has loaded, and the new one reads its tabs when it renders.
+registerWebComponent()
+if (!registerLegacy()) {
+	document.addEventListener('DOMContentLoaded', registerLegacy)
 }

@@ -1,4 +1,5 @@
 import { getCurrentUser } from '@nextcloud/auth'
+import { defaultRootPath } from '@nextcloud/files/dav'
 import { translate as t } from '@nextcloud/l10n'
 import { generateUrl } from '@nextcloud/router'
 import { AUTO_SLOT, dav } from './api.js'
@@ -497,10 +498,7 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 		// the same way closing it does, and like closing it, what the game
 		// is worth keeping is the player's to have saved.
 		const openFilesDetails = async () => {
-			const missing = window.OCA === undefined
-				? 'OCA'
-				: window.OCA.Files === undefined ? 'OCA.Files' : 'OCA.Files.Sidebar'
-			console.warn(`arcade: cannot open the Files sidebar, window.${missing} is undefined; opening the Files app instead`)
+			console.warn('arcade: this page carries no Files sidebar; opening the Files app instead')
 			const absolute = romPath.startsWith('/') ? romPath : `/${romPath}`
 			const dir = absolute.replace(/\/[^/]*$/, '') || '/'
 			let target
@@ -516,17 +514,21 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 		// The full Files sidebar. Whether the page carries it is only known
 		// for sure when it is asked for, so the item always shows and the
 		// click looks for it.
-		const sidebarItem = item(ICONS.sidebar, t('arcade', 'Open sidebar'), () => {
-			if (window.OCA?.Files?.Sidebar === undefined) {
+		const sidebarItem = item(ICONS.sidebar, t('arcade', 'Open sidebar'), async () => {
+			const absolute = romPath.startsWith('/') ? romPath : `/${romPath}`
+			try {
+				if (!await openFilesSidebar(absolute)) {
+					openFilesDetails()
+				}
+			} catch (error) {
+				console.error('arcade: could not open the Files sidebar', error)
 				openFilesDetails()
-				return
 			}
-			window.OCA.Files.Sidebar.open(romPath.startsWith('/') ? romPath : `/${romPath}`)
 		})
 		// What the item does depends on the page, so its face follows suit
 		// each time the menu opens.
 		refreshSidebarItem = () => {
-			const available = window.OCA?.Files?.Sidebar !== undefined
+			const available = filesSidebar() !== null
 			sidebarItem.innerHTML = icon(available ? ICONS.sidebar : ICONS.information)
 			sidebarItem.appendChild(document.createTextNode(
 				available ? t('arcade', 'Open sidebar') : t('arcade', 'Details'),
@@ -783,6 +785,55 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 		container.querySelector('.arcade-resume')?.remove()
 		topbar?.remove()
 		toolbar.remove()
+	}
+}
+
+/**
+ * Which Files sidebar the page carries, if any. Asked from the actions
+ * menu, which only the app page has: inside the Files app the Viewer
+ * brings a sidebar button of its own.
+ *
+ * Nextcloud 35 replaced the sidebar there was: OCA.Files.Sidebar is still
+ * there, but holds only the new one's state, and its open() -- which took
+ * a path -- is gone. The new one is reached through OCA.Files._sidebar(),
+ * which @nextcloud/files 4 wraps, and opens on a file node instead.
+ *
+ * @return {?string} 'legacy' for Nextcloud 34 and before, 'node' for the
+ *   new one, or null when the page carries none
+ */
+function filesSidebar() {
+	const files = window.OCA?.Files
+	if (typeof files?.Sidebar?.open === 'function') {
+		return 'legacy'
+	}
+	if (typeof files?._sidebar === 'function' && files._sidebar()) {
+		return 'node'
+	}
+	return null
+}
+
+/**
+ * Open the Files sidebar on a game.
+ *
+ * @param {string} path the path of the game, from the root of the user's files
+ * @return {Promise<boolean>} whether there was a sidebar to open
+ */
+async function openFilesSidebar(path) {
+	switch (filesSidebar()) {
+	case 'legacy':
+		window.OCA.Files.Sidebar.open(path)
+		return true
+	case 'node': {
+		// Rendered by this page, the sidebar shows whatever node it is
+		// handed and fetches nothing, so it is handed a whole one -- its
+		// permissions and attributes are what the other tabs go by.
+		const { getClient, getDefaultPropfind, resultToNode } = await import('@nextcloud/files/dav')
+		const stat = await getClient().stat(`${defaultRootPath}${path}`, { details: true, data: getDefaultPropfind() })
+		window.OCA.Files._sidebar().open(resultToNode(stat.data), 'arcade')
+		return true
+	}
+	default:
+		return false
 	}
 }
 

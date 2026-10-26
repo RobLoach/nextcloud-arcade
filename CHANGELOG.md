@@ -100,6 +100,10 @@ All notable changes to NextCloud Arcade. The format follows
   what each limit is currently set to.
 
 ### Fixed
+- Nextcloud 35 replaced the Files sidebar, and with it the two ways the
+  app used it: "Open sidebar" in the player failed with "Sidebar.open is
+  not a function", and the Arcade tab of the sidebar never appeared. Both
+  now use the new sidebar, and still the old one on Nextcloud 34.
 - The saves of a zipped game are named after the game inside the zip, as
   RetroArch names them, so the two find each other's saves. They were
   named after the zip, and RetroArch's were never found.

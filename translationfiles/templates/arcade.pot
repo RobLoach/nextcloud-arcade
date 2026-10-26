@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Nextcloud 3.14159\n"
 "Report-Msgid-Bugs-To: translations\\@example.com\n"
-"POT-Creation-Date: 2026-10-26 01:49-0400\n"
+"POT-Creation-Date: 2026-10-26 02:06-0400\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -50,7 +50,8 @@ msgstr ""
 #: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/lib/Settings/AdminSection.php:24
 #: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/lib/Settings/PersonalSection.php:24
 #: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/specialAppInfoFakeDummyForL10nScript.php:2
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:194
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:208
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:313
 msgid "Arcade"
 msgstr ""
 
@@ -199,83 +200,83 @@ msgstr ""
 msgid "Play with Arcade"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:39
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:41
 #: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:473
 msgid "Played %n time"
 msgid_plural "Played %n times"
 msgstr[0] ""
 msgstr[1] ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:49
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:51
 msgid "Autosave"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:49
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:51
 msgid "Slot {slot}"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:83
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:85
 msgid "Play"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:89
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:91
 #: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:413
 #: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:627
 msgid "System"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:90
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:92
 msgid "Title"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:91
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:93
 msgid "Region"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:92
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:94
 msgid "Mapper"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:93
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:95
 msgid "Checksum"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:94
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:96
 msgid "CRC32"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:95
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:97
 #: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/library.js:416
 msgid "Played"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:101
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:103
 #: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:89
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:210
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:262
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:211
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:263
 msgid "Save states"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:118
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:120
 #: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:415
 msgid "made from another copy of this game"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:119
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:121
 #: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:416
 msgid ""
 "The ROM has changed since this state was saved, so loading it may go wrong."
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:168
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:170
 msgid "Nothing is known about this game yet"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:175
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:177
 msgid "Could not ask the server about this game."
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:178
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:180
 msgid "Try again"
 msgstr ""
 
@@ -521,7 +522,7 @@ msgid "Could not start the emulator: {error}"
 msgstr ""
 
 #: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/gallery.js:21
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:400
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:401
 msgid "Screenshots"
 msgstr ""
 
@@ -674,7 +675,7 @@ msgid "Really delete?"
 msgstr ""
 
 #: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:347
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:232
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:233
 msgid "Could not read the save states ({why})."
 msgstr ""
 
@@ -979,103 +980,103 @@ msgstr ""
 msgid "Could not remove the file"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:104
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:118
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:105
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:119
 msgid "Pause"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:118
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:119
 msgid "Resume"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:152
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:153
 msgid "Restarted"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:255
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:256
 msgid ""
 "Saving is off. Choose a Saves folder under Personal settings → Arcade to "
 "save games."
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:278
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:279
 msgid "Touch controls"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:296
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:306
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:297
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:307
 msgid "Mute"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:306
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:307
 msgid "Unmute"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:312
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:313
 msgid "Fast-forward"
-msgstr ""
-
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:330
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:493
-msgid "RetroArch menu"
 msgstr ""
 
 #: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:331
 #: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:494
+msgid "RetroArch menu"
+msgstr ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:332
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:495
 msgid "Restart"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:351
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:352
 msgid "The game did not hand over a picture"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:360
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:361
 msgid "Screenshot saved to {folder}"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:377
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:378
 msgid "Could not take a screenshot"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:388
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:492
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:389
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:493
 msgid "Screenshot"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:414
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:415
 msgid "Fullscreen"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:428
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:429
 msgid "Could not go fullscreen"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:491
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:492
 msgid "Full screen"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:519
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:532
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:517
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:534
 msgid "Open sidebar"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:532
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:534
 msgid "Details"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:538
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:540
 msgid "Settings"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:543
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:545
 msgid "Download"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:546
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:548
 msgid "Actions"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:584
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:586
 msgid "Close"
 msgstr ""
 
