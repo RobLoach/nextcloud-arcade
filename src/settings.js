@@ -434,9 +434,13 @@ function setUpMaintenance() {
 	if (section === null) {
 		return
 	}
+	// A task the page does not carry is left out rather than taken down
+	// with: a page and a script of two different versions -- the browser
+	// keeping one of them a while -- should lose a line, not the section.
+	const absent = document.createElement('button')
 	const task = (name) => section.querySelector(`[data-task="${name}"]`)
-	const stateOf = (name) => task(name).querySelector('.arcade-maintenance-state')
-	const buttonOf = (name) => task(name).querySelector('.arcade-maintenance-action')
+	const stateOf = (name) => task(name)?.querySelector('.arcade-maintenance-state') ?? document.createElement('p')
+	const buttonOf = (name) => task(name)?.querySelector('.arcade-maintenance-action') ?? absent
 	const say = (name, text) => {
 		stateOf(name).textContent = text
 	}
