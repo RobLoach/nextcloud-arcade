@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Nextcloud 3.14159\n"
 "Report-Msgid-Bugs-To: translations\\@example.com\n"
-"POT-Creation-Date: 2026-10-25 20:50-0400\n"
+"POT-Creation-Date: 2026-10-25 21:35-0400\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -508,7 +508,7 @@ msgid "Only the first {count} games of the folder are listed."
 msgstr ""
 
 #: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/main.js:39
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/player.js:240
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/player.js:254
 #: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/viewer.js:93
 msgid "Unsupported ROM type: {file}"
 msgstr ""
@@ -701,11 +701,11 @@ msgstr ""
 msgid "Delete slot {slot}"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/player.js:190
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/player.js:204
 msgid "No supported ROM found in the archive"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/player.js:253
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/player.js:267
 msgid "No BIOS files found for {system}. Games may run worse without them."
 msgstr ""
 
@@ -734,7 +734,7 @@ msgid "Saving …"
 msgstr ""
 
 #: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:118
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:510
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:479
 msgid "Saved"
 msgstr ""
 
@@ -788,78 +788,47 @@ msgstr ""
 msgid "Could not start looking. A thumbnails folder has to be set first."
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:396
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:130
-msgid "Checking …"
-msgstr ""
-
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:403
-msgid "Everything was already recorded."
-msgstr ""
-
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:405
-msgid "Recorded %n save."
-msgid_plural "Recorded %n saves."
-msgstr[0] ""
-msgstr[1] ""
-
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:406
-msgid "Recorded %n save as deleted."
-msgid_plural "Recorded %n saves as deleted."
-msgstr[0] ""
-msgstr[1] ""
-
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:411
-msgid ""
-"The manifest.server in the saves folder cannot be read, so it was left as it "
-"is."
-msgstr ""
-
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:412
-msgid "Could not record the saves."
-msgstr ""
-
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:429
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:398
 msgid "{message}, still going"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:470
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:439
 msgid "Missing"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:472
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:441
 msgid "Present ({size}, instance store, managed with occ arcade:bios)"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:475
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:444
 msgid "Present ({size})"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:496
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:465
 msgid "That file is too big to be a BIOS"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:500
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:469
 msgid "Uploading …"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:513
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:482
 msgid "Could not upload the file"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:528
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:497
 msgid "Removing …"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:533
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:502
 msgid "Removed"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:538
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:507
 msgid "This file comes from the instance store; manage it with occ arcade:bios"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:541
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:510
 msgid "Could not remove the file"
 msgstr ""
 
@@ -1007,6 +976,7 @@ msgid "Folders deep at most"
 msgstr ""
 
 #: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:91
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/settings.php:219
 msgid "RetroArch Cloud Sync"
 msgstr ""
 
@@ -1030,6 +1000,7 @@ msgid ""
 msgstr ""
 
 #: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:97
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/settings.php:227
 msgid ""
 "In RetroArch, open Settings → Saving → Cloud Sync, turn on Cloud Sync, and "
 "choose the webdav backend."
@@ -1038,7 +1009,8 @@ msgstr ""
 #: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:99
 msgid ""
 "Set the Cloud Storage URL to the Saves folder over WebDAV, with the trailing "
-"slash. Each player finds their own in their personal settings:"
+"slash. Each player finds their own in the RetroArch Cloud Sync section of "
+"their personal settings:"
 msgstr ""
 
 #: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:100
@@ -1075,6 +1047,10 @@ msgid ""
 "hardware. Copy these files from a console you own; they go into your System "
 "folder. Files added instance-wide with occ arcade:bios are offered to every "
 "player as a fallback."
+msgstr ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:130
+msgid "Checking …"
 msgstr ""
 
 #: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:132
@@ -1266,9 +1242,8 @@ msgstr ""
 #: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/settings.php:184
 msgid ""
 "Save states and battery saves are stored here, in a saves and a states "
-"folder laid out the way RetroArch keeps its own, so RetroArch can share them "
-"through Cloud Sync. Without a folder, a game cannot be saved at all and the "
-"player says so."
+"folder laid out the way RetroArch keeps its own. Without a folder, a game "
+"cannot be saved at all and the player says so."
 msgstr ""
 
 #: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/settings.php:187
@@ -1291,24 +1266,26 @@ msgstr ""
 msgid "Look for missing box art"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/settings.php:210
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/settings.php:220
 msgid ""
-"To play with the same saves in RetroArch, open Settings → Saving → Cloud "
-"Sync there, choose the webdav backend, and give it this address, your user "
-"name and an app password:"
+"RetroArch on a computer, a phone or a handheld can sync with your Saves "
+"folder, so a game saved there carries on here, and the other way around."
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/settings.php:216
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/settings.php:223
+msgid "Set a Saves folder above first."
+msgstr ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/settings.php:226
+msgid "In the Security settings, create an app password for RetroArch."
+msgstr ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/settings.php:229
+msgid "Set the Cloud Storage URL to:"
+msgstr ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/settings.php:232
 msgid ""
-"Saves copied into the folder some other way, such as with the desktop "
-"client, reach RetroArch once they are recorded. That happens by itself once "
-"a week, or now:"
-msgstr ""
-
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/settings.php:217
-msgid "Record saves for RetroArch"
-msgstr ""
-
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/settings.php:219
-msgid "Check every file, not only the new ones"
+"Enter your user name and the app password, keep Sync Saves on, then restart "
+"RetroArch."
 msgstr ""

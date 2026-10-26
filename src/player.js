@@ -18,6 +18,20 @@ const SRAM_SYNC_INTERVAL = 60 * 1000
 // takes a moment; a wedged one must not keep the player here.
 const SRAM_FINAL_WAIT = 5000
 
+// How long the battery save is given to appear once RetroArch is told to
+// write it, and how often to look. A game that has one writes it within a
+// few frames. Nostalgist's own saveSRAM() waits a minute for the file,
+// and a game without a battery save never writes one: every sync then
+// held the core for that minute, and a save state asked for meanwhile
+// gave up waiting behind it.
+const SRAM_APPEAR_WAIT = 2000
+const SRAM_POLL = 100
+
+// How many looks in a row that find no battery save it takes to decide the
+// game has none. More than one, in case a look came while the core could
+// not answer -- a game with a battery save writes one every time.
+const SRAM_MISSES_TO_STOP = 2
+
 // The most a request may carry and still be allowed to outlive its page.
 // The Fetch standard caps a keepalive body at 64 KiB and fails anything
 // larger outright, so asking for it unconditionally was not a nicety that
@@ -527,6 +541,54 @@ async function fetchSram(romPath, signal = null) {
 }
 
 /**
+ * Read the battery save out of the core, or null when it writes none --
+ * which a game without one never does.
+ *
+ * Done here rather than through Nostalgist's saveSRAM(), which waits a
+ * minute for a file that may never come. It reaches into Nostalgist's
+ * emulator for the path it reads from, which the pinned version keeps;
+ * should that ever give way, saveSRAM() is still there to fall back on.
+ *
+ * @param {import('nostalgist').Nostalgist} instance the running emulator,
+ *                                                   from the core queue
+ * @return {Promise<?Blob>} the battery save, or null
+ */
+async function readSram(instance) {
+	let FS
+	let path
+	let module
+	try {
+		FS = instance.getEmscriptenFS()
+		path = instance.getEmulator().sramFilePath
+		module = instance.getEmscriptenModule()
+	} catch {
+		return await instance.saveSRAM()
+	}
+	try {
+		FS.unlink(path)
+	} catch {
+		// Not written yet, which is what is wanted.
+	}
+	module._cmd_savefiles?.()
+	let lastSize = -1
+	for (let waited = 0; waited < SRAM_APPEAR_WAIT; waited += SRAM_POLL) {
+		await new Promise((resolve) => setTimeout(resolve, SRAM_POLL))
+		let size = -1
+		try {
+			size = FS.stat(path).size
+		} catch {
+			// Not there yet.
+		}
+		// Written in full once two looks in a row find it the same size.
+		if (size > 0 && size === lastSize) {
+			return new Blob([FS.readFile(path)], { type: 'application/octet-stream' })
+		}
+		lastSize = size
+	}
+	return null
+}
+
+/**
  * Periodically upload the in-game battery save, and once more when the
  * page is hidden, so in-game saves survive closing the tab.
  *
@@ -542,15 +604,22 @@ export function startSramSync(instance, romPath, canSave = true) {
 	// A fresh launch starts from what the server holds, so it syncs again
 	// even when the battery save was deleted in an earlier session.
 	sramSyncStopped.delete(romPath)
+	// Whether the game keeps a battery save at all: it does if the server
+	// had one for it, and otherwise until it is seen not to.
+	let misses = 0
 	const upload = async () => {
-		if (sramSyncStopped.has(romPath)) {
+		if (sramSyncStopped.has(romPath) || misses >= SRAM_MISSES_TO_STOP) {
 			return
 		}
 		try {
-			const sram = await instance.saveSRAM()
-			if (sram === undefined || sram.size === 0) {
+			const sram = await instance.exclusive(readSram)
+			if (sram === null || sram === undefined || sram.size === 0) {
+				if (!sramOnServer.has(romPath)) {
+					misses++
+				}
 				return
 			}
+			misses = 0
 			const bytes = new Uint8Array(await sram.arrayBuffer())
 			if (sameBytes(bytes, sramOnServer.get(romPath))) {
 				return

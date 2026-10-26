@@ -16,8 +16,8 @@ All notable changes to NextCloud Arcade. The format follows
   personal settings give each player their own address.
 - Any slot RetroArch saved into is listed in the player, and can be
   loaded and deleted there.
-- `occ arcade:cloudsync`, a button in the personal settings, and the
-  weekly background job record in the manifest the saves that got into
+- Opening a game (at most once an hour), the weekly background job, and
+  `occ arcade:cloudsync` record in the manifest the saves that got into
   the saves folder some other way — the desktop client, an upload in
   Files — so RetroArch fetches them, and the ones that are gone as
   deleted.
@@ -90,6 +90,11 @@ All notable changes to NextCloud Arcade. The format follows
   what each limit is currently set to.
 
 ### Fixed
+- A save state no longer fails with "The game did not hand over a save
+  state" in a game without a battery save. Reading the battery save waited
+  a minute for a file such a game never writes, once a minute, and a save
+  state asked for meanwhile gave up waiting behind it. It now looks for
+  two seconds, and stops looking once the game is seen to keep none.
 - What the emulator has to say for itself now reaches the player.
   RetroArch prints nothing unless told to, and it never was, so the
   messages meant to pass its errors on never had any to pass. It is now

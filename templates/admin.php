@@ -96,7 +96,7 @@ $webdavBase = $_['webdavBase'];
 			<li><?php p($l->t('In the personal security settings, create an app password for RetroArch.')); ?></li>
 			<li><?php p($l->t('In RetroArch, open Settings → Saving → Cloud Sync, turn on Cloud Sync, and choose the webdav backend.')); ?></li>
 			<li>
-				<?php p($l->t('Set the Cloud Storage URL to the Saves folder over WebDAV, with the trailing slash. Each player finds their own in their personal settings:')); ?>
+				<?php p($l->t('Set the Cloud Storage URL to the Saves folder over WebDAV, with the trailing slash. Each player finds their own in the RetroArch Cloud Sync section of their personal settings:')); ?>
 				<br><code><?php p($webdavBase . $l->t('USERNAME') . '/' . trim($defaults['saves_folder'] !== '' ? $defaults['saves_folder'] : $l->t('Saves'), '/') . '/'); ?></code>
 			</li>
 			<li><?php p($l->t('Enter the user name and the app password, keep Sync Saves on, then restart RetroArch.')); ?></li>

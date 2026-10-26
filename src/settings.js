@@ -1,4 +1,4 @@
-import { translate as t, translatePlural as n } from '@nextcloud/l10n'
+import { translate as t } from '@nextcloud/l10n'
 import { generateUrl } from '@nextcloud/router'
 import { UPLOAD_WAIT, api, deadline } from './api.js'
 import { formatSize } from './format.js'
@@ -384,37 +384,6 @@ async function fetchThumbnails() {
 }
 
 /**
- * Record in the Cloud Sync manifest the saves that reached the saves
- * folder some other way than through the player, so RetroArch fetches
- * them, and the ones that are gone as deleted.
- */
-async function recordForRetroArch() {
-	const button = document.getElementById('arcade-cloudsync-check')
-	const status = document.getElementById('arcade-cloudsync-status')
-	const full = document.getElementById('arcade-cloudsync-full')?.checked === true
-	button.disabled = true
-	status.textContent = t('arcade', 'Checking …')
-	try {
-		const url = generateUrl('/apps/arcade/arcade/cloudsync?full={full}', { full: full ? 1 : 0 })
-		// Checking every file reads every save there is, so it gets the
-		// time an upload would.
-		const counts = await (await api(url, { method: 'POST', signal: deadline(UPLOAD_WAIT) })).json()
-		status.textContent = counts.recorded === 0 && counts.removed === 0
-			? t('arcade', 'Everything was already recorded.')
-			: [
-				counts.recorded > 0 ? n('arcade', 'Recorded %n save.', 'Recorded %n saves.', counts.recorded) : '',
-				counts.removed > 0 ? n('arcade', 'Recorded %n save as deleted.', 'Recorded %n saves as deleted.', counts.removed) : '',
-			].filter(Boolean).join(' ')
-	} catch (error) {
-		console.error('Could not record the saves for RetroArch', error)
-		status.textContent = error?.status === 409
-			? t('arcade', 'The manifest.server in the saves folder cannot be read, so it was left as it is.')
-			: t('arcade', 'Could not record the saves.')
-	}
-	button.disabled = false
-}
-
-/**
  * Show what the background job last had to say for itself.
  */
 async function showFetchStatus() {
@@ -553,7 +522,6 @@ if (container !== null) {
 		}
 	})
 	document.getElementById('arcade-fetch-thumbnails')?.addEventListener('click', fetchThumbnails)
-	document.getElementById('arcade-cloudsync-check')?.addEventListener('click', recordForRetroArch)
 	container.querySelectorAll('.arcade-key-binding').forEach((element) => {
 		showBinding(element)
 		element.addEventListener('click', () => captureKey(element))

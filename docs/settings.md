@@ -80,20 +80,20 @@ play the same games with the same saves in RetroArch:
 3. In RetroArch, open Settings → Saving → Cloud Sync, turn on Cloud Sync,
    and choose the `webdav` backend.
 4. Set the Cloud Storage URL to the saves folder over WebDAV, with the
-   trailing slash — the personal settings show yours, under the saves
-   folder: `https://cloud.example.com/remote.php/dav/files/USERNAME/Saves/`
+   trailing slash — the RetroArch Cloud Sync section of the personal settings shows yours:
+   `https://cloud.example.com/remote.php/dav/files/USERNAME/Saves/`
 5. Enter your user name and the app password, keep Sync Saves on, and
    restart RetroArch.
 
 Saves copied into the folder some other way — the desktop client, an
 upload in Files — are only in the manifest once something records them,
-and RetroArch does not fetch them until then. Opening a game does, at most
-once an hour; the weekly background job does, for everybody; the personal settings have a button under the saves
-folder that does it now, and `occ arcade:cloudsync` does it from the
-command line. Saves that are gone from the folder are recorded as deleted,
-so RetroArch deletes its copy too. A file the manifest already has, and
-that has not been touched since the manifest was written, is taken at its
-word; checking every file, or `--full`, hashes them all.
+and RetroArch does not fetch them until then. That happens by itself:
+opening a game does, at most once an hour, and the weekly background job
+does for everybody. `occ arcade:cloudsync` does it from the command line.
+Saves that are gone from the folder are recorded as deleted, so RetroArch
+deletes its copy too. A file the manifest already has, and that has not
+been touched since the manifest was written, is taken at its word;
+`--full` hashes them all.
 
 Keep RetroArch's "Sort Saves into Folders by Core Name" and "Sort Save
 States into Folders by Core Name" on, as they are by default; saves it
