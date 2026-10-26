@@ -101,6 +101,10 @@ All notable changes to NextCloud Arcade. The format follows
   what each limit is currently set to.
 
 ### Fixed
+- An instance with no memory cache no longer rescans the games library on
+  every request: the scan is kept in files of the app data instead, until
+  a memory cache is configured. The administration overview says so as a
+  note rather than a warning.
 - A save that cannot reach the server says why: the status the server
   answered with, or that it did not answer. When the reason is a table
   of Arcade an upgrade left out, the player says the database needs

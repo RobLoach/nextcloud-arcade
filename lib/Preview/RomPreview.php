@@ -18,6 +18,7 @@ use OCP\Files\IRootFolder;
 use OCP\Files\NotFoundException;
 use OCP\FilesMetadata\IFilesMetadataManager;
 use OCP\ICache;
+use OCP\Files\AppData\IAppDataFactory;
 use OCP\ICacheFactory;
 use OCP\IImage;
 use OCP\Image;
@@ -47,6 +48,7 @@ class RomPreview implements IProviderV2 {
 		private IFilesMetadataManager $metadataManager,
 		private ICacheFactory $cacheFactory,
 		private LoggerInterface $logger,
+		private ?IAppDataFactory $appDataFactory = null,
 	) {
 	}
 
@@ -194,6 +196,6 @@ class RomPreview implements IProviderV2 {
 	 * between.
 	 */
 	private function cache(): ICache {
-		return $this->cache ??= Caches::create($this->cacheFactory, Application::CACHE_PREVIEW);
+		return $this->cache ??= Caches::create($this->cacheFactory, Application::CACHE_PREVIEW, $this->appDataFactory);
 	}
 }

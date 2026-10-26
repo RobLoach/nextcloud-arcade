@@ -10,6 +10,7 @@ use OCA\Arcade\Listener\MetadataListener;
 use OCA\Arcade\Search\SearchBinaryOperator;
 use OCA\Arcade\Search\SearchComparison;
 use OCA\Arcade\Search\SearchQuery;
+use OCP\Files\AppData\IAppDataFactory;
 use OCP\Files\Folder;
 use OCP\Files\NotFoundException;
 use OCP\Files\Search\ISearchBinaryOperator;
@@ -92,6 +93,7 @@ class LibraryService {
 		private ISystemTagManager $tagManager,
 		private ISystemTagObjectMapper $tagObjectMapper,
 		private LoggerInterface $logger,
+		private ?IAppDataFactory $appDataFactory = null,
 	) {
 	}
 
@@ -398,7 +400,7 @@ class LibraryService {
 	 * between.
 	 */
 	private function cache(): ICache {
-		return $this->cache ??= Caches::create($this->cacheFactory, Application::CACHE_LIBRARY);
+		return $this->cache ??= Caches::create($this->cacheFactory, Application::CACHE_LIBRARY, $this->appDataFactory);
 	}
 
 	private function folderEtag(string $userId, Folder $userFolder, string $path): string {

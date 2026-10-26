@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 namespace OCA\Arcade\BackgroundJob;
 
+use OCA\Arcade\AppInfo\Application;
+use OCA\Arcade\Service\AppDataCache;
 use OCA\Arcade\Service\CleanupService;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\BackgroundJob\IJob;
+use OCP\Files\AppData\IAppDataFactory;
 use OCP\BackgroundJob\TimedJob;
 use Psr\Log\LoggerInterface;
 
@@ -30,6 +33,7 @@ class CleanupSweep extends TimedJob {
 		ITimeFactory $time,
 		private CleanupService $cleanupService,
 		private LoggerInterface $logger,
+		private ?IAppDataFactory $appDataFactory = null,
 	) {
 		parent::__construct($time);
 		$this->setInterval(self::INTERVAL);
@@ -60,6 +64,17 @@ class CleanupSweep extends TimedJob {
 			$this->logger->info($summary);
 		} else {
 			$this->logger->debug($summary);
+		}
+
+		// Cache entries kept in files, on an instance with no memory cache,
+		// that expired without being asked for again: a library scan is
+		// keyed by the state of the folder, so one that changed never is.
+		if ($this->appDataFactory !== null) {
+			try {
+				AppDataCache::pruneAll($this->appDataFactory->get(Application::APP_ID));
+			} catch (\Throwable $e) {
+				$this->logger->warning('Could not prune the cache files of Arcade', ['exception' => $e]);
+			}
 		}
 
 		// Saves that reached a saves folder some other way than through the

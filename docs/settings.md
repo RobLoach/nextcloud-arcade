@@ -236,7 +236,11 @@ location ~ ^/apps/arcade/img/cores/ {
 ```
 
 A memory cache (Redis or APCu) makes the games library page faster, since
-that is where the scanned library is cached.
+that is where the scanned library is cached. Without one, Arcade keeps
+the scan in files of its app data instead: slower than memory, far
+quicker than walking the library folder again on every request, and
+never used once a memory cache is configured. The weekly background job
+removes the cache files that expired.
 
 The script the Files app loads carries no more than what it takes to
 register the player with the file viewer; the emulator itself is fetched

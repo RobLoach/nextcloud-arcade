@@ -79,12 +79,12 @@ class ArcadeSetupCheck implements ISetupCheck {
 			);
 		}
 
-		// A game library "cached" in the NullCache of an instance without
-		// any memory cache is no cache at all, and the symptom -- a slow
-		// listing -- never says why by itself.
+		// Without a memory cache the game library is kept in files instead,
+		// which works but is slower; the symptom -- a listing a little slow
+		// to answer -- never says why by itself.
 		if (!$this->cacheFactory->isAvailable() && !$this->cacheFactory->isLocalCacheAvailable()) {
-			return SetupResult::warning(
-				$this->l->t('No memory cache is configured, so Arcade rescans the game library on every request. Configure a memory cache such as APCu or Redis.'),
+			return SetupResult::info(
+				$this->l->t('No memory cache is configured, so Arcade keeps its game library scans in files, which is slower than memory. A memory cache such as APCu or Redis makes the library quicker.'),
 				self::CACHE_DOC_LINK,
 			);
 		}
