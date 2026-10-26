@@ -11,7 +11,6 @@ use OCA\Arcade\Service\StateService;
 use OCP\Files\Folder;
 use OCP\Files\IRootFolder;
 use OCP\Files\Node;
-use OCP\Files\SimpleFS\ISimpleFolder;
 use OCP\IUser;
 use OCP\IUserManager;
 use PHPUnit\Framework\TestCase;
@@ -51,7 +50,7 @@ class CleanupTest extends TestCase {
 			function (): array {
 				$folders = [];
 				foreach ($this->folders as $uid => $_) {
-					$folder = $this->createStub(ISimpleFolder::class);
+					$folder = $this->createStub(Folder::class);
 					$folder->method('delete')->willReturnCallback(
 						function () use ($uid): void {
 							$this->deletedFolders[] = $uid;

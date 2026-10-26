@@ -40,6 +40,12 @@ $webdavBase = $_['webdavBase'];
 					<?php endif; ?>>
 				<button type="button" class="arcade-folder-picker"
 					data-target="arcade-<?php p($key); ?>"><?php p($l->t('Browse …')); ?></button>
+				<?php if ($key === 'library_folder'): ?>
+					<?php /* Here the folder is everybody's default, so a scan is of
+					        everybody's library, and runs in the background. */ ?>
+					<button type="button" class="arcade-library-scan"><?php p($l->t('Scan')); ?></button>
+					<span class="arcade-library-scan-status" aria-live="polite"></span>
+				<?php endif; ?>
 			</p>
 		<?php endforeach; ?>
 
@@ -218,5 +224,29 @@ $webdavBase = $_['webdavBase'];
 				</p>
 			<?php endforeach; ?>
 		</div>
+	</div>
+
+	<?php /* Housekeeping an administrator would otherwise do with occ: each
+	        task says how things stand, filled in by the page once it has
+	        asked, and has one button. The two that remove saves ask to be
+	        pressed twice. */ ?>
+	<div class="section" id="arcade-maintenance">
+		<?php print_unescaped($this->inc('part.sectionhead', [
+			'title' => $l->t('Maintenance'),
+			'hint' => $l->t('Tasks that keep Arcade in order. Each can also be run with occ.'),
+		])); ?>
+		<?php foreach ([
+			'database' => [$l->t('Database'), $l->t('Repair the database')],
+			'filetypes' => [$l->t('ROM file types'), $l->t('Fix ROM file types')],
+			'leftbehind' => [$l->t('Saves of deleted games and users'), $l->t('Remove them')],
+			'appdata' => [$l->t('Saves left by earlier versions'), $l->t('Remove them')],
+			'cloudsync' => [$l->t('RetroArch Cloud Sync'), $l->t('Record copied saves now')],
+		] as $task => [$heading, $action]): ?>
+			<div class="arcade-maintenance-task" data-task="<?php p($task); ?>">
+				<h3><?php p($heading); ?></h3>
+				<p class="arcade-maintenance-state" aria-live="polite"><?php p($l->t('Checking …')); ?></p>
+				<button type="button" class="arcade-maintenance-action" disabled><?php p($action); ?></button>
+			</div>
+		<?php endforeach; ?>
 	</div>
 </div>

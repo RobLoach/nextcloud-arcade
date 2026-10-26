@@ -228,6 +228,10 @@ class StateServiceTest extends TestCase {
 	private function rootFolder(): IRootFolder {
 		$root = $this->createStub(IRootFolder::class);
 		$root->method('getUserFolder')->willReturn($this->userFolder(''));
+		// The app data, as the files of the instance see it: where its
+		// folders can be listed, which its own folders cannot.
+		$root->method('getAppDataDirectoryName')->willReturn('appdata_test');
+		$root->method('get')->willReturnCallback(fn (string $path) => $this->userFolder('')->get($path));
 		return $root;
 	}
 
@@ -837,12 +841,20 @@ class StateServiceTest extends TestCase {
 	// What earlier versions left in the app data.
 
 	public function testWhatEarlierVersionsLeftIsMeasuredAndCanBeRemoved(): void {
-		$this->appData['states'] = ['flat-file' => '12345'];
-		$this->appData['states/' . StateService::userKey(self::USER)] = ['1-1.state' => 'abc', '1.srm' => 'de'];
-		$this->appData['states/' . hash('sha256', 'nobody')] = ['2-0.state' => 'f'];
+		// Loose in the states folder, and in the folder of a user -- the one
+		// the app data's own listing never shows.
+		$states = 'appdata_test/arcade/states';
+		$this->files["$states/flat-file"] = '12345';
+		$this->files["$states/" . StateService::userKey(self::USER) . '/1-1.state'] = 'abc';
+		$this->files["$states/" . StateService::userKey(self::USER) . '/1.srm'] = 'de';
+		$this->files["$states/" . hash('sha256', 'nobody') . '/2-0.state'] = 'f';
 		$service = $this->service();
 
 		$this->assertSame(['files' => 4, 'bytes' => 11], $service->appDataSaves());
+		$this->assertSame(
+			[StateService::userKey(self::USER), hash('sha256', 'nobody')],
+			array_keys($service->userFolders()),
+		);
 		$this->assertSame(4, $service->deleteAppDataSaves());
 		$this->assertSame(['files' => 0, 'bytes' => 0], $service->appDataSaves());
 	}

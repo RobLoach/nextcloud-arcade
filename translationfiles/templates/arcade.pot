@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Nextcloud 3.14159\n"
 "Report-Msgid-Bugs-To: translations\\@example.com\n"
-"POT-Creation-Date: 2026-10-25 21:35-0400\n"
+"POT-Creation-Date: 2026-10-25 22:15-0400\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -734,7 +734,7 @@ msgid "Saving …"
 msgstr ""
 
 #: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:118
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:479
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:653
 msgid "Saved"
 msgstr ""
 
@@ -788,47 +788,189 @@ msgstr ""
 msgid "Could not start looking. A thumbnails folder has to be set first."
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:398
-msgid "{message}, still going"
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:397
+msgid "Scanning …"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:439
-msgid "Missing"
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:400
+msgid "The settings could not be saved, so nothing was scanned."
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:441
-msgid "Present ({size}, instance store, managed with occ arcade:bios)"
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:408
+msgid "Scanning the games library of every user in the background."
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:444
-msgid "Present ({size})"
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:409
+msgid "A scan of every games library is already waiting to run."
+msgstr ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:416
+msgid "Found %n game in {folder}."
+msgid_plural "Found %n games in {folder}."
+msgstr[0] ""
+msgstr[1] ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:421
+msgid "There is no such folder in your files."
+msgstr ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:422
+msgid "Could not scan the games library."
+msgstr ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:448
+msgid "Removed the saves of %n deleted game."
+msgid_plural "Removed the saves of %n deleted games."
+msgstr[0] ""
+msgstr[1] ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:449
+msgid "The saves of %n deleted game are left behind."
+msgid_plural "The saves of %n deleted games are left behind."
+msgstr[0] ""
+msgstr[1] ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:453
+msgid "Removed the saves of %n deleted user."
+msgid_plural "Removed the saves of %n deleted users."
+msgstr[0] ""
+msgstr[1] ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:454
+msgid "The saves of %n deleted user are left behind."
+msgid_plural "The saves of %n deleted users are left behind."
+msgstr[0] ""
+msgstr[1] ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:456
+msgid "Nothing was left behind."
+msgstr ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:461
+msgid "The database tables are in order."
 msgstr ""
 
 #: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:465
-msgid "That file is too big to be a BIOS"
+msgid ""
+"ROMs uploaded before Arcade was enabled can still be plain files to "
+"Nextcloud, and do not play from the Files app."
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:469
-msgid "Uploading …"
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:470
+msgid "Repair the database first."
+msgstr ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:473
+msgid "Nothing is left behind."
 msgstr ""
 
 #: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:482
+msgid "Nothing is left."
+msgstr ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:485
+msgid ""
+"%n file ({size}) left in the app data by versions before 0.48.8, which "
+"nothing reads any more."
+msgid_plural ""
+"%n files ({size}) left in the app data by versions before 0.48.8, which "
+"nothing reads any more."
+msgstr[0] ""
+msgstr[1] ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:492
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:555
+msgid "Recording the saves copied into every Saves folder, in the background."
+msgstr ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:493
+msgid ""
+"Saves copied into a Saves folder some other way, such as with the desktop "
+"client, reach RetroArch once they are recorded. That happens once a week by "
+"itself."
+msgstr ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:503
+msgid "Could not be checked."
+msgstr ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:512
+msgid "Working …"
+msgstr ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:521
+msgid "Could not be done. The server log says why."
+msgstr ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:533
+msgid "Really remove?"
+msgstr ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:548
+msgid "Repaired: the database tables are in order."
+msgstr ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:549
+msgid "Still wrong: {problems}."
+msgstr ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:551
+msgid "Every ROM already had its file type."
+msgstr ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:552
+msgid "Gave %n file its ROM file type."
+msgid_plural "Gave %n files their ROM file type."
+msgstr[0] ""
+msgstr[1] ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:554
+msgid "Removed %n file."
+msgid_plural "Removed %n files."
+msgstr[0] ""
+msgstr[1] ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:572
+msgid "{message}, still going"
+msgstr ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:613
+msgid "Missing"
+msgstr ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:615
+msgid "Present ({size}, instance store, managed with occ arcade:bios)"
+msgstr ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:618
+msgid "Present ({size})"
+msgstr ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:639
+msgid "That file is too big to be a BIOS"
+msgstr ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:643
+msgid "Uploading …"
+msgstr ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:656
 msgid "Could not upload the file"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:497
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:671
 msgid "Removing …"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:502
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:676
 msgid "Removed"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:507
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:681
 msgid "This file comes from the instance store; manage it with occ arcade:bios"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:510
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:684
 msgid "Could not remove the file"
 msgstr ""
 
@@ -967,20 +1109,26 @@ msgstr ""
 msgid "Browse …"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:64
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:46
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/settings.php:206
+msgid "Scan"
+msgstr ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:70
 msgid "Games listed at most"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:75
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:81
 msgid "Folders deep at most"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:91
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/settings.php:219
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:97
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:243
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/settings.php:223
 msgid "RetroArch Cloud Sync"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:92
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:98
 msgid ""
 "The Saves folder of every player is kept the way RetroArch keeps its own "
 "saves and states, with the manifest.server its Cloud Sync reads. So "
@@ -988,46 +1136,46 @@ msgid ""
 "and a game saved there carries on in Arcade, and the other way around."
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:95
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:101
 msgid ""
 "Set a Saves folder above, or have the player set their own in their personal "
 "settings."
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:96
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:102
 msgid ""
 "In the personal security settings, create an app password for RetroArch."
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:97
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/settings.php:227
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:103
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/settings.php:231
 msgid ""
 "In RetroArch, open Settings → Saving → Cloud Sync, turn on Cloud Sync, and "
 "choose the webdav backend."
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:99
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:105
 msgid ""
 "Set the Cloud Storage URL to the Saves folder over WebDAV, with the trailing "
 "slash. Each player finds their own in the RetroArch Cloud Sync section of "
 "their personal settings:"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:100
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:106
 msgid "USERNAME"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:100
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:106
 msgid "Saves"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:102
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:108
 msgid ""
 "Enter the user name and the app password, keep Sync Saves on, then restart "
 "RetroArch."
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:104
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:110
 msgid ""
 "Keep RetroArch's \"Sort Saves into Folders by Core Name\" and \"Sort Save "
 "States into Folders by Core Name\" on, as they are by default: Arcade files "
@@ -1037,11 +1185,11 @@ msgid ""
 "too."
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:114
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:120
 msgid "BIOS"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:115
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:121
 msgid ""
 "A few consoles will not start without the firmware file of the real "
 "hardware. Copy these files from a console you own; they go into your System "
@@ -1049,56 +1197,98 @@ msgid ""
 "player as a fallback."
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:130
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:136
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:247
 msgid "Checking …"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:132
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:138
 #, php-format
 msgid "Upload %s"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:135
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:141
 #, php-format
 msgid "Remove %s"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:136
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:142
 msgid "Remove"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:146
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:152
 msgid "Core options"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:147
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:153
 msgid ""
 "Options of the emulator cores themselves. Left on \"Core default\", the core "
 "decides."
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:165
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:171
 msgid "%n option changed"
 msgid_plural "%n options changed"
 msgstr[0] ""
 msgstr[1] ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:177
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:183
 msgid "Core default"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:189
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:195
 msgid "Reset this core to defaults"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:202
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:208
 msgid "Pictures"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:203
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:209
 msgid ""
 "What a game of each system is shown with, for everybody on this instance. "
 "Which file each kind comes out of is in the usage guide."
+msgstr ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:235
+msgid "Maintenance"
+msgstr ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:236
+msgid "Tasks that keep Arcade in order. Each can also be run with occ."
+msgstr ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:239
+msgid "Database"
+msgstr ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:239
+msgid "Repair the database"
+msgstr ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:240
+msgid "ROM file types"
+msgstr ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:240
+msgid "Fix ROM file types"
+msgstr ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:241
+msgid "Saves of deleted games and users"
+msgstr ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:241
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:242
+msgid "Remove them"
+msgstr ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:242
+msgid "Saves left by earlier versions"
+msgstr ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:243
+msgid "Record copied saves now"
 msgstr ""
 
 #: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/settings.php:14
@@ -1262,29 +1452,29 @@ msgid ""
 "empty to download them instead."
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/settings.php:206
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/settings.php:210
 msgid "Look for missing box art"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/settings.php:220
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/settings.php:224
 msgid ""
 "RetroArch on a computer, a phone or a handheld can sync with your Saves "
 "folder, so a game saved there carries on here, and the other way around."
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/settings.php:223
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/settings.php:227
 msgid "Set a Saves folder above first."
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/settings.php:226
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/settings.php:230
 msgid "In the Security settings, create an app password for RetroArch."
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/settings.php:229
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/settings.php:233
 msgid "Set the Cloud Storage URL to:"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/settings.php:232
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/settings.php:236
 msgid ""
 "Enter your user name and the app password, keep Sync Saves on, then restart "
 "RetroArch."

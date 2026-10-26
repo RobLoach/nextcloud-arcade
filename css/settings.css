@@ -273,3 +273,28 @@
 	user-select: all;
 	overflow-wrap: anywhere;
 }
+
+/* Each maintenance task: what it is, how it stands, and its button. */
+#arcade-settings .arcade-maintenance-task {
+	margin-block: calc(var(--default-grid-baseline) * 3);
+}
+
+#arcade-settings .arcade-maintenance-task h3 {
+	margin-block: 0 var(--default-grid-baseline);
+	font-size: var(--default-font-size);
+	font-weight: bold;
+}
+
+#arcade-settings .arcade-maintenance-state {
+	color: var(--color-text-maxcontrast);
+	margin-block-end: var(--default-grid-baseline);
+}
+
+/* Pressed once, and waiting to be pressed again: in the server's own
+   colours for something that cannot be taken back, which pair a light
+   background with a dark text rather than the other way around. */
+#arcade-settings .arcade-maintenance-confirm {
+	background-color: var(--color-error);
+	color: var(--color-error-text);
+	border: 2px solid var(--color-error-text);
+}

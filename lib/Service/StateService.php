@@ -853,12 +853,15 @@ class StateService {
 	/**
 	 * The folders of the app data holding states, by the key of their user.
 	 *
-	 * @return array<string, ISimpleFolder>
+	 * Through the files of the instance rather than the app data's own
+	 * folders, which list files and never the folders beside them.
+	 *
+	 * @return array<string, Folder>
 	 */
 	public function userFolders(): array {
 		$folders = [];
-		foreach ($this->statesRoot()->getDirectoryListing() as $node) {
-			if ($node instanceof ISimpleFolder) {
+		foreach ($this->appDataStates()?->getDirectoryListing() ?? [] as $node) {
+			if ($node instanceof Folder) {
 				$folders[$node->getName()] = $node;
 			}
 		}
@@ -879,11 +882,9 @@ class StateService {
 	public function appDataSaves(): array {
 		$files = 0;
 		$bytes = 0;
-		foreach ($this->statesRoot()->getDirectoryListing() as $node) {
-			foreach ($node instanceof ISimpleFolder ? $node->getDirectoryListing() : [$node] as $file) {
-				$files++;
-				$bytes += (int)$file->getSize();
-			}
+		foreach ($this->filesUnder($this->appDataStates()) as $file) {
+			$files++;
+			$bytes += (int)$file->getSize();
 		}
 		return ['files' => $files, 'bytes' => $bytes];
 	}
@@ -893,13 +894,43 @@ class StateService {
 	 * how many files went.
 	 */
 	public function deleteAppDataSaves(): int {
-		$removed = 0;
-		foreach ($this->statesRoot()->getDirectoryListing() as $node) {
-			$removed += $node instanceof ISimpleFolder ? count($node->getDirectoryListing()) : 1;
+		$states = $this->appDataStates();
+		$removed = count($this->filesUnder($states));
+		foreach ($states?->getDirectoryListing() ?? [] as $node) {
 			$node->delete();
 		}
 		$this->userStates = [];
 		return $removed;
+	}
+
+	/**
+	 * The states folder of the app data, as a folder of the instance's files:
+	 * the app data's own folders cannot say what folders they hold.
+	 */
+	private function appDataStates(): ?Folder {
+		try {
+			$node = $this->rootFolder->get($this->rootFolder->getAppDataDirectoryName() . '/' . Application::APP_ID . '/states');
+		} catch (NotFoundException) {
+			return null;
+		}
+		return $node instanceof Folder ? $node : null;
+	}
+
+	/**
+	 * Every file under a folder, however deep.
+	 *
+	 * @return list<File>
+	 */
+	private function filesUnder(?Folder $folder): array {
+		$files = [];
+		foreach ($folder?->getDirectoryListing() ?? [] as $node) {
+			if ($node instanceof File) {
+				$files[] = $node;
+			} elseif ($node instanceof Folder) {
+				array_push($files, ...$this->filesUnder($node));
+			}
+		}
+		return $files;
 	}
 
 	/** Remove what the app data holds of a game, under one of its keys. */

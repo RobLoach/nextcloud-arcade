@@ -7,6 +7,7 @@ namespace OCA\Arcade\Tests\Unit;
 use OCA\Arcade\Command\Status;
 use OCA\Arcade\Db\GameMapper;
 use OCA\Arcade\Db\PlayMapper;
+use OCA\Arcade\Service\Maintenance;
 use OCA\Arcade\Service\StateService;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Console\Tester\CommandTester;
@@ -22,6 +23,8 @@ class StatusTest extends TestCase {
 	private array $plays = [];
 	/** What earlier versions left in the app data. */
 	private array $appData = ['files' => 0, 'bytes' => 0];
+	/** What is wrong with the tables. */
+	private array $problems = [];
 
 	private function tester(): CommandTester {
 		$stateService = $this->createStub(StateService::class);
@@ -33,7 +36,10 @@ class StatusTest extends TestCase {
 		$playMapper = $this->createStub(PlayMapper::class);
 		$playMapper->method('totalsByUser')->willReturnCallback(fn (): array => $this->plays);
 
-		return new CommandTester(new Status($stateService, $gameMapper, $playMapper));
+		$maintenance = $this->createStub(Maintenance::class);
+		$maintenance->method('databaseProblems')->willReturnCallback(fn (): array => $this->problems);
+
+		return new CommandTester(new Status($stateService, $gameMapper, $playMapper, $maintenance));
 	}
 
 	public function testEveryUserWithSavesOrPlaysIsReportedWithTheTotals(): void {
@@ -88,5 +94,16 @@ class StatusTest extends TestCase {
 		$this->assertSame(['users', 'totals', 'appDataSaves'], array_keys($status));
 		$this->assertSame([['user' => 'alice', 'games' => 3, 'plays' => 5, 'seconds' => 60]], $status['users']);
 		$this->assertSame(['files' => 1, 'bytes' => 10], $status['appDataSaves']);
+	}
+
+	public function testMissingTablesAreSaidPlainlyWithWhatToDo(): void {
+		$this->problems = ['The table oc_arcade_games is missing'];
+		$tester = $this->tester();
+
+		$this->assertSame(1, $tester->execute([]));
+
+		$display = $tester->getDisplay();
+		$this->assertStringContainsString('The table oc_arcade_games is missing', $display);
+		$this->assertStringContainsString('occ arcade:repair', $display);
 	}
 }

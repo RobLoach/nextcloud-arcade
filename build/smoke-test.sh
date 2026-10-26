@@ -674,6 +674,25 @@ else
 	fail 'occ arcade:status exited non-zero'
 fi
 
+step 'Repairing a table that went missing'
+# What an upgrade gone wrong half way leaves behind: a table Nextcloud
+# believes it made. Repairing has to make it again, with every column,
+# whatever the database says about the migrations that ran.
+docker exec "$CONTAINER" php -r '$d = new PDO("sqlite:/var/www/html/data/owncloud.db"); $d->exec("DROP TABLE oc_arcade_games");' \
+	|| die 'could not drop the games table'
+if occ arcade:status > "$BODY" 2>&1; then
+	fail 'occ arcade:status did not notice the missing table'
+elif grep -q 'arcade_games is missing' "$BODY"; then
+	echo 'ok: arcade:status says the table is missing'
+else
+	fail "occ arcade:status failed without saying why: $(head -c 300 "$BODY")"
+fi
+if occ arcade:repair > "$BODY" 2>&1 && occ arcade:status > /dev/null 2>&1; then
+	echo 'ok: arcade:repair made the table again'
+else
+	fail "occ arcade:repair did not put the table back: $(head -c 300 "$BODY")"
+fi
+
 check_log 'after the fresh install'
 
 # --- the upgrade path ---------------------------------------------------------

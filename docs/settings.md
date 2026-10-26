@@ -25,7 +25,7 @@ Personal settings → Arcade:
 | Volume | 100% | How loud the game plays, 0 to 100 |
 | Audio latency | 64 ms | Raise it if the sound crackles |
 | Controls | [see the usage guide](usage.md#the-keyboard) | The key of every button and of the player itself |
-| Games library folder | `/Games` | Scanned for the games library page |
+| Games library folder | `/Games` | Scanned for the games library page. Scan, beside it, scans it afresh now and says how many games it holds |
 | Thumbnails folder | empty | Images used as game thumbnails, and where fetched box art lands |
 | Saves folder | empty | Save states and battery saves, in your own files, in RetroArch's layout. Without one, a game cannot be saved |
 | System folder | empty | Where BIOS files are read from |
@@ -114,7 +114,7 @@ Administration settings → Arcade holds what is the same for everybody:
 
 | Setting | Default | Description |
 | --- | --- | --- |
-| Folder defaults | as above | What new users start with, and each can still change |
+| Folder defaults | as above | What new users start with, and each can still change. Scan, beside the library folder, scans every user's library afresh in the background |
 | Look up box art | On | Whether the server may ask the libretro thumbnail server at all |
 | Work out ROM checksums | Off | Whether to read a whole ROM to hash it, when the upload brought no checksum |
 | Games listed at most | 5000 | How many games one library scan lists |
@@ -122,6 +122,17 @@ Administration settings → Arcade holds what is the same for everybody:
 | How long a scan is kept | 1 day | How long an unchanged scan may be reused, from 1 hour to 1 week |
 | Core options | Core default | Options of the emulator cores, which users cannot change |
 | Picture shown for each system | Box art | Box art, title screen, screenshot or logo, per system, for everybody |
+
+At the bottom, **Maintenance** says how Arcade stands and offers what an
+administrator would otherwise do with occ, one button each:
+
+| Task | Does | occ |
+| --- | --- | --- |
+| Database | Makes whatever tables and columns of Arcade are missing, and touches nothing that is there | `occ arcade:repair` |
+| ROM file types | Gives ROMs uploaded before Arcade was enabled their file type, so they play from the Files app | `occ maintenance:mimetype:update-db` |
+| Saves of deleted games and users | Removes them; asks to be pressed twice | `occ arcade:cleanup` |
+| Saves left by earlier versions | Removes what versions before 0.48.8 kept in the app data; asks to be pressed twice | `occ arcade:cleanup --legacy` |
+| RetroArch Cloud Sync | Records the saves copied into every Saves folder some other way, in the background | `occ arcade:cloudsync` |
 
 Box art, checksums and the three scan limits are scalars of the instance,
 so they live in a declarative settings form that the server renders and
@@ -198,6 +209,7 @@ waiting in the queue.
 | `occ arcade:bios` | List, add or remove the BIOS files the instance offers to every player |
 | `occ arcade:cleanup` | Remove save states of games and users that no longer exist; `--legacy` also removes the saves versions before 0.48.8 left in the app data, which nothing reads; `--dry-run` only reports |
 | `occ arcade:cloudsync` | Record in each user's Cloud Sync manifest the saves that got into the saves folder some other way, and the ones that are gone; `--user`, `--full` |
+| `occ arcade:repair` | Make the database tables and columns of Arcade that are missing |
 | `occ arcade:status` | Report the games with saves and the play activity of every user, and what earlier versions left in the app data; `--json` for machines |
 | `occ arcade:uninstall` | Remove the settings, save states and mimetypes of the app, before removing the app itself; `--dry-run`, `--force` |
 
@@ -267,6 +279,12 @@ save states and battery save, since it can be restored with the same file
 id. They go when the trash lets go of it. The weekly cleanup sweep — or
 `occ arcade:cleanup` — picks up whatever the event listeners could not
 catch, such as a whole folder of games deleted in one go.
+
+**A table of Arcade is missing.** An upgrade that went wrong half way can
+leave Arcade without a table or a column, and `occ arcade:status` says
+which. Repair the database under Administration settings → Arcade →
+Maintenance, or run `occ arcade:repair`: whatever is missing is made, and
+nothing that is there is touched.
 
 **Old saves in the app data.** Versions before 0.48.8 could keep saves in
 the app's internal storage. Nothing reads them now; `occ arcade:status`

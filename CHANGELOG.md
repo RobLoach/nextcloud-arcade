@@ -16,6 +16,17 @@ All notable changes to NextCloud Arcade. The format follows
   personal settings give each player their own address.
 - Any slot RetroArch saved into is listed in the player, and can be
   loaded and deleted there.
+- A Maintenance section at the bottom of the administration settings:
+  repairing the database, giving ROMs their file types, removing the
+  saves of deleted games and users and those earlier versions left in the
+  app data, and recording copied saves for RetroArch -- each saying how
+  things stand before it is pressed.
+- `occ arcade:repair`, which makes the database tables and columns of
+  Arcade that are missing.
+- A Scan button beside the games library folder: in the personal settings
+  it scans your library afresh and says how many games it found; in the
+  administration settings it scans every user's library in the
+  background.
 - Opening a game (at most once an hour), the weekly background job, and
   `occ arcade:cloudsync` record in the manifest the saves that got into
   the saves folder some other way — the desktop client, an upload in
@@ -90,6 +101,11 @@ All notable changes to NextCloud Arcade. The format follows
   what each limit is currently set to.
 
 ### Fixed
+- `occ arcade:status` says which table is missing and how to repair it,
+  instead of failing with the database's own error.
+- The cleanup now finds the app-data folders of users who no longer
+  exist. Nextcloud's app data lists only the files of a folder, never the
+  folders in it, so the folders it was looking for were never there.
 - A save state no longer fails with "The game did not hand over a save
   state" in a game without a battery save. Reading the battery save waited
   a minute for a file such a game never writes, once a minute, and a save

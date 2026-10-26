@@ -6,6 +6,7 @@ namespace OCA\Arcade\Command;
 
 use OCA\Arcade\Db\GameMapper;
 use OCA\Arcade\Db\PlayMapper;
+use OCA\Arcade\Service\Maintenance;
 use OCA\Arcade\Service\StateService;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -27,6 +28,7 @@ class Status extends Command {
 		private StateService $stateService,
 		private GameMapper $gameMapper,
 		private PlayMapper $playMapper,
+		private Maintenance $maintenance,
 	) {
 		parent::__construct();
 	}
@@ -39,6 +41,16 @@ class Status extends Command {
 	}
 
 	protected function execute(InputInterface $input, OutputInterface $output): int {
+		// Everything below reads the tables of the app, and a missing one
+		// is a database error a page long that says nothing of what to do.
+		$problems = $this->maintenance->databaseProblems();
+		if ($problems !== []) {
+			foreach ($problems as $problem) {
+				$output->writeln("<error>$problem</error>");
+			}
+			$output->writeln('Run `occ arcade:repair`, or Repair the database under Administration settings → Arcade → Maintenance.');
+			return 1;
+		}
 		$games = $this->gameMapper->countsByUser();
 		$plays = $this->playMapper->totalsByUser();
 		$userIds = array_unique(array_map(strval(...), [...array_keys($games), ...array_keys($plays)]));
