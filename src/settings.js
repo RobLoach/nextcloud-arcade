@@ -1,6 +1,6 @@
 import { translate as t, translatePlural as n } from '@nextcloud/l10n'
 import { generateUrl } from '@nextcloud/router'
-import { UPLOAD_WAIT, api, deadline } from './api.js'
+import { UPLOAD_WAIT, api, asUpload, deadline } from './api.js'
 import { formatSize } from './format.js'
 import { UNBOUND, keyLabel, retroarchKey } from './keys.js'
 
@@ -488,10 +488,6 @@ function setUpMaintenance() {
 			buttonOf('appdata').disabled = false
 		}
 
-		say('cloudsync', status.recording
-			? t('arcade', 'Recording the saves copied into every Saves folder, in the background.')
-			: t('arcade', 'Saves copied into a Saves folder some other way, such as with the desktop client, reach RetroArch once they are recorded. That happens once a week by itself.'))
-		buttonOf('cloudsync').disabled = status.recording === true
 	}
 
 	const refresh = async () => {
@@ -552,7 +548,6 @@ function setUpMaintenance() {
 		: n('arcade', 'Gave %n file its ROM file type.', 'Gave %n files their ROM file type.', result.updated))))
 	armed('leftbehind', () => run('leftbehind', '/leftbehind', (result) => leftBehind(result, true)))
 	armed('appdata', () => run('appdata', '/appdata', (result) => n('arcade', 'Removed %n file.', 'Removed %n files.', result.removed)))
-	buttonOf('cloudsync').addEventListener('click', () => run('cloudsync', '/cloudsync', () => t('arcade', 'Recording the saves copied into every Saves folder, in the background.')))
 
 	refresh()
 }
@@ -644,8 +639,7 @@ async function uploadBios(input) {
 	try {
 		await api(generateUrl('/apps/arcade/arcade/bios?name={name}', { name: row.dataset.name }), {
 			method: 'POST',
-			headers: { 'Content-Type': 'application/octet-stream' },
-			body: file,
+			body: asUpload(file, row.dataset.name),
 			// A BIOS is a file the admin picked off their disk, so it moves
 			// like a save rather than like a listing.
 			signal: deadline(UPLOAD_WAIT),
@@ -696,7 +690,6 @@ if (container !== null) {
 		}
 	})
 	document.getElementById('arcade-fetch-thumbnails')?.addEventListener('click', fetchThumbnails)
-	setUpMaintenance()
 	container.querySelectorAll('.arcade-library-scan').forEach((button) => {
 		button.addEventListener('click', () => scanLibrary(button))
 	})
@@ -751,3 +744,7 @@ if (container !== null) {
 	})
 	refreshBios()
 }
+
+// A form of its own, last on the administration page, so it is looked for
+// whether or not the other forms are there.
+setUpMaintenance()

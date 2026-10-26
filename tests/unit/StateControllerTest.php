@@ -21,9 +21,20 @@ use PHPUnit\Framework\TestCase;
  */
 class TestableStateController extends StateController {
 	public string $body = '';
+	/** The file of the form, as PHP would describe it, with what it holds. */
+	public ?array $upload = null;
+	public string $uploadContent = '';
 
 	protected function rawBody(int $limit): string|false {
 		return substr($this->body, 0, $limit);
+	}
+
+	protected function uploadedFile(string $field): ?array {
+		return $field === 'data' ? $this->upload : null;
+	}
+
+	protected function uploadedContent(string $path): ?string {
+		return $path === '/tmp/php-upload' ? $this->uploadContent : null;
 	}
 }
 
@@ -327,5 +338,35 @@ class StateControllerTest extends TestCase {
 		$this->stateService->expects($this->never())->method('save');
 
 		$this->assertSame(Http::STATUS_BAD_REQUEST, $controller->save('', 2)->getStatus());
+	}
+
+	/**
+	 * The player sends the save as the file of a form: a firewall in front
+	 * of the server refuses a bare application/octet-stream body.
+	 */
+	public function testASaveCanArriveAsTheFileOfAForm(): void {
+		$controller = $this->controller();
+		$controller->upload = ['tmp_name' => '/tmp/php-upload', 'error' => UPLOAD_ERR_OK, 'size' => 9];
+		$controller->uploadContent = 'the state';
+		$this->stateService->expects($this->once())->method('save')
+			->with('alice', self::GAME, 2, 'the state');
+
+		$this->assertSame(Http::STATUS_OK, $controller->save(self::GAME, 2)->getStatus());
+	}
+
+	public function testAFileOfAFormThatDidNotArriveWholeIsRefused(): void {
+		foreach ([
+			['tmp_name' => '/tmp/php-upload', 'error' => UPLOAD_ERR_PARTIAL, 'size' => 9],
+			['tmp_name' => '/tmp/php-upload', 'error' => UPLOAD_ERR_OK, 'size' => 50],
+			['tmp_name' => '/tmp/php-upload', 'error' => UPLOAD_ERR_OK, 'size' => 0],
+			['tmp_name' => '/etc/passwd', 'error' => UPLOAD_ERR_OK, 'size' => 9],
+		] as $upload) {
+			$controller = $this->controller();
+			$controller->upload = $upload;
+			$controller->uploadContent = 'the state';
+			$this->stateService->expects($this->never())->method('save');
+
+			$this->assertSame(Http::STATUS_BAD_REQUEST, $controller->save(self::GAME, 2)->getStatus());
+		}
 	}
 }

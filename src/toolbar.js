@@ -248,6 +248,22 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 		}
 	}
 
+	// Signed in but with no Saves folder: the button is there, switched
+	// off, rather than missing -- a player looking for where saving went
+	// is told where to turn it on. On a public share there is nobody to
+	// tell, and it stays away.
+	const savingOff = t('arcade', 'Saving is off. Choose a Saves folder under Personal settings → Arcade to save games.')
+	const sayWhySavingIsOff = () => {
+		if (getCurrentUser() !== null) {
+			flash(savingOff, 'info')
+		}
+	}
+	if (!canSave && getCurrentUser() !== null && romPath) {
+		statesButton = button(ICONS.save, t('arcade', 'Save states'), sayWhySavingIsOff)
+		statesButton.setAttribute('aria-disabled', 'true')
+		statesButton.title = savingOff
+	}
+
 	// Virtual gamepad for touch play. It is offered wherever a finger
 	// could work it, but only put over the picture where a finger is how
 	// the device is pointed at in the first place.
@@ -582,8 +598,8 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 		pause: () => pauseButton.click(),
 		fastForward: () => fastForwardButton.click(),
 		fullscreen: () => fullscreenButton.click(),
-		saveState: () => statesPanel?.save(1),
-		loadState: () => statesPanel?.load(1),
+		saveState: () => (statesPanel === null ? sayWhySavingIsOff() : statesPanel.save(1)),
+		loadState: () => (statesPanel === null ? sayWhySavingIsOff() : statesPanel.load(1)),
 		// Straight to the handler, not through a button: on the app page
 		// there is no button any more, only the actions entry.
 		screenshot: takeScreenshot,

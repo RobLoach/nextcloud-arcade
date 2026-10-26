@@ -132,7 +132,6 @@ administrator would otherwise do with occ, one button each:
 | ROM file types | Gives ROMs uploaded before Arcade was enabled their file type, so they play from the Files app | `occ maintenance:mimetype:update-db` |
 | Saves of deleted games and users | Removes them; asks to be pressed twice | `occ arcade:cleanup` |
 | Saves left by earlier versions | Removes what versions before 0.48.8 kept in the app data; asks to be pressed twice | `occ arcade:cleanup --legacy` |
-| RetroArch Cloud Sync | Records the saves copied into every Saves folder some other way, in the background | `occ arcade:cloudsync` |
 
 Box art, checksums and the three scan limits are scalars of the instance,
 so they live in a declarative settings form that the server renders and

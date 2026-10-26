@@ -91,7 +91,7 @@ class BiosController extends ArcadeController {
 				Http::STATUS_BAD_REQUEST,
 			);
 		}
-		$data = $this->readBody(self::MAX_BIOS_SIZE);
+		$data = $this->readUpload(self::MAX_BIOS_SIZE);
 		if ($data === null) {
 			return new JSONResponse(
 				['error' => 'The file is empty or larger than a BIOS could be'],

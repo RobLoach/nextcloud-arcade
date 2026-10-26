@@ -86,7 +86,7 @@ class StateController extends ArcadeController {
 		if (!$this->isWritableSlot($file, $slot)) {
 			return new JSONResponse([], Http::STATUS_BAD_REQUEST);
 		}
-		$state = $this->readBody(self::MAX_STATE_SIZE);
+		$state = $this->readUpload(self::MAX_STATE_SIZE);
 		if ($state === null) {
 			return new JSONResponse([], Http::STATUS_BAD_REQUEST);
 		}
@@ -160,7 +160,7 @@ class StateController extends ArcadeController {
 		if (!$this->isWritableSlot($file, $slot)) {
 			return new JSONResponse([], Http::STATUS_BAD_REQUEST);
 		}
-		$thumbnail = $this->readBody(self::MAX_THUMBNAIL_SIZE);
+		$thumbnail = $this->readUpload(self::MAX_THUMBNAIL_SIZE);
 		if ($thumbnail === null) {
 			return new JSONResponse([], Http::STATUS_BAD_REQUEST);
 		}
@@ -192,7 +192,7 @@ class StateController extends ArcadeController {
 		if (!$this->isValidRequest($file, StateService::AUTO_SLOT)) {
 			return new JSONResponse([], Http::STATUS_BAD_REQUEST);
 		}
-		$sram = $this->readBody(self::MAX_STATE_SIZE);
+		$sram = $this->readUpload(self::MAX_STATE_SIZE);
 		if ($sram === null) {
 			return new JSONResponse([], Http::STATUS_BAD_REQUEST);
 		}

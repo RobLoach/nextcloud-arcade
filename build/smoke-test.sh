@@ -432,9 +432,12 @@ if kept != "/Saves":
 '
 fi
 STATE_URL="$BASE/index.php/apps/arcade/arcade/state?file=$GAME&slot=1"
+# As the file of a form, the way the player sends it: a firewall in front
+# of the server refuses a bare application/octet-stream body. The picture
+# below still goes as one, which the server takes too.
+printf 'not a real save state' > "$WORKDIR/state.bin"
 expect_status 'a state is saved' 200 -X POST \
-	-H 'Content-Type: application/octet-stream' \
-	--data-binary 'not a real save state' "$STATE_URL" || true
+	-F "data=@$WORKDIR/state.bin;filename=state" "$STATE_URL" || true
 
 # The panel asks for every slot's picture each time it opens, and the URL
 # it asks with carries the slot's mtime -- so the answer is good until the

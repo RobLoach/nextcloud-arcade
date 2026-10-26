@@ -15,6 +15,26 @@ export const AUTO_SLOT = -1
 const cores = new Map()
 
 /**
+ * A file as the routes of the app take an upload: the data field of a
+ * form, which is what every browser upload is.
+ *
+ * Sent as a bare application/octet-stream body before, which a web
+ * application firewall in front of the server -- ModSecurity with the
+ * OWASP Core Rule Set is the common one -- refuses outright as a body
+ * type it does not allow: every save was turned away before Nextcloud
+ * saw it. Fetch sets the multipart type and its boundary by itself.
+ *
+ * @param {Blob} blob the file
+ * @param {string} [name] what to call it in the form
+ * @return {FormData} the form carrying it
+ */
+export function asUpload(blob, name = 'upload') {
+	const form = new FormData()
+	form.append('data', blob, name)
+	return form
+}
+
+/**
  * Note the core a game runs on, for the save requests about it.
  *
  * @param {string} romPath path identifying the game

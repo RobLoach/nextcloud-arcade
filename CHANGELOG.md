@@ -12,15 +12,14 @@ All notable changes to NextCloud Arcade. The format follows
   core, with RetroArch's file names -- and every save and delete is
   recorded in the `manifest.server` its Cloud Sync reads. Point RetroArch
   at the folder over WebDAV and a game saved there carries on in Arcade,
-  and the other way around. The administration settings say how, and the
-  personal settings give each player their own address.
+  and the other way around. The personal settings say how, with each
+  player's own address.
 - Any slot RetroArch saved into is listed in the player, and can be
   loaded and deleted there.
 - A Maintenance section at the bottom of the administration settings:
   repairing the database, giving ROMs their file types, removing the
   saves of deleted games and users and those earlier versions left in the
-  app data, and recording copied saves for RetroArch -- each saying how
-  things stand before it is pressed.
+  app data -- each saying how things stand before it is pressed.
 - `occ arcade:repair`, which makes the database tables and columns of
   Arcade that are missing.
 - A Scan button beside the games library folder: in the personal settings
@@ -101,6 +100,16 @@ All notable changes to NextCloud Arcade. The format follows
   what each limit is currently set to.
 
 ### Fixed
+- Saves reach the server behind a web application firewall. They were
+  sent as a bare application/octet-stream body, which ModSecurity's
+  OWASP Core Rule Set refuses as a body type it does not allow, so every
+  save was turned away before Nextcloud saw it; they now travel as the
+  file of a form, as every browser upload does. The BIOS upload too.
+- A folder emptied in the personal settings stays empty. The id kept to
+  follow a folder that moves won on every read, so an emptied Saves
+  folder came straight back.
+- Without a Saves folder the save button is there but switched off, and
+  says where to choose one, rather than being missing.
 - An instance with no memory cache no longer rescans the games library on
   every request: the scan is kept in files of the app data instead, until
   a memory cache is configured. The administration overview says so as a

@@ -1,4 +1,4 @@
-import { api, deadline, stateUrl, UPLOAD_WAIT } from './api.js'
+import { api, asUpload, deadline, stateUrl, UPLOAD_WAIT } from './api.js'
 
 // How much of the save states of a game is fetched ahead, before any is
 // asked for. A state is a few megabytes, a PlayStation one a few more,
@@ -108,8 +108,7 @@ export function createStateCache({ romPath, onUploadFailed = () => {} }) {
 		try {
 			const response = await api(stateUrl('/state', romPath, slot), {
 				method: 'POST',
-				headers: { 'Content-Type': 'application/octet-stream' },
-				body: entry.state,
+				body: asUpload(entry.state, 'state'),
 				signal: budget,
 			})
 			const answer = await response.json().catch(() => ({}))
@@ -121,8 +120,7 @@ export function createStateCache({ romPath, onUploadFailed = () => {} }) {
 				// A picture is the one part worth going without.
 				await api(stateUrl('/state/thumbnail', romPath, slot), {
 					method: 'POST',
-					headers: { 'Content-Type': 'image/png' },
-					body: entry.thumbnail,
+					body: asUpload(entry.thumbnail, 'state.png'),
 					signal: budget,
 				}).catch(() => {})
 			}

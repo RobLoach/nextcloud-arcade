@@ -48,6 +48,60 @@ abstract class ArcadeController extends Controller {
 	}
 
 	/**
+	 * What a client uploaded, up to $maxSize bytes: the file sent as the
+	 * data field of a form, or else the raw body of the request. Null when
+	 * there is nothing, it is too big, or it did not arrive whole.
+	 *
+	 * The player sends a form. A web application firewall in front of the
+	 * server -- ModSecurity with the OWASP Core Rule Set is the common one
+	 * -- allows only the body types a form or an API sends, and refuses
+	 * application/octet-stream outright: every save was turned away before
+	 * Nextcloud saw it. A file in a form is what every browser upload is,
+	 * and no rule set refuses that. The raw body is still taken, for
+	 * clients that send one.
+	 */
+	protected function readUpload(int $maxSize): ?string {
+		$file = $this->uploadedFile('data');
+		if ($file === null) {
+			return $this->readBody($maxSize);
+		}
+		if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+			return null;
+		}
+		$size = (int)($file['size'] ?? 0);
+		if ($size <= 0 || $size > $maxSize) {
+			return null;
+		}
+		$content = $this->uploadedContent((string)($file['tmp_name'] ?? ''));
+		// PHP keeps a file that was cut off short as a partial upload, but
+		// the size it says it received is what the content is held to.
+		return is_string($content) && strlen($content) === $size ? $content : null;
+	}
+
+	/**
+	 * A file of the request as PHP received it, null when there is none.
+	 *
+	 * @return ?array<array-key, mixed>
+	 */
+	protected function uploadedFile(string $field): ?array {
+		$file = $this->request->getUploadedFile($field);
+		return is_array($file) && isset($file['tmp_name']) && is_string($file['tmp_name']) ? $file : null;
+	}
+
+	/**
+	 * What an uploaded file holds, read from where PHP put it -- and only
+	 * from there: a path that is not an upload of this request is nothing
+	 * to read. Overridable so tests can stand in for it.
+	 */
+	protected function uploadedContent(string $path): ?string {
+		if ($path === '' || !is_uploaded_file($path)) {
+			return null;
+		}
+		$content = file_get_contents($path);
+		return $content === false ? null : $content;
+	}
+
+	/**
 	 * The request body as it arrived, up to $limit bytes. The one place
 	 * php://input is read, and overridable so tests can stand in for it:
 	 * it cannot be written to from a test.

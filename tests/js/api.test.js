@@ -5,7 +5,7 @@ vi.mock('@nextcloud/router', () => ({
 	generateUrl: (url, params = {}) => url.replace(/\{(\w+)\}/g, (whole, key) => encodeURIComponent(params[key])),
 }))
 
-const { encodePath, stateUrl, useCore } = await import('../../src/api.js')
+const { asUpload, encodePath, stateUrl, useCore } = await import('../../src/api.js')
 
 describe('the address of a save', () => {
 	test('names the game, and the slot when there is one', () => {
@@ -28,5 +28,12 @@ describe('the address of a save', () => {
 		expect(encoded).toMatch(/^[A-Za-z0-9_-]+$/)
 		const bytes = Uint8Array.from(atob(encoded.replace(/-/g, '+').replace(/_/g, '/')), (c) => c.charCodeAt(0))
 		expect(new TextDecoder().decode(bytes)).toBe(path)
+	})
+
+	test('carries an upload as the file of a form, which no firewall turns away', async () => {
+		const form = asUpload(new Blob(['a state']), 'state')
+
+		expect(form).toBeInstanceOf(FormData)
+		expect(await form.get('data').text()).toBe('a state')
 	})
 })

@@ -68,6 +68,7 @@ NextCloud Arcade runs RetroArch libretro cores in the browser. Seventeen systems
 	</commands>
 	<settings>
 		<admin>OCA\Arcade\Settings\Admin</admin>
+		<admin>OCA\Arcade\Settings\MaintenanceAdmin</admin>
 		<admin-section>OCA\Arcade\Settings\AdminSection</admin-section>
 		<personal>OCA\Arcade\Settings\Personal</personal>
 		<personal-section>OCA\Arcade\Settings\PersonalSection</personal-section>

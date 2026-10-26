@@ -425,7 +425,17 @@ class SettingsService {
 		// The body may carry only the keys that changed -- the onboarding
 		// sets the library folder alone -- so what was stored stays, and
 		// only what was posted is written over it.
-		$sanitized = array_merge($this->storedUserSettings($userId), $sanitized);
+		$stored = $this->storedUserSettings($userId);
+		// A folder posted is the folder now, and the id stored for the one
+		// before is not to overrule it: the id wins on every read, so a
+		// folder emptied -- or pointed somewhere else -- came straight back
+		// as the one it was. The id of the new one is found from its path.
+		foreach (self::FOLDER_SETTINGS as $key) {
+			if (array_key_exists($key, $sanitized)) {
+				unset($stored[$key . '_id']);
+			}
+		}
+		$sanitized = array_merge($stored, $sanitized);
 		// A folder handed in as a path is remembered by its id as well,
 		// so the setting follows the folder if it moves.
 		$sanitized = $this->resolveFolders($userId, $sanitized);

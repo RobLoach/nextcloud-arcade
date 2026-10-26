@@ -5,10 +5,8 @@ declare(strict_types=1);
 namespace OCA\Arcade\Service;
 
 use OCA\Arcade\AppInfo\Application;
-use OCA\Arcade\BackgroundJob\ReconcileManifests;
 use OCA\Arcade\Migration\RegisterMimeTypes;
 use OCP\App\IAppManager;
-use OCP\BackgroundJob\IJobList;
 use OCP\DB\Exception;
 use OCP\IConfig;
 use OCP\IDBConnection;
@@ -33,7 +31,6 @@ class Maintenance {
 		private IDBConnection $connection,
 		private IAppManager $appManager,
 		private IConfig $config,
-		private IJobList $jobList,
 		private CleanupService $cleanupService,
 		private StateService $stateService,
 		private RegisterMimeTypes $mimeTypes,
@@ -101,7 +98,6 @@ class Maintenance {
 	 *     database: list<string>,
 	 *     leftBehind: ?array{users: int, games: int},
 	 *     appData: array{files: int, bytes: int},
-	 *     recording: bool,
 	 * }
 	 */
 	public function status(): array {
@@ -115,7 +111,6 @@ class Maintenance {
 			'database' => $problems,
 			'leftBehind' => $leftBehind,
 			'appData' => $this->stateService->appDataSaves(),
-			'recording' => $this->jobList->has(ReconcileManifests::class, null),
 		];
 	}
 
@@ -132,18 +127,6 @@ class Maintenance {
 	/** Remove what earlier versions left in the app data; says how many files went. */
 	public function removeAppDataSaves(): int {
 		return $this->stateService->deleteAppDataSaves();
-	}
-
-	/**
-	 * Bring the Cloud Sync manifest of every user up to date, in the
-	 * background. Says whether it was queued, rather than already waiting.
-	 */
-	public function recordForRetroArch(): bool {
-		if ($this->jobList->has(ReconcileManifests::class, null)) {
-			return false;
-		}
-		$this->jobList->add(ReconcileManifests::class, null);
-		return true;
 	}
 
 	/**

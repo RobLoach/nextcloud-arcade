@@ -6,6 +6,9 @@ import { beforeEach, describe, expect, test, vi } from 'vitest'
 
 const api = vi.hoisted(() => vi.fn())
 vi.mock('../../src/api.js', () => ({
+	// The form the upload travels in is the browser's business; the
+	// tests read back the file it carries.
+	asUpload: (blob) => blob,
 	api,
 	deadline: () => new AbortController().signal,
 	stateUrl: (route, romPath, slot = null) => `${route}?slot=${slot}`,

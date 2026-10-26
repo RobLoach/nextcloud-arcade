@@ -11,7 +11,6 @@ $systems = $_['systems'];
 $thumbnailTypes = $_['thumbnailTypes'];
 $storedTypes = $_['storedThumbnailTypes'];
 $systemFolder = $_['systemFolder'];
-$webdavBase = $_['webdavBase'];
 ?>
 
 <div id="arcade-settings" data-scope="admin">
@@ -86,28 +85,6 @@ $webdavBase = $_['webdavBase'];
 				value="<?php p($defaults['max_depth']); ?>">
 			<output for="arcade-max_depth"><?php p($defaults['max_depth']); ?></output>
 		</p>
-	</div>
-
-	<?php /* How to point RetroArch at the saves folder. Nothing here is
-	        a setting: the saves folder is already laid out the way
-	        RetroArch's Cloud Sync expects, so what is left is telling an
-	        administrator, who gets asked, how a player connects it. */ ?>
-	<div class="section" id="arcade-cloudsync-section">
-		<?php print_unescaped($this->inc('part.sectionhead', [
-			'title' => $l->t('RetroArch Cloud Sync'),
-			'hint' => $l->t('The Saves folder of every player is kept the way RetroArch keeps its own saves and states, with the manifest.server its Cloud Sync reads. So RetroArch on a computer, a phone or a handheld can sync with it over WebDAV, and a game saved there carries on in Arcade, and the other way around.'),
-		])); ?>
-		<ol class="arcade-cloudsync-steps">
-			<li><?php p($l->t('Set a Saves folder above, or have the player set their own in their personal settings.')); ?></li>
-			<li><?php p($l->t('In the personal security settings, create an app password for RetroArch.')); ?></li>
-			<li><?php p($l->t('In RetroArch, open Settings → Saving → Cloud Sync, turn on Cloud Sync, and choose the webdav backend.')); ?></li>
-			<li>
-				<?php p($l->t('Set the Cloud Storage URL to the Saves folder over WebDAV, with the trailing slash. Each player finds their own in the RetroArch Cloud Sync section of their personal settings:')); ?>
-				<br><code><?php p($webdavBase . $l->t('USERNAME') . '/' . trim($defaults['saves_folder'] !== '' ? $defaults['saves_folder'] : $l->t('Saves'), '/') . '/'); ?></code>
-			</li>
-			<li><?php p($l->t('Enter the user name and the app password, keep Sync Saves on, then restart RetroArch.')); ?></li>
-		</ol>
-		<p class="settings-hint"><?php p($l->t('Keep RetroArch\'s "Sort Saves into Folders by Core Name" and "Sort Save States into Folders by Core Name" on, as they are by default: Arcade files new saves under the name of the core. Saves RetroArch already filed without them are read and written where they are. Arcade offers slots 1 to 3 and the automatic slot; any other slot RetroArch saved into can be loaded in Arcade too.')); ?></p>
 	</div>
 
 	<?php /* Box art and checksums are a declarative
@@ -224,29 +201,5 @@ $webdavBase = $_['webdavBase'];
 				</p>
 			<?php endforeach; ?>
 		</div>
-	</div>
-
-	<?php /* Housekeeping an administrator would otherwise do with occ: each
-	        task says how things stand, filled in by the page once it has
-	        asked, and has one button. The two that remove saves ask to be
-	        pressed twice. */ ?>
-	<div class="section" id="arcade-maintenance">
-		<?php print_unescaped($this->inc('part.sectionhead', [
-			'title' => $l->t('Maintenance'),
-			'hint' => $l->t('Tasks that keep Arcade in order. Each can also be run with occ.'),
-		])); ?>
-		<?php foreach ([
-			'database' => [$l->t('Database'), $l->t('Repair the database')],
-			'filetypes' => [$l->t('ROM file types'), $l->t('Fix ROM file types')],
-			'leftbehind' => [$l->t('Saves of deleted games and users'), $l->t('Remove them')],
-			'appdata' => [$l->t('Saves left by earlier versions'), $l->t('Remove them')],
-			'cloudsync' => [$l->t('RetroArch Cloud Sync'), $l->t('Record copied saves now')],
-		] as $task => [$heading, $action]): ?>
-			<div class="arcade-maintenance-task" data-task="<?php p($task); ?>">
-				<h3><?php p($heading); ?></h3>
-				<p class="arcade-maintenance-state" aria-live="polite"><?php p($l->t('Checking …')); ?></p>
-				<button type="button" class="arcade-maintenance-action" disabled><?php p($action); ?></button>
-			</div>
-		<?php endforeach; ?>
 	</div>
 </div>

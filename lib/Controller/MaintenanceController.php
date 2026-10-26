@@ -61,9 +61,4 @@ class MaintenanceController extends ArcadeController {
 	public function removeAppDataSaves(): JSONResponse {
 		return new JSONResponse(['removed' => $this->maintenance->removeAppDataSaves()]);
 	}
-
-	#[FrontpageRoute(verb: 'POST', url: '/arcade/maintenance/cloudsync')]
-	public function recordForRetroArch(): JSONResponse {
-		return new JSONResponse(['queued' => $this->maintenance->recordForRetroArch()]);
-	}
 }

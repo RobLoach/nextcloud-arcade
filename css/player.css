@@ -93,6 +93,12 @@
 	pointer-events: none;
 	visibility: hidden;
 }
+/* A button that is there but switched off -- saving, without a Saves
+   folder -- still answers a press with why, so it keeps its place and
+   only looks the part. */
+.arcade-toolbar > button[aria-disabled="true"] {
+	opacity: 0.45;
+}
 .arcade-toolbar > button,
 .arcade-topbar > button {
 	background-color: transparent;
