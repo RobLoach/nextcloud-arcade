@@ -5,17 +5,11 @@ declare(strict_types=1);
 namespace OCA\Arcade\Migration;
 
 use OCA\Arcade\AppInfo\Application;
-use OCA\Arcade\Db\GameMapper;
 use OCA\Arcade\Db\PlayMapper;
 use OCA\Arcade\Service\Folders;
-use OCA\Arcade\Service\StateService;
 use OCP\Config\IUserConfig;
-use OCP\Files\AppData\IAppDataFactory;
 use OCP\Files\IRootFolder;
-use OCP\Files\NotFoundException;
-use OCP\Files\SimpleFS\ISimpleFolder;
 use OCP\ITagManager;
-use OCP\IUserManager;
 use OCP\Migration\IOutput;
 use OCP\Migration\IRepairStep;
 
@@ -24,11 +18,15 @@ use OCP\Migration\IRepairStep;
  * now, once, at upgrade -- so no request ever has to look in the old places
  * again.
  *
- * Older versions kept the games registry in a games.json next to the states,
- * filed states under the hash of the ROM's path (and before that flat in the
- * shared states folder, under the hash of user and path), and kept the play
- * records and favorites as JSON blobs of the user config. Each of those is
- * converted here.
+ * Older versions kept the play records and favorites as JSON blobs of the
+ * user config; both are converted here.
+ *
+ * It used to convert the save states of the app data as well, to the names
+ * and folders later versions read them under. Save states are not read
+ * from the app data at all any more -- they live in the saves folder of
+ * each user -- so that conversion was work done on every upgrade for
+ * files nothing would open. What is left there is reported and removed
+ * by the maintenance section of the administration settings instead.
  *
  * The step is idempotent: everything is checked before it is touched, so a
  * partial earlier run only leaves less to do. Nothing that cannot be
@@ -37,16 +35,10 @@ use OCP\Migration\IRepairStep;
  * @psalm-suppress UnusedClass
  */
 class ConvertLegacyStorage implements IRepairStep {
-	/** Where older versions listed the games a user has states for. */
-	private const GAMES_FILE = 'games.json';
-
 	public function __construct(
-		private IAppDataFactory $appDataFactory,
 		private IRootFolder $rootFolder,
-		private IUserManager $userManager,
 		private IUserConfig $userConfig,
 		private ITagManager $tagManager,
-		private GameMapper $gameMapper,
 		private PlayMapper $playMapper,
 	) {
 	}
@@ -56,172 +48,9 @@ class ConvertLegacyStorage implements IRepairStep {
 	}
 
 	public function run(IOutput $output): void {
-		$this->convertStates($output);
 		// The plays go first, so a favorite's counts cannot shadow them.
 		$this->convertPlays($output);
 		$this->convertFavorites($output);
-	}
-
-	/**
-	 * The app data: every user folder under the states root gets its
-	 * games.json imported, its path-hash names brought to file-id names,
-	 * and the flat files of its user adopted.
-	 */
-	private function convertStates(IOutput $output): void {
-		try {
-			$root = $this->appDataFactory->get(Application::APP_ID)->getFolder('states');
-		} catch (NotFoundException) {
-			// Nothing was ever stored.
-			return;
-		}
-
-		// The folders are named after the hash of their user, which only
-		// the list of users can turn back into one.
-		$users = [];
-		$this->userManager->callForAllUsers(static function ($user) use (&$users): void {
-			$users[StateService::userKey($user->getUID())] = $user->getUID();
-		});
-
-		// The files still sitting flat in the states root, listed once.
-		$flat = [];
-		$folders = [];
-		foreach ($root->getDirectoryListing() as $node) {
-			if ($node instanceof ISimpleFolder) {
-				$folders[$node->getName()] = $node;
-			} else {
-				$flat[$node->getName()] = true;
-			}
-		}
-
-		$converted = 0;
-		foreach ($folders as $name => $folder) {
-			$userId = $users[$name] ?? null;
-			if ($userId === null) {
-				// A folder of a user that is gone; `occ arcade:cleanup`
-				// is the one that removes those.
-				continue;
-			}
-			try {
-				$this->convertUserStates($userId, $folder, $root, $flat);
-				$converted++;
-			} catch (\Throwable) {
-				// Whatever could not be converted stays where it is; the
-				// next upgrade tries again.
-			}
-		}
-		if ($converted > 0) {
-			$output->info("Converted the stored states of $converted users.");
-		}
-	}
-
-	/**
-	 * @param array<string, true> $flat what sits flat in the states root
-	 */
-	private function convertUserStates(string $userId, ISimpleFolder $folder, ISimpleFolder $root, array &$flat): void {
-		$this->importGames($userId, $folder);
-		$entries = $this->gameMapper->entriesOf($userId);
-		$entries = $this->renameToFileIds($userId, $folder, $entries);
-		$this->adoptFlatFiles($userId, $folder, $root, $flat, $entries);
-	}
-
-	/**
-	 * The registry used to be a games.json next to the states. It goes into
-	 * the table, and the file goes. An entry the table already has was
-	 * written since, and stays.
-	 */
-	private function importGames(string $userId, ISimpleFolder $folder): void {
-		if (!$folder->fileExists(self::GAMES_FILE)) {
-			return;
-		}
-		$games = json_decode($folder->getFile(self::GAMES_FILE)->getContent(), true);
-		foreach (is_array($games) ? $games : [] as $key => $entry) {
-			$key = (string)$key;
-			// Written as a bare path before the checksum was kept with it.
-			$path = is_array($entry) ? ($entry['path'] ?? '') : $entry;
-			$checksum = is_array($entry) ? ($entry['md5'] ?? '') : '';
-			if (!is_string($path) || $path === '' || !is_string($checksum)) {
-				continue;
-			}
-			$this->gameMapper->importEntry($userId, $key, ctype_digit($key) ? (int)$key : 0, $path, $checksum);
-		}
-		$folder->getFile(self::GAMES_FILE)->delete();
-	}
-
-	/**
-	 * States were filed under the hash of the ROM's path before the file id
-	 * was used. Where the registry knows the path and the path still resolves
-	 * to a file, its files are renamed and the registry entry follows. A name
-	 * that is already taken was written since and is not touched, and a path
-	 * that no longer resolves keeps everything as it is.
-	 *
-	 * @param array<string, array{path: string, md5: string, core: string, name: string}> $entries
-	 * @return array<string, array{path: string, md5: string, core: string, name: string}>
-	 */
-	private function renameToFileIds(string $userId, ISimpleFolder $folder, array $entries): array {
-		foreach ($entries as $key => $entry) {
-			$key = (string)$key;
-			if (ctype_digit($key) || $entry['path'] === '') {
-				continue;
-			}
-			$id = Folders::fileId($this->rootFolder, $userId, $entry['path']);
-			if ($id === null) {
-				// The game is gone; its files keep the name they had.
-				continue;
-			}
-			$clean = true;
-			foreach ($this->suffixes() as $suffix) {
-				if (!$folder->fileExists($key . $suffix)) {
-					continue;
-				}
-				if ($folder->fileExists($id . $suffix)) {
-					// Written since under the new name; the old file stays.
-					$clean = false;
-					continue;
-				}
-				$folder->newFile($id . $suffix, $folder->getFile($key . $suffix)->getContent());
-				$folder->getFile($key . $suffix)->delete();
-			}
-			$this->gameMapper->importEntry($userId, (string)$id, $id, $entry['path'], $entry['md5']);
-			$entries[(string)$id] ??= $entry;
-			if ($clean) {
-				$this->gameMapper->remove($userId, $key);
-				unset($entries[$key]);
-			}
-		}
-		return $entries;
-	}
-
-	/**
-	 * Before the states were kept in a folder per user, they sat flat in the
-	 * states root, under the hash of user and path. For every game the
-	 * registry knows, matching flat files move into the user's folder under
-	 * the current name. Unmatched flat files stay put.
-	 *
-	 * @param array<string, true> $flat
-	 * @param array<string, array{path: string, md5: string, core: string, name: string}> $entries
-	 */
-	private function adoptFlatFiles(string $userId, ISimpleFolder $folder, ISimpleFolder $root, array &$flat, array $entries): void {
-		if ($flat === []) {
-			return;
-		}
-		foreach ($entries as $key => $entry) {
-			if ($entry['path'] === '') {
-				continue;
-			}
-			$legacy = hash('sha256', $userId . '|' . $entry['path']);
-			foreach ($this->suffixes() as $suffix) {
-				if (!isset($flat[$legacy . $suffix])) {
-					continue;
-				}
-				if ($folder->fileExists($key . $suffix)) {
-					// Saved since; the flat file stays where it is.
-					continue;
-				}
-				$folder->newFile($key . $suffix, $root->getFile($legacy . $suffix)->getContent());
-				$root->getFile($legacy . $suffix)->delete();
-				unset($flat[$legacy . $suffix]);
-			}
-		}
 	}
 
 	/**
@@ -329,21 +158,4 @@ class ConvertLegacyStorage implements IRepairStep {
 			$output->info("Handed the favorites of $handed users to the Files app.");
 		}
 	}
-
-	/**
-	 * Every name a game's files can carry after its key, spelled by the
-	 * service that writes them: one state and one screenshot per slot, and
-	 * the battery save.
-	 *
-	 * @return list<string>
-	 */
-	private function suffixes(): array {
-		$suffixes = [StateService::sramFileName('')];
-		foreach (StateService::legacySlots() as $slot) {
-			$suffixes[] = StateService::fileName('', $slot, 'state');
-			$suffixes[] = StateService::fileName('', $slot, 'png');
-		}
-		return $suffixes;
-	}
-
 }

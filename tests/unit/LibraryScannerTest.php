@@ -10,9 +10,11 @@ use OCA\Arcade\Service\LibraryScanner;
 use OCA\Arcade\Service\LibraryService;
 use OCA\Arcade\Service\SettingsService;
 use OCP\BackgroundJob\IJobList;
+use OCP\Files\Cache\IScanner;
 use OCP\Files\Folder;
 use OCP\Files\IRootFolder;
 use OCP\Files\NotFoundException;
+use OCP\Files\Storage\IStorage;
 use OCP\IUser;
 use OCP\IUserManager;
 use PHPUnit\Framework\TestCase;
@@ -29,6 +31,8 @@ class LibraryScannerTest extends TestCase {
 	private array $jobs = [];
 	/** Who was scanned, and whether past the cache. */
 	private array $scanned = [];
+	/** The folders Nextcloud was asked to scan on disk, as user:path. */
+	private array $filesScanned = [];
 
 	private function scanner(): LibraryScanner {
 		$settings = $this->createStub(SettingsService::class);
@@ -52,7 +56,17 @@ class LibraryScannerTest extends TestCase {
 				if (!($this->libraries[$userId] ?? false)) {
 					throw new NotFoundException('/Games');
 				}
-				return $this->createStub(Folder::class);
+				$scanner = $this->createStub(IScanner::class);
+				$scanner->method('scan')->willReturnCallback(function (string $path, $recursive, int $reuse) use ($userId): ?array {
+					$this->filesScanned[] = "$userId:$path";
+					return [];
+				});
+				$storage = $this->createStub(IStorage::class);
+				$storage->method('getScanner')->willReturn($scanner);
+				$library = $this->createStub(Folder::class);
+				$library->method('getStorage')->willReturn($storage);
+				$library->method('getInternalPath')->willReturn('files/Games');
+				return $library;
 			});
 			return $userFolder;
 		});
@@ -106,5 +120,10 @@ class LibraryScannerTest extends TestCase {
 		$this->libraries = ['alice' => true, 'bob' => false, 'carol' => true, 'dave' => true];
 		$this->assertSame(2, $this->scanner()->scanAll());
 		$this->assertSame(['alice (afresh)', 'dave (afresh)'], $this->scanned);
+	}
+
+	public function testGamesCopiedOntoTheDiskAreLookedForFirst(): void {
+		$this->scanner()->scan('alice');
+		$this->assertSame(['alice:files/Games'], $this->filesScanned);
 	}
 }

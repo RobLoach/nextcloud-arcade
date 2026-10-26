@@ -7,6 +7,8 @@ namespace OCA\Arcade\Service;
 use OCA\Arcade\BackgroundJob\RefreshMetadata;
 use OCA\Arcade\BackgroundJob\ScanLibraries;
 use OCP\BackgroundJob\IJobList;
+use OCP\Files\Cache\IScanner;
+use OCP\Files\Folder;
 use OCP\Files\IRootFolder;
 use OCP\IUser;
 use OCP\IUserManager;
@@ -44,6 +46,7 @@ class LibraryScanner {
 		if ($folder === null) {
 			return null;
 		}
+		$this->scanFiles($folder);
 		$games = $this->libraryService->getGames($userId, $folder, $userFolder, $path, $settings, true);
 		$this->readMetadata($userId);
 		return count($games);
@@ -82,6 +85,30 @@ class LibraryScanner {
 			}
 		});
 		return $scanned;
+	}
+
+	/**
+	 * Have Nextcloud look at the library folder on disk again first. Games
+	 * copied there some other way than through Nextcloud -- a network
+	 * share, rsync, a drive mounted in -- are not in its file cache until
+	 * a scan finds them, and a library scan only reads the file cache.
+	 * What is unchanged is taken from the cache as it is, so a library
+	 * that holds no surprises costs little more than a listing.
+	 */
+	private function scanFiles(Folder $folder): void {
+		try {
+			$folder->getStorage()->getScanner()->scan(
+				$folder->getInternalPath(),
+				IScanner::SCAN_RECURSIVE,
+				IScanner::REUSE_ETAG | IScanner::REUSE_SIZE,
+			);
+		} catch (\Throwable $e) {
+			// The library is still scanned from what the cache holds.
+			$this->logger->warning('Could not scan the games library folder for files added outside Nextcloud', [
+				'path' => $folder->getPath(),
+				'exception' => $e,
+			]);
+		}
 	}
 
 	/** Read again what the games of a user say about themselves, once. */
