@@ -380,7 +380,7 @@ class StateServiceTest extends TestCase {
 		$service = $this->service();
 		$service->save(self::USER, self::GAME, 1, 'the state');
 		$this->assertSame('the state', $this->files[self::STATES . '/Mario.state1']);
-		$this->assertSame('the state', $service->load(self::USER, self::GAME, 1));
+		$this->assertSame('the state', $service->load(self::USER, self::GAME, 1)?->getContent());
 	}
 
 	public function testTheSlotsAreNamedAsRetroArchNamesThem(): void {
@@ -393,14 +393,14 @@ class StateServiceTest extends TestCase {
 		$this->assertSame('three', $this->files[self::STATES . '/Mario.state3']);
 		$this->assertSame('picture', $this->files[self::STATES . '/Mario.state3.png']);
 		$this->assertSame('auto picture', $this->files[self::STATES . '/Mario.state.auto.png']);
-		$this->assertSame('picture', $service->loadThumbnail(self::USER, self::GAME, 3));
+		$this->assertSame('picture', $service->loadThumbnail(self::USER, self::GAME, 3)?->getContent());
 	}
 
 	public function testTheBatterySaveGoesUnderSaves(): void {
 		$service = $this->service();
 		$service->saveSram(self::USER, self::GAME, 'sram');
 		$this->assertSame('sram', $this->files[self::SAVES . '/Mario.srm']);
-		$this->assertSame('sram', $service->loadSram(self::USER, self::GAME));
+		$this->assertSame('sram', $service->loadSram(self::USER, self::GAME)?->getContent());
 		$this->assertTrue($service->hasSram(self::USER, self::GAME));
 	}
 
@@ -409,10 +409,10 @@ class StateServiceTest extends TestCase {
 		$service->save(self::USER, self::GAME, 1, 'mario');
 		$service->save(self::USER, '/Games/NES/Zelda.nes', 1, 'zelda');
 		$service->save(self::USER, self::GAME, 2, 'mario two');
-		$this->assertSame('mario', $service->load(self::USER, self::GAME, 1));
-		$this->assertSame('zelda', $service->load(self::USER, '/Games/NES/Zelda.nes', 1));
-		$this->assertSame('mario two', $service->load(self::USER, self::GAME, 2));
-		$this->assertNull($service->load(self::USER, self::GAME, 3));
+		$this->assertSame('mario', $service->load(self::USER, self::GAME, 1)?->getContent());
+		$this->assertSame('zelda', $service->load(self::USER, '/Games/NES/Zelda.nes', 1)?->getContent());
+		$this->assertSame('mario two', $service->load(self::USER, self::GAME, 2)?->getContent());
+		$this->assertNull($service->load(self::USER, self::GAME, 3)?->getContent());
 	}
 
 	public function testEveryWriteIsRecordedInTheManifest(): void {
@@ -450,7 +450,7 @@ class StateServiceTest extends TestCase {
 		$this->files['Saves/manifest.server'] = 'not a manifest';
 		$service = $this->service();
 		$service->save(self::USER, self::GAME, 1, 'the state');
-		$this->assertSame('the state', $service->load(self::USER, self::GAME, 1));
+		$this->assertSame('the state', $service->load(self::USER, self::GAME, 1)?->getContent());
 		$this->assertSame('not a manifest', $this->files['Saves/manifest.server']);
 	}
 
@@ -473,8 +473,8 @@ class StateServiceTest extends TestCase {
 		$service->save(self::USER, self::GAME, 1, 'one');
 		$service->save(self::USER, self::GAME, 2, 'two');
 		$service->delete(self::USER, self::GAME, 1);
-		$this->assertNull($service->load(self::USER, self::GAME, 1));
-		$this->assertSame('two', $service->load(self::USER, self::GAME, 2));
+		$this->assertNull($service->load(self::USER, self::GAME, 1)?->getContent());
+		$this->assertSame('two', $service->load(self::USER, self::GAME, 2)?->getContent());
 	}
 
 	// What RetroArch put there.
@@ -483,8 +483,8 @@ class StateServiceTest extends TestCase {
 		$this->files['Saves/saves/Mario.srm'] = 'from retroarch';
 		$this->files['Saves/states/Mario.state1'] = 'from retroarch';
 		$service = $this->service();
-		$this->assertSame('from retroarch', $service->loadSram(self::USER, self::GAME));
-		$this->assertSame('from retroarch', $service->load(self::USER, self::GAME, 1));
+		$this->assertSame('from retroarch', $service->loadSram(self::USER, self::GAME)?->getContent());
+		$this->assertSame('from retroarch', $service->load(self::USER, self::GAME, 1)?->getContent());
 
 		$service->saveSram(self::USER, self::GAME, 'from arcade');
 		$this->assertSame('from arcade', $this->files['Saves/saves/Mario.srm']);
@@ -495,7 +495,7 @@ class StateServiceTest extends TestCase {
 	public function testTheFolderOfTheCoreWinsOverTheFlatOne(): void {
 		$this->files['Saves/states/Mario.state1'] = 'flat';
 		$this->files[self::STATES . '/Mario.state1'] = 'by core';
-		$this->assertSame('by core', $this->service()->load(self::USER, self::GAME, 1));
+		$this->assertSame('by core', $this->service()->load(self::USER, self::GAME, 1)?->getContent());
 	}
 
 	public function testEverySlotRetroArchSavedIsListed(): void {
@@ -510,7 +510,7 @@ class StateServiceTest extends TestCase {
 		$this->assertSame([StateService::AUTO_SLOT, 0, 2, 990], array_column($states, 'slot'));
 		$this->assertSame(['slot' => 2, 'size' => 3, 'mtime' => 3000, 'hasThumbnail' => false], $states[2]);
 		$this->assertTrue($states[3]['hasThumbnail']);
-		$this->assertSame('nine ninety', $this->service()->load(self::USER, self::GAME, 990));
+		$this->assertSame('nine ninety', $this->service()->load(self::USER, self::GAME, 990)?->getContent());
 	}
 
 	public function testFilesOfOtherGamesAreNotTakenForSlots(): void {
@@ -537,7 +537,7 @@ class StateServiceTest extends TestCase {
 	public function testNothingIsSavedWithoutASavesFolder(): void {
 		$service = $this->service('');
 		$this->assertSame([], $service->list(self::USER, self::GAME));
-		$this->assertNull($service->load(self::USER, self::GAME, 1));
+		$this->assertNull($service->load(self::USER, self::GAME, 1)?->getContent());
 		$this->assertFalse($service->hasSram(self::USER, self::GAME));
 	}
 
@@ -599,8 +599,8 @@ class StateServiceTest extends TestCase {
 		$this->ids['Games/NES/Super Mario.nes'] = 42;
 
 		$renamed = $this->service();
-		$this->assertSame('state', $renamed->load(self::USER, '/Games/NES/Super Mario.nes', 1));
-		$this->assertSame('sram', $renamed->loadSram(self::USER, '/Games/NES/Super Mario.nes'));
+		$this->assertSame('state', $renamed->load(self::USER, '/Games/NES/Super Mario.nes', 1)?->getContent());
+		$this->assertSame('sram', $renamed->loadSram(self::USER, '/Games/NES/Super Mario.nes')?->getContent());
 		$this->assertArrayNotHasKey(self::STATES . '/Mario.state1', $this->files);
 		$manifest = $this->manifest();
 		$this->assertSame('', $manifest['states/FCEUmm/Mario.state1']);
@@ -617,7 +617,7 @@ class StateServiceTest extends TestCase {
 		$this->ids['Games/NES/Luigi.nes'] = 42;
 		$this->files[self::STATES . '/Luigi.state1'] = 'luigi';
 
-		$this->assertSame('luigi', $this->service()->load(self::USER, '/Games/NES/Luigi.nes', 1));
+		$this->assertSame('luigi', $this->service()->load(self::USER, '/Games/NES/Luigi.nes', 1)?->getContent());
 		$this->assertSame('old', $this->files[self::STATES . '/Mario.state1']);
 	}
 
@@ -891,7 +891,7 @@ class StateServiceTest extends TestCase {
 		$service = $this->service();
 		$service->useCore(self::USER, '/Games/Super Street Fighter II.zip', 'snes9x');
 		$service->useName(self::USER, '/Games/Super Street Fighter II.zip', 'Super Street Fighter II (USA)');
-		$this->assertSame('from retroarch', $service->loadSram(self::USER, '/Games/Super Street Fighter II.zip'));
+		$this->assertSame('from retroarch', $service->loadSram(self::USER, '/Games/Super Street Fighter II.zip')?->getContent());
 	}
 
 	public function testTheNotedNameIsUsedWhenThePlayerDoesNotSay(): void {
@@ -909,7 +909,7 @@ class StateServiceTest extends TestCase {
 		unset($this->files['Games/Mystery.zip'], $this->ids['Games/Mystery.zip']);
 		$this->files['Games/Renamed.zip'] = 'zip';
 		$this->ids['Games/Renamed.zip'] = 9;
-		$this->assertSame('state', $this->service()->load(self::USER, '/Games/Renamed.zip', 2));
+		$this->assertSame('state', $this->service()->load(self::USER, '/Games/Renamed.zip', 2)?->getContent());
 		$this->assertArrayHasKey('Saves/states/FCEUmm/Inner Game (USA).state2', $this->files);
 
 		unset($this->files['Games/Renamed.zip'], $this->ids['Games/Renamed.zip']);

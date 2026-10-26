@@ -169,12 +169,16 @@ class StateService {
 		$this->write($userId, $romPath, self::STATES, self::stateName($this->stemFor($userId, $romPath), $slot) . '.png', $data);
 	}
 
-	public function load(string $userId, string $romPath, int $slot): ?string {
-		return $this->find($userId, $romPath, self::STATES, self::stateName($this->stemFor($userId, $romPath), $slot))?->getContent();
+	/**
+	 * The file of a slot, handed over as the file rather than its bytes so
+	 * it can be streamed: a state can be tens of megabytes.
+	 */
+	public function load(string $userId, string $romPath, int $slot): ?File {
+		return $this->find($userId, $romPath, self::STATES, self::stateName($this->stemFor($userId, $romPath), $slot));
 	}
 
-	public function loadThumbnail(string $userId, string $romPath, int $slot): ?string {
-		return $this->find($userId, $romPath, self::STATES, self::stateName($this->stemFor($userId, $romPath), $slot) . '.png')?->getContent();
+	public function loadThumbnail(string $userId, string $romPath, int $slot): ?File {
+		return $this->find($userId, $romPath, self::STATES, self::stateName($this->stemFor($userId, $romPath), $slot) . '.png');
 	}
 
 	/**
@@ -186,8 +190,8 @@ class StateService {
 		$this->remember($userId, $romPath);
 	}
 
-	public function loadSram(string $userId, string $romPath): ?string {
-		return $this->find($userId, $romPath, self::SAVES, $this->sramName($userId, $romPath))?->getContent();
+	public function loadSram(string $userId, string $romPath): ?File {
+		return $this->find($userId, $romPath, self::SAVES, $this->sramName($userId, $romPath));
 	}
 
 	/** Whether the game has a battery save at all, without reading it. */

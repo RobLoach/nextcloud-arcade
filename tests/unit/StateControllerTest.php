@@ -9,6 +9,8 @@ use OCA\Arcade\Controller\StateController;
 use OCA\Arcade\Service\SettingsService;
 use OCA\Arcade\Service\StateService;
 use OCP\AppFramework\Http;
+use OCP\AppFramework\Http\FileDisplayResponse;
+use OCP\Files\File;
 use OCP\Files\Folder;
 use OCP\Files\IRootFolder;
 use OCP\IRequest;
@@ -291,6 +293,21 @@ class StateControllerTest extends TestCase {
 
 		$this->assertSame(Http::STATUS_NOT_FOUND, $controller->get(self::GAME, 990)->getStatus());
 		$this->assertSame(Http::STATUS_BAD_REQUEST, $controller->get(self::GAME, StateService::HIGHEST_SLOT + 1)->getStatus());
+	}
+
+	public function testAStateIsStreamedRatherThanReadIntoMemory(): void {
+		$controller = $this->controller();
+		$file = $this->createStub(File::class);
+		$file->method('getName')->willReturn('Mario.state');
+		$file->method('getEtag')->willReturn('etag');
+		$file->method('getMTime')->willReturn(1000);
+		$this->stateService->method('load')->willReturn($file);
+
+		$response = $controller->get(self::GAME, 1);
+
+		$this->assertInstanceOf(FileDisplayResponse::class, $response);
+		$this->assertSame('application/octet-stream', $response->getHeaders()['Content-Type']);
+		$this->assertStringStartsWith('attachment;', $response->getHeaders()['Content-Disposition']);
 	}
 
 	public function testTheCoreThePlayerRanIsHandedOn(): void {

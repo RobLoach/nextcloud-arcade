@@ -64,6 +64,11 @@ All notable changes to NextCloud Arcade. The format follows
 
 ### Changed
 - Nextcloud 34.0.4 or newer is required.
+- Save states, battery saves, their pictures and BIOS files are streamed
+  to the player straight from storage, rather than read whole into the
+  server's memory first.
+- Looking for box art and screenshots asks the database for the images of
+  a folder only, rather than listing everything in it.
 - ROMs take the file types the shared freedesktop.org database gives
   them: Super Nintendo games are `application/vnd.nintendo.snes.rom` and
   Atari Lynx games `application/x-atari-lynx-rom`, and Neo Geo Pocket

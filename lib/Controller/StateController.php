@@ -14,9 +14,10 @@ use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
 use OCP\AppFramework\Http\Attribute\OpenAPI;
 use OCP\AppFramework\Http\Attribute\UserRateLimit;
-use OCP\AppFramework\Http\DataDownloadResponse;
+use OCP\AppFramework\Http\FileDisplayResponse;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\AppFramework\Http\Response;
+use OCP\Files\File;
 use OCP\Files\IRootFolder;
 use OCP\IRequest;
 
@@ -72,7 +73,7 @@ class StateController extends ArcadeController {
 		if ($state === null) {
 			return new JSONResponse([], Http::STATUS_NOT_FOUND);
 		}
-		return new DataDownloadResponse($state, basename($file) . '.state', 'application/octet-stream');
+		return $this->download($state, basename($file) . '.state', 'application/octet-stream');
 	}
 
 	// The fastest autosave interval is 30 seconds, so with a manual saving
@@ -138,7 +139,7 @@ class StateController extends ArcadeController {
 		if ($thumbnail === null) {
 			return new JSONResponse([], Http::STATUS_NOT_FOUND);
 		}
-		$response = new DataDownloadResponse($thumbnail, 'thumbnail.png', 'image/png');
+		$response = $this->download($thumbnail, 'thumbnail.png', 'image/png');
 		// The panel asks for every slot's picture each time it opens, and
 		// the answer never changes: the caller hangs the slot's mtime on
 		// the URL, so a rewritten slot is a different one to ask for.
@@ -179,7 +180,7 @@ class StateController extends ArcadeController {
 		if ($sram === null) {
 			return new JSONResponse([], Http::STATUS_NOT_FOUND);
 		}
-		return new DataDownloadResponse($sram, basename($file) . '.srm', 'application/octet-stream');
+		return $this->download($sram, basename($file) . '.srm', 'application/octet-stream');
 	}
 
 	// SRAM syncs once a minute plus a flush when the page hides or the game
@@ -291,5 +292,16 @@ class StateController extends ArcadeController {
 	private function isWritableSlot(string $file, int $slot): bool {
 		return $this->isValidRequest($file, $slot)
 			&& ($slot === StateService::AUTO_SLOT || ($slot >= 0 && $slot < StateService::SLOTS));
+	}
+
+	/**
+	 * A file of the saves folder, streamed from storage rather than read
+	 * into memory first, under the name and type the player expects.
+	 */
+	private function download(File $file, string $name, string $mime): FileDisplayResponse {
+		$response = new FileDisplayResponse($file);
+		$response->addHeader('Content-Type', $mime);
+		$response->addHeader('Content-Disposition', 'attachment; filename="' . rawurlencode($name) . '"');
+		return $response;
 	}
 }

@@ -12,7 +12,9 @@ use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
 use OCP\AppFramework\Http\Attribute\OpenAPI;
 use OCP\AppFramework\Http\Attribute\UserRateLimit;
 use OCP\AppFramework\Http\DataDisplayResponse;
+use OCP\AppFramework\Http\FileDisplayResponse;
 use OCP\AppFramework\Http\JSONResponse;
+use OCP\AppFramework\Http\Response;
 use OCP\IRequest;
 
 /**
@@ -41,15 +43,16 @@ class BiosController extends ArcadeController {
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
 	#[FrontpageRoute(verb: 'GET', url: '/arcade/bios')]
-	public function get(string $name = ''): DataDisplayResponse {
+	public function get(string $name = ''): Response {
 		// The user's own system folder first, whatever the casing there,
 		// then the store of the instance; a public page has no folder, so
 		// only the store answers for it.
-		$data = $this->biosService->readFor($this->userId, $name);
-		if ($data === null) {
+		$file = $this->biosService->fileFor($this->userId, $name);
+		if ($file === null) {
 			return new DataDisplayResponse('', Http::STATUS_NOT_FOUND);
 		}
-		$response = new DataDisplayResponse($data, Http::STATUS_OK, [
+		// Streamed rather than read into memory: some are megabytes.
+		$response = new FileDisplayResponse($file, Http::STATUS_OK, [
 			'Content-Type' => 'application/octet-stream',
 		]);
 		// Private cache: the bytes may be the user's own.

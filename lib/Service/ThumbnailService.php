@@ -181,7 +181,8 @@ class ThumbnailService {
 	 */
 	private function indexImages(Folder $folder): array {
 		$images = ['exact' => [], 'loose' => []];
-		foreach ($folder->getDirectoryListing() as $node) {
+		// Only the images are fetched: the database leaves the rest out.
+		foreach ($folder->getDirectoryListing('image') as $node) {
 			if (!$node instanceof Folder && $this->isImage($node->getName())) {
 				$this->addImage($images, $node->getName(), $node->getId());
 			}
@@ -360,7 +361,7 @@ class ThumbnailService {
 				$nodes[] = $node;
 				continue;
 			}
-			foreach ($node->getDirectoryListing() as $child) {
+			foreach ($node->getDirectoryListing('image') as $child) {
 				if (!$child instanceof Folder) {
 					$nodes[] = $child;
 				}

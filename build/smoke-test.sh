@@ -438,6 +438,15 @@ STATE_URL="$BASE/index.php/apps/arcade/arcade/state?file=$GAME&slot=1"
 printf 'not a real save state' > "$WORKDIR/state.bin"
 expect_status 'a state is saved' 200 -X POST \
 	-F "data=@$WORKDIR/state.bin;filename=state" "$STATE_URL" || true
+# Streamed back from the saves folder rather than read into memory first,
+# which is a different response type -- so the bytes are checked whole.
+if expect_status 'the state comes back' 200 "$STATE_URL"; then
+	if cmp -s "$BODY" "$WORKDIR/state.bin"; then
+		echo "ok: the state comes back byte for byte"
+	else
+		fail "the state came back as '$(head -c 100 "$BODY")'"
+	fi
+fi
 
 # The panel asks for every slot's picture each time it opens, and the URL
 # it asks with carries the slot's mtime -- so the answer is good until the

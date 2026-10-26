@@ -7,6 +7,8 @@ namespace OCA\Arcade\Tests\Unit;
 use OCA\Arcade\Controller\BiosController;
 use OCA\Arcade\Service\BiosService;
 use OCP\AppFramework\Http;
+use OCP\AppFramework\Http\FileDisplayResponse;
+use OCP\Files\File;
 use OCP\IRequest;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
@@ -43,31 +45,41 @@ class BiosControllerTest extends TestCase {
 		return $controller;
 	}
 
+	private function firmware(): File {
+		$file = $this->createStub(File::class);
+		$file->method('getName')->willReturn('gb_bios.bin');
+		$file->method('getEtag')->willReturn('etag');
+		$file->method('getMTime')->willReturn(1000);
+		$file->method('getSize')->willReturn(12);
+		return $file;
+	}
+
 	public function testGetHandsOutTheFileForTheAskingUser(): void {
 		$controller = $this->controller();
-		$this->biosService->expects($this->once())->method('readFor')
+		$file = $this->firmware();
+		$this->biosService->expects($this->once())->method('fileFor')
 			->with('admin', 'gb_bios.bin')
-			->willReturn('the firmware');
+			->willReturn($file);
 
 		$response = $controller->get('gb_bios.bin');
 
 		$this->assertSame(Http::STATUS_OK, $response->getStatus());
-		$this->assertSame('the firmware', $response->getData());
+		$this->assertInstanceOf(FileDisplayResponse::class, $response, 'streamed, not read into memory');
 		$this->assertSame('application/octet-stream', $response->getHeaders()['Content-Type']);
 	}
 
 	public function testGetWithoutAUserAsksForTheStoreOnly(): void {
 		$controller = $this->controller(userId: null);
-		$this->biosService->expects($this->once())->method('readFor')
+		$this->biosService->expects($this->once())->method('fileFor')
 			->with(null, 'gb_bios.bin')
-			->willReturn('the firmware');
+			->willReturn($this->firmware());
 
 		$this->assertSame(Http::STATUS_OK, $controller->get('gb_bios.bin')->getStatus());
 	}
 
 	public function testGetSaysWhenNobodyHasTheFile(): void {
 		$controller = $this->controller();
-		$this->biosService->method('readFor')->willReturn(null);
+		$this->biosService->method('fileFor')->willReturn(null);
 
 		$this->assertSame(Http::STATUS_NOT_FOUND, $controller->get('gb_bios.bin')->getStatus());
 	}

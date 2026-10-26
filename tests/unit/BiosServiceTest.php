@@ -201,13 +201,13 @@ class BiosServiceTest extends TestCase {
 		$this->userFiles['gb_bios.bin'] = 'mine';
 		$this->files['gb_bios.bin'] = 'everybody\'s';
 
-		$this->assertSame('mine', $this->service()->readFor('player', 'gb_bios.bin'));
+		$this->assertSame('mine', $this->service()->fileFor('player', 'gb_bios.bin')?->getContent());
 	}
 
 	public function testReadForFindsTheFolderFileWhateverItsCase(): void {
 		$this->userFiles['GB_BIOS.BIN'] = 'mine';
 
-		$this->assertSame('mine', $this->service()->readFor('player', 'gb_bios.bin'));
+		$this->assertSame('mine', $this->service()->fileFor('player', 'gb_bios.bin')?->getContent());
 	}
 
 	public function testReadForIsAskedWhateverTheCase(): void {
@@ -216,13 +216,13 @@ class BiosServiceTest extends TestCase {
 		// wanted sat right there.
 		$this->userFiles['gb_bios.bin'] = 'mine';
 
-		$this->assertSame('mine', $this->service()->readFor('player', 'GB_BIOS.BIN'));
+		$this->assertSame('mine', $this->service()->fileFor('player', 'GB_BIOS.BIN')?->getContent());
 	}
 
 	public function testReadForReachesTheStoreWhateverTheCase(): void {
 		$this->files['gb_bios.bin'] = 'everybody\'s';
 
-		$this->assertSame('everybody\'s', $this->service()->readFor('player', 'Gb_Bios.Bin'));
+		$this->assertSame('everybody\'s', $this->service()->fileFor('player', 'Gb_Bios.Bin')?->getContent());
 	}
 
 	public function testTheNameACoreAsksForIsKnownWhateverItsCase(): void {
@@ -270,25 +270,25 @@ class BiosServiceTest extends TestCase {
 	public function testReadForFallsBackToTheStore(): void {
 		$this->files['gb_bios.bin'] = 'everybody\'s';
 
-		$this->assertSame('everybody\'s', $this->service()->readFor('player', 'gb_bios.bin'));
+		$this->assertSame('everybody\'s', $this->service()->fileFor('player', 'gb_bios.bin')?->getContent());
 	}
 
 	public function testReadForWithoutAUserOnlyKnowsTheStore(): void {
 		$this->userFiles['gb_bios.bin'] = 'somebody\'s';
 		$this->files['gb_bios.bin'] = 'everybody\'s';
 
-		$this->assertSame('everybody\'s', $this->service()->readFor(null, 'gb_bios.bin'));
+		$this->assertSame('everybody\'s', $this->service()->fileFor(null, 'gb_bios.bin')?->getContent());
 	}
 
 	public function testReadForRefusesANameNoCoreAsksFor(): void {
 		$this->userFiles['notes.txt'] = 'todo';
 		$this->files['notes.txt'] = 'todo';
 
-		$this->assertNull($this->service()->readFor('player', 'notes.txt'));
+		$this->assertNull($this->service()->fileFor('player', 'notes.txt')?->getContent());
 	}
 
 	public function testReadForSaysNothingWhenNobodyHasTheFile(): void {
-		$this->assertNull($this->service()->readFor('player', 'gb_bios.bin'));
+		$this->assertNull($this->service()->fileFor('player', 'gb_bios.bin')?->getContent());
 	}
 
 	public function testStatusFindsAFolderFileWhateverItsCase(): void {
