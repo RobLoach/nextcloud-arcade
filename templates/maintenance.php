@@ -25,5 +25,11 @@
 				<button type="button" class="arcade-maintenance-action" disabled><?php p($action); ?></button>
 			</div>
 		<?php endforeach; ?>
+		<?php /* Nothing to press: how the background jobs last went, which
+		        otherwise only the log says. */ ?>
+		<div class="arcade-maintenance-task" data-task="jobs">
+			<h3><?php p($l->t('Background jobs')); ?></h3>
+			<div class="arcade-maintenance-state" aria-live="polite"><?php p($l->t('Checking …')); ?></div>
+		</div>
 	</div>
 </div>

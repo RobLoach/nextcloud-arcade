@@ -75,6 +75,7 @@ class Status extends Command {
 			'users' => $users,
 			'totals' => $totals,
 			'appDataSaves' => $this->stateService->appDataSaves(),
+			'jobs' => $this->maintenance->jobs(),
 		];
 
 		if ((bool)$input->getOption('json')) {
@@ -91,6 +92,7 @@ class Status extends Command {
 	 *     users: list<array{user: string, games: int, plays: int, seconds: int}>,
 	 *     totals: array{games: int, plays: int, seconds: int},
 	 *     appDataSaves: array{files: int, bytes: int},
+	 *     jobs: array<string, array{running: bool, last: ?array{status: string, at: int, seconds: ?float}}>,
 	 * } $status
 	 */
 	private function report(array $status, OutputInterface $output): void {
@@ -117,6 +119,8 @@ class Status extends Command {
 			));
 		}
 
+		$this->reportJobs($status['jobs'], $output);
+
 		$left = $status['appDataSaves'];
 		if ($left['files'] > 0) {
 			$output->writeln(sprintf(
@@ -126,6 +130,54 @@ class Status extends Command {
 				$this->sizeOf($left['bytes']),
 			));
 		}
+	}
+
+	/**
+	 * How each background job last went: a failure otherwise only shows
+	 * in the log.
+	 *
+	 * @param array<string, array{running: bool, last: ?array{status: string, at: int, seconds: ?float}}> $jobs
+	 */
+	private function reportJobs(array $jobs, OutputInterface $output): void {
+		if ($jobs === []) {
+			return;
+		}
+		$names = [
+			'scan' => 'Scanning every library',
+			'cleanup' => 'Weekly cleanup',
+			'thumbnails' => 'Fetching thumbnails',
+			'metadata' => 'Reading game details',
+		];
+		$output->writeln('');
+		$output->writeln('Background jobs:');
+		foreach ($jobs as $job => $state) {
+			$last = $state['last'];
+			if ($last === null) {
+				$said = 'has not run yet';
+			} else {
+				$when = date('Y-m-d H:i', $last['at']);
+				$took = $last['seconds'] === null ? '' : sprintf(', took %s', $this->durationOf($last['seconds']));
+				$said = match ($last['status']) {
+					'failed' => "<error>failed</error> at $when$took",
+					'crashed' => "<error>crashed</error> at $when$took",
+					default => "finished at $when$took",
+				};
+			}
+			if ($state['running']) {
+				$said = $last === null ? 'running now' : "running now; last $said";
+			}
+			$output->writeln(sprintf('  %-24s %s', $names[$job] ?? $job, $said));
+		}
+	}
+
+	private function durationOf(float $seconds): string {
+		if ($seconds < 1) {
+			return '<1s';
+		}
+		if ($seconds < 60) {
+			return sprintf('%.1fs', $seconds);
+		}
+		return $this->playtimeOf((int)round($seconds));
 	}
 
 	private function sizeOf(int $bytes): string {

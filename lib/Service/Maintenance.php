@@ -34,6 +34,7 @@ class Maintenance {
 		private CleanupService $cleanupService,
 		private StateService $stateService,
 		private RegisterMimeTypes $mimeTypes,
+		private JobHistory $jobHistory,
 	) {
 	}
 
@@ -72,7 +73,7 @@ class Maintenance {
 	 * @return list<string>
 	 */
 	public function repairDatabase(): array {
-		$qb = $this->connection->getQueryBuilder();
+		$qb = $this->connection->getTypedQueryBuilder();
 		$qb->delete('migrations')
 			->where($qb->expr()->eq('app', $qb->createNamedParameter(Application::APP_ID)));
 		$qb->executeStatement();
@@ -98,13 +99,24 @@ class Maintenance {
 	 * @return array{
 	 *     database: list<string>,
 	 *     appData: array{files: int, bytes: int},
+	 *     jobs: array<string, array{running: bool, last: ?array{status: string, at: int, seconds: ?float}}>,
 	 * }
 	 */
 	public function status(): array {
 		return [
 			'database' => $this->databaseProblems(),
 			'appData' => $this->stateService->appDataSaves(),
+			'jobs' => $this->jobs(),
 		];
+	}
+
+	/**
+	 * How the background jobs of the app last went.
+	 *
+	 * @return array<string, array{running: bool, last: ?array{status: string, at: int, seconds: ?float}}>
+	 */
+	public function jobs(): array {
+		return $this->jobHistory->states();
 	}
 
 	/**
@@ -140,8 +152,8 @@ class Maintenance {
 	 */
 	private function hasColumn(string $table, string $column): bool {
 		try {
-			$qb = $this->connection->getQueryBuilder();
-			$qb->select($column)->from($table)->setMaxResults(1);
+			$qb = $this->connection->getTypedQueryBuilder();
+			$qb->selectColumns($column)->from($table)->setMaxResults(1);
 			$qb->executeQuery()->closeCursor();
 			return true;
 		} catch (Exception) {

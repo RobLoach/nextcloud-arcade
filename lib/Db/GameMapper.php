@@ -27,8 +27,8 @@ class GameMapper extends QBMapper {
 	 * @return array<string, array{path: string, md5: string, core: string, name: string}>
 	 */
 	public function entriesOf(string $userId): array {
-		$qb = $this->db->getQueryBuilder();
-		$qb->select('game_key', 'last_path', 'checksum', 'core', 'name')
+		$qb = $this->db->getTypedQueryBuilder();
+		$qb->selectColumns('game_key', 'last_path', 'checksum', 'core', 'name')
 			->from($this->getTableName())
 			->where($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)));
 		$result = $qb->executeQuery();
@@ -49,8 +49,8 @@ class GameMapper extends QBMapper {
 	 * @return array{path: string, md5: string, core: string, name: string}|null
 	 */
 	public function entryOf(string $userId, string $key): ?array {
-		$qb = $this->db->getQueryBuilder();
-		$qb->select('last_path', 'checksum', 'core', 'name')
+		$qb = $this->db->getTypedQueryBuilder();
+		$qb->selectColumns('last_path', 'checksum', 'core', 'name')
 			->from($this->getTableName())
 			->where($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)))
 			->andWhere($qb->expr()->eq('game_key', $qb->createNamedParameter($key)));
@@ -74,10 +74,17 @@ class GameMapper extends QBMapper {
 	 * @return array<string, int> user id => games
 	 */
 	public function countsByUser(): array {
-		$qb = $this->db->getQueryBuilder();
-		$qb->select('user_id')
-			->selectAlias($qb->func()->count('game_key'), 'games')
-			->from($this->getTableName())
+		$qb = $this->db->getTypedQueryBuilder();
+		// One call each: what a row holds is read off $qb itself, which a
+		// chain does not tell Psalm about past its first link. Every select
+		// after the first trips the `S of never` bound the builder is
+		// declared with -- core's own Psalm test of it does the same -- so
+		// that one issue is let through here; the columns still add up.
+		$qb->selectColumns('user_id');
+		/** @psalm-suppress InvalidTemplateParam */
+		$qb->selectAlias($qb->func()->count('game_key'), 'games');
+		/** @psalm-suppress InvalidTemplateParam */
+		$qb->from($this->getTableName())
 			->groupBy('user_id');
 		$result = $qb->executeQuery();
 		$counts = [];
@@ -121,7 +128,7 @@ class GameMapper extends QBMapper {
 	}
 
 	private function replace(string $userId, string $key, int $fileId, string $path, string $checksum, string $core, ?string $name): int {
-		$qb = $this->db->getQueryBuilder();
+		$qb = $this->db->getTypedQueryBuilder();
 		$qb->update($this->getTableName())
 			->set('file_id', $qb->createNamedParameter($fileId, IQueryBuilder::PARAM_INT))
 			->set('last_path', $qb->createNamedParameter($path))
@@ -164,7 +171,7 @@ class GameMapper extends QBMapper {
 		if ($keys === []) {
 			return;
 		}
-		$qb = $this->db->getQueryBuilder();
+		$qb = $this->db->getTypedQueryBuilder();
 		$qb->delete($this->getTableName())
 			->where($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)))
 			->andWhere($qb->expr()->in('game_key', $qb->createNamedParameter($keys, IQueryBuilder::PARAM_STR_ARRAY)));
@@ -172,7 +179,7 @@ class GameMapper extends QBMapper {
 	}
 
 	public function deleteAllForUser(string $userId): void {
-		$qb = $this->db->getQueryBuilder();
+		$qb = $this->db->getTypedQueryBuilder();
 		$qb->delete($this->getTableName())
 			->where($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)));
 		$qb->executeStatement();

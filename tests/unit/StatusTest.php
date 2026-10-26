@@ -25,6 +25,8 @@ class StatusTest extends TestCase {
 	private array $appData = ['files' => 0, 'bytes' => 0];
 	/** What is wrong with the tables. */
 	private array $problems = [];
+	/** How the background jobs last went. */
+	private array $jobs = [];
 
 	private function tester(): CommandTester {
 		$stateService = $this->createStub(StateService::class);
@@ -38,6 +40,7 @@ class StatusTest extends TestCase {
 
 		$maintenance = $this->createStub(Maintenance::class);
 		$maintenance->method('databaseProblems')->willReturnCallback(fn (): array => $this->problems);
+		$maintenance->method('jobs')->willReturnCallback(fn (): array => $this->jobs);
 
 		return new CommandTester(new Status($stateService, $gameMapper, $playMapper, $maintenance));
 	}
@@ -91,9 +94,28 @@ class StatusTest extends TestCase {
 		$tester->execute(['--json' => true]);
 
 		$status = json_decode($tester->getDisplay(), true);
-		$this->assertSame(['users', 'totals', 'appDataSaves'], array_keys($status));
+		$this->assertSame(['users', 'totals', 'appDataSaves', 'jobs'], array_keys($status));
 		$this->assertSame([['user' => 'alice', 'games' => 3, 'plays' => 5, 'seconds' => 60]], $status['users']);
 		$this->assertSame(['files' => 1, 'bytes' => 10], $status['appDataSaves']);
+	}
+
+	public function testHowEachBackgroundJobWentIsSaid(): void {
+		$at = mktime(9, 30, 0, 10, 20, 2026);
+		$this->jobs = [
+			'scan' => ['running' => false, 'last' => ['status' => 'succeeded', 'at' => $at, 'seconds' => 3.5]],
+			'cleanup' => ['running' => false, 'last' => ['status' => 'failed', 'at' => $at, 'seconds' => 125.0]],
+			'thumbnails' => ['running' => true, 'last' => null],
+			'metadata' => ['running' => false, 'last' => null],
+		];
+		$tester = $this->tester();
+
+		$tester->execute([]);
+
+		$display = $tester->getDisplay();
+		$this->assertMatchesRegularExpression('/Scanning every library +finished at 2026-10-20 09:30, took 3\.5s/', $display);
+		$this->assertMatchesRegularExpression('/Weekly cleanup +failed at 2026-10-20 09:30, took 2m/', $display);
+		$this->assertMatchesRegularExpression('/Fetching thumbnails +running now\n/', $display);
+		$this->assertMatchesRegularExpression('/Reading game details +has not run yet/', $display);
 	}
 
 	public function testMissingTablesAreSaidPlainlyWithWhatToDo(): void {

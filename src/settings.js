@@ -472,6 +472,8 @@ function setUpMaintenance() {
 		databaseInOrder = problems.length === 0
 		showLeftBehind()
 
+		showJobs(status.jobs ?? {})
+
 		const appData = status.appData ?? { files: 0, bytes: 0 }
 		if (appData.files === 0) {
 			say('appdata', t('arcade', 'Nothing is left.'))
@@ -483,6 +485,53 @@ function setUpMaintenance() {
 			buttonOf('appdata').disabled = false
 		}
 
+	}
+
+	// How each background job last went, one line apiece. A failure is
+	// the reason this is here: otherwise only the log says so.
+	const jobNames = {
+		scan: t('arcade', 'Scanning every library'),
+		cleanup: t('arcade', 'Weekly cleanup'),
+		thumbnails: t('arcade', 'Fetching thumbnails'),
+		metadata: t('arcade', 'Reading game details'),
+	}
+	const jobLine = ({ running, last }) => {
+		if (running) {
+			return t('arcade', 'Running now')
+		}
+		if (!last) {
+			return t('arcade', 'Has not run yet')
+		}
+		const when = new Date(last.at * 1000).toLocaleString()
+		switch (last.status) {
+		case 'failed':
+			return t('arcade', 'Failed on {when}. The Nextcloud log says why.', { when })
+		case 'crashed':
+			return t('arcade', 'Stopped partway on {when}. The Nextcloud log says why.', { when })
+		default:
+			return t('arcade', 'Finished on {when}', { when })
+		}
+	}
+	const showJobs = (jobs) => {
+		const list = document.createElement('ul')
+		list.className = 'arcade-maintenance-jobs'
+		for (const [job, state] of Object.entries(jobs)) {
+			const item = document.createElement('li')
+			const name = document.createElement('strong')
+			name.textContent = jobNames[job] ?? job
+			item.append(name, ': ', jobLine(state))
+			if (state.last?.status === 'failed' || state.last?.status === 'crashed') {
+				item.classList.add('arcade-maintenance-job-failed')
+			}
+			list.appendChild(item)
+		}
+		const state = stateOf('jobs')
+		state.textContent = ''
+		if (list.children.length === 0) {
+			state.textContent = t('arcade', 'Nextcloud keeps no record of them.')
+			return
+		}
+		state.appendChild(list)
 	}
 
 	// What is left behind of deleted games and users takes a walk over the

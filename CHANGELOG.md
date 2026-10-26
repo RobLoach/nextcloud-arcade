@@ -56,6 +56,10 @@ All notable changes to NextCloud Arcade. The format follows
   put back to its defaults.
 - Mute, in the player's control bar, drawn as whichever of the two it
   would do next.
+- The Maintenance section and `occ arcade:status` say how each of
+  Arcade's background jobs last went -- scanning every library, the
+  weekly cleanup, fetching thumbnails, reading game details -- and when,
+  so one that failed shows there rather than only in the log.
 - A Details button on every game of the library -- in the corner of a
   card, at the end of a row of the list and the table -- opening the
   Files sidebar on it, with its tags, shares, versions and Arcade tab,
@@ -69,6 +73,8 @@ All notable changes to NextCloud Arcade. The format follows
   server's memory first.
 - Looking for box art and screenshots asks the database for the images of
   a folder only, rather than listing everything in it.
+- The queries of the app's own tables say which columns they read, so
+  static analysis catches a misspelled one before it reaches a database.
 - The background jobs that go through every user -- scanning every
   library, the weekly cleanup and Cloud Sync check -- let go of each
   user's files once done with them, so on a large instance they no longer

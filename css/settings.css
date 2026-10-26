@@ -290,6 +290,22 @@
 	margin-block-end: var(--default-grid-baseline);
 }
 
+#arcade-maintenance .arcade-maintenance-jobs {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+#arcade-maintenance .arcade-maintenance-jobs strong {
+	color: var(--color-main-text);
+	font-weight: normal;
+}
+
+/* A job that went wrong is the line worth finding at a glance. */
+#arcade-maintenance .arcade-maintenance-job-failed {
+	color: var(--color-text-error, var(--color-error-text));
+}
+
 /* Pressed once, and waiting to be pressed again: in the server's own
    colours for something that cannot be taken back, which pair a light
    background with a dark text rather than the other way around. */
