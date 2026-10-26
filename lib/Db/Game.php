@@ -25,8 +25,8 @@ use OCP\AppFramework\Db\Entity;
  * @method void setLastPath(string $lastPath)
  * @method string getChecksum()
  * @method void setChecksum(string $checksum)
- * @method string getCore()
- * @method void setCore(string $core)
+ * @method ?string getCore()
+ * @method void setCore(?string $core)
  */
 class Game extends Entity {
 	protected string $userId = '';
@@ -34,7 +34,7 @@ class Game extends Entity {
 	protected string $gameKey = '';
 	protected string $lastPath = '';
 	protected string $checksum = '';
-	protected string $core = '';
+	protected ?string $core = null;
 
 	public function __construct() {
 		$this->addType('userId', 'string');

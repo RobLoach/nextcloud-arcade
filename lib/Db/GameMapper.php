@@ -102,7 +102,7 @@ class GameMapper extends QBMapper {
 		$game->setFileId($fileId);
 		$game->setLastPath($path);
 		$game->setChecksum($checksum);
-		$game->setCore($core);
+		$game->setCore($core === '' ? null : $core);
 		try {
 			$this->insert($game);
 		} catch (Exception $e) {

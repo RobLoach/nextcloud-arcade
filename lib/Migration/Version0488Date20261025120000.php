@@ -33,12 +33,15 @@ class Version0488Date20261025120000 extends SimpleMigrationStep {
 		if ($table->hasColumn('core')) {
 			return null;
 		}
-		// The libretro name of the core, such as "fceumm"; empty when the
-		// player has not said, and the path is asked instead.
+		// The libretro name of the core, such as "fceumm"; null when the
+		// player has not said, and the path is asked instead. Nullable
+		// rather than an empty default: Nextcloud refuses a column added
+		// to a table that is not null with '' for a default, since Oracle
+		// stores '' as null and the rows already there would break it.
 		$table->addColumn('core', Types::STRING, [
-			'notnull' => true,
+			'notnull' => false,
 			'length' => 64,
-			'default' => '',
+			'default' => null,
 		]);
 		return $schema;
 	}
