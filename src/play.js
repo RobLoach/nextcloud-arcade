@@ -1,5 +1,6 @@
 import { generateUrl } from '@nextcloud/router'
 import { encodePath } from './paths.js'
+import { startInSlot } from './startslot.js'
 import { romMimes } from './systems.js'
 
 /**
@@ -25,8 +26,13 @@ export function playUrl(path, fileId) {
  * @param {string} path path of the game
  * @param {string} mime its mimetype
  * @param {number|string} [fileId] the Nextcloud file id, when known
+ * @param {?number} [slot] a save state to start in, rather than offering
+ *	to resume from the latest
  */
-export function playGame(path, mime, fileId) {
+export function playGame(path, mime, fileId, slot = null) {
+	if (slot !== null) {
+		startInSlot(path, slot)
+	}
 	if (window.OCA?.Viewer !== undefined && romMimes().includes(mime)) {
 		window.OCA.Viewer.open({ path })
 		return

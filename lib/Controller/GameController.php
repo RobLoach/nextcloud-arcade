@@ -6,6 +6,7 @@ namespace OCA\Arcade\Controller;
 
 use OCA\Arcade\CoreMap;
 use OCA\Arcade\Listener\MetadataListener;
+use OCA\Arcade\Service\BiosService;
 use OCA\Arcade\Service\RecentService;
 use OCA\Arcade\Service\StateService;
 use OCP\AppFramework\Http;
@@ -38,6 +39,7 @@ class GameController extends ArcadeController {
 		private IFilesMetadataManager $metadataManager,
 		private RecentService $recentService,
 		private StateService $stateService,
+		private BiosService $biosService,
 		private LoggerInterface $logger,
 		protected ?string $userId,
 	) {
@@ -62,6 +64,12 @@ class GameController extends ArcadeController {
 		}
 
 		$known = $this->metadataOf($node->getId());
+		// A game the background pass has not reached yet is read now, for
+		// this one file: a sidebar of System and nothing else says less
+		// than the cartridge would have, a moment later.
+		if (!$known['read']) {
+			$known = $this->readNow($node) ?? $known;
+		}
 		// The mark inside the file has the last word; the name and the
 		// folder answer for the games that have not been read yet.
 		$system = $known['system'] !== '' ? $known['system'] : (CoreMap::systemForPath($node->getPath()) ?? '');
@@ -87,14 +95,65 @@ class GameController extends ArcadeController {
 			'crc32' => $known['crc32'],
 			'playtime' => $stats,
 			'states' => $this->stateService->list($userId, $file),
+			'emulator' => CoreMap::CORE_NAMES[CoreMap::SYSTEMS[$system]['core'] ?? ''] ?? '',
+			'bios' => $this->biosOf($userId, $system),
 		]);
+	}
+
+	/**
+	 * Read what the ROM says about itself right away, the way the
+	 * background pass would. Live first, so a system whose cartridges say
+	 * nothing the app reads costs nothing more than its name.
+	 *
+	 * @return ?array{system: string, title: string, region: string, mapper: string, checksum: string, crc32: string, read: bool}
+	 */
+	private function readNow(File $node): ?array {
+		try {
+			$this->metadataManager->refreshMetadata(
+				$node,
+				IFilesMetadataManager::PROCESS_LIVE | IFilesMetadataManager::PROCESS_BACKGROUND,
+			);
+		} catch (\Throwable $e) {
+			$this->logger->debug('Could not read a ROM for the sidebar', ['exception' => $e]);
+			return null;
+		}
+		return $this->metadataOf($node->getId());
+	}
+
+	/**
+	 * The BIOS files the system's core asks for, and whether the player
+	 * would find each: the user's own system folder first, then the store
+	 * of the instance.
+	 *
+	 * @return list<array{name: string, present: bool, source: ?string}>
+	 */
+	private function biosOf(string $userId, string $system): array {
+		if ((CoreMap::SYSTEMS[$system]['bios'] ?? []) === []) {
+			return [];
+		}
+		try {
+			foreach ($this->biosService->statusFor($userId)['systems'] ?? [] as $entry) {
+				if ($entry['system']['id'] === $system) {
+					return array_map(
+						static fn (array $file): array => ['name' => $file['name'], 'present' => $file['present'], 'source' => $file['source']],
+						$entry['files'],
+					);
+				}
+			}
+		} catch (\Throwable $e) {
+			$this->logger->debug('Could not look for the BIOS files of a system', ['exception' => $e]);
+		}
+		return [];
 	}
 
 	/**
 	 * What was read out of the ROM itself, empty strings for whatever was
 	 * not. A game nothing has been filed for is still a game.
 	 *
-	 * @return array{system: string, title: string, region: string, mapper: string, checksum: string, crc32: string}
+	 * 'read' says whether anything was read out of the file itself yet,
+	 * rather than told by its name or the upload.
+	 *
+	 * @return array{system: string, title: string, region: string, mapper: string, checksum: string, crc32: string, read: bool}
 	 */
 	private function metadataOf(int $fileId): array {
 		$known = [
@@ -104,6 +163,7 @@ class GameController extends ArcadeController {
 			'mapper' => '',
 			'checksum' => '',
 			'crc32' => '',
+			'read' => false,
 		];
 		try {
 			$metadata = $this->metadataManager->getMetadata($fileId);
@@ -119,6 +179,9 @@ class GameController extends ArcadeController {
 					$known[$field] = $metadata->getString($key);
 				}
 			}
+			// Only reading the file gives a title, a mapper or a CRC32; the
+			// system and the MD5 can come from the name and the upload.
+			$known['read'] = $known['title'] !== '' || $known['mapper'] !== '' || $known['crc32'] !== '';
 		} catch (\Throwable $e) {
 			// Nothing has been filed for this file yet, which is ordinary
 			// for a game the background job has not reached. Anything else

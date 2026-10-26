@@ -8,6 +8,7 @@ import { offerResume } from './panels/resume.js'
 import { createStatesPanel, databaseBroken, whyFailed } from './panels/states.js'
 import { davUrl, makeFolder } from './player.js'
 import { hasFilesSidebar, showDetails } from './sidebar.js'
+import { takeStartSlot } from './startslot.js'
 import { shortNameForPath } from './systems.js'
 import { UNTIL_DISMISSED } from './toast.js'
 import { attachTouchControls, isTouchDevice, isTouchPrimary } from './touch.js'
@@ -227,6 +228,7 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 			load: statesPanel.load,
 			list: stateCache.list,
 			automatic: settings.autoload_on_start === true,
+			startSlot: takeStartSlot(romPath),
 			signal: gone.signal,
 			onFailure: (error) => flash(error?.reason === 'database'
 				? databaseBroken()

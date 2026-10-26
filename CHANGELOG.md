@@ -60,6 +60,13 @@ All notable changes to NextCloud Arcade. The format follows
   Arcade's background jobs last went -- scanning every library, the
   weekly cleanup, fetching thumbnails, reading game details -- and when,
   so one that failed shows there rather than only in the log.
+- The Arcade tab of the sidebar -- in the Files app, and opened from the
+  library -- shows more of a game: the emulator that runs it, the BIOS
+  files its system asks for and whether they are found, a picture of
+  each save state with a Load button that starts the game in it, and the
+  latest screenshots. Opened from the library, it links to the game in
+  Files. A game the background pass has not read yet is read there and
+  then, so its title and region show straight away.
 - A Details button on every game of the library -- in the corner of a
   card, at the end of a row of the list and the table -- opening the
   Files sidebar on it, with its tags, shares, versions and Arcade tab,
@@ -132,6 +139,9 @@ All notable changes to NextCloud Arcade. The format follows
   what each limit is currently set to.
 
 ### Fixed
+- Super Nintendo games never got their title or region: the header sits
+  32 KiB into the file, and the read stopped at the 8 KiB a Nextcloud
+  file stream hands over at a time.
 - "Play with Arcade" now appears in the file menu of the Files app. It was
   added where @nextcloud/files 3 keeps actions, and the Files app of
   Nextcloud 34 and 35 reads them where version 4 does, so it never showed.

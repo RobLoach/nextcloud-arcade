@@ -114,7 +114,10 @@ class MetadataListener implements IEventListener {
 			// rest of the same stream is what is hashed. Systems whose
 			// cartridges carry no name the app reads skip the first part.
 			$wanted = $ambiguous || $system === null || RomHeader::handles($system);
-			$front = $wanted ? (string)fread($handle, RomHeader::BYTES) : '';
+			// stream_get_contents, not fread: a stream of Nextcloud's hands
+			// over 8 KiB a call however much is asked for, and a Super
+			// Nintendo header sits 32 KiB in.
+			$front = $wanted ? (string)stream_get_contents($handle, RomHeader::BYTES) : '';
 			if ($ambiguous || $system === null) {
 				// What the cartridge says wins over the folder it sits in.
 				$marked = RomHeader::systemOf($front);
@@ -181,7 +184,7 @@ class MetadataListener implements IEventListener {
 		if (@fseek($handle, -RomHeader::TAIL_BYTES, SEEK_END) !== 0) {
 			return '';
 		}
-		return (string)fread($handle, RomHeader::TAIL_BYTES);
+		return (string)stream_get_contents($handle, RomHeader::TAIL_BYTES);
 	}
 
 	/**

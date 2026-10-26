@@ -11,15 +11,23 @@ import { AUTO_SLOT } from '../api.js'
  * @param {Function} options.load loads a state slot
  * @param {Function} options.list lists the slots, taking an abort signal
  * @param {boolean} [options.automatic] load without asking
+ * @param {?number} [options.startSlot] a slot asked for by name, loaded
+ *                                      without asking when it is there
  * @param {?AbortSignal} [options.signal] the game is over; offer nothing
  * @param {?Function} [options.onFailure] told the error when the slots
  *                                         cannot be listed at all
  * @return {Promise<void>} answers once the offer is made, or not
  */
-export async function offerResume({ container, load, list, automatic = false, signal = null, onFailure = null }) {
+export async function offerResume({ container, load, list, automatic = false, startSlot = null, signal = null, onFailure = null }) {
 	let latest = null
 	try {
 		const data = await list(signal)
+		// A slot asked for by name -- the Load button of the sidebar -- is
+		// loaded straight away, no question asked.
+		if (startSlot !== null && signal?.aborted !== true && data.states.some(({ slot }) => slot === startSlot)) {
+			load(startSlot)
+			return
+		}
 		latest = data.states.reduce((a, b) => (a === null || b.mtime > a.mtime ? b : a), null)
 	} catch (error) {
 		// A game closed mid-request is not a fault worth reporting.

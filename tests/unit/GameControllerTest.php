@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace OCA\Arcade\Tests\Unit;
 
 use OCA\Arcade\Controller\GameController;
+use OCA\Arcade\Listener\MetadataListener;
+use OCA\Arcade\Service\BiosService;
 use OCA\Arcade\Service\RecentService;
 use OCA\Arcade\Service\StateService;
 use OCP\AppFramework\Http;
@@ -69,6 +71,7 @@ class GameControllerTest extends TestCase {
 			$metadataManager,
 			$recentService,
 			$stateService,
+			$this->createStub(BiosService::class),
 			$this->createStub(LoggerInterface::class),
 			$userId,
 		);
@@ -111,7 +114,70 @@ class GameControllerTest extends TestCase {
 			'crc32' => 'cbf43926',
 			'playtime' => ['plays' => 3, 'seconds' => 5400, 'time' => 1700000100],
 			'states' => $states,
+			'emulator' => 'FCEUmm',
+			'bios' => [],
 		], $response->getData());
+	}
+
+	public function testAGameNotReadYetIsReadThereAndThen(): void {
+		$read = false;
+		$metadataManager = $this->createStub(IFilesMetadataManager::class);
+		$metadataManager->method('refreshMetadata')->willReturnCallback(
+			function ($node, int $process) use (&$read): IFilesMetadata {
+				// Live for the name, and the reading done here rather than
+				// left to a job.
+				$this->assertSame(IFilesMetadataManager::PROCESS_LIVE | IFilesMetadataManager::PROCESS_BACKGROUND, $process);
+				$read = true;
+				return $this->createStub(IFilesMetadata::class);
+			},
+		);
+		$metadataManager->method('getMetadata')->willReturnCallback(function () use (&$read): IFilesMetadata {
+			$filed = $this->createStub(IFilesMetadata::class);
+			$values = $read
+				? [MetadataListener::SYSTEM => 'snes', MetadataListener::TITLE => 'CHRONO TRIGGER']
+				: [MetadataListener::SYSTEM => 'snes'];
+			$filed->method('hasKey')->willReturnCallback(static fn (string $key): bool => isset($values[$key]));
+			$filed->method('getString')->willReturnCallback(static fn (string $key): string => $values[$key] ?? '');
+			return $filed;
+		});
+
+		$data = $this->controllerWith($metadataManager, $this->rom('/alice/files/Games/Chrono.sfc'))->game('/Games/Chrono.sfc')->getData();
+
+		$this->assertTrue($read);
+		$this->assertSame('CHRONO TRIGGER', $data['title']);
+		$this->assertSame('Snes9x', $data['emulator']);
+	}
+
+	public function testTheBiosFilesOfTheSystemAreSaidFoundOrNot(): void {
+		$bios = $this->createStub(BiosService::class);
+		$bios->method('statusFor')->willReturn(['systems' => [
+			['system' => ['id' => 'gb', 'name' => 'Game Boy'], 'files' => [['name' => 'gb_bios.bin', 'present' => false, 'source' => null, 'size' => 0]]],
+			['system' => ['id' => 'gba', 'name' => 'Game Boy Advance'], 'files' => [['name' => 'gba_bios.bin', 'present' => true, 'source' => 'folder', 'size' => 16384]]],
+		]]);
+		$metadataManager = $this->createStub(IFilesMetadataManager::class);
+		$metadataManager->method('getMetadata')->willThrowException(new \Exception('nothing filed'));
+
+		$data = $this->controllerWith($metadataManager, $this->rom('/alice/files/Games/Zelda.gba'), $bios)->game('/Games/Zelda.gba')->getData();
+
+		$this->assertSame([['name' => 'gba_bios.bin', 'present' => true, 'source' => 'folder']], $data['bios']);
+	}
+
+	private function controllerWith(IFilesMetadataManager $metadataManager, File $node, ?BiosService $bios = null): GameController {
+		$userFolder = $this->createStub(Folder::class);
+		$userFolder->method('get')->willReturn($node);
+		$rootFolder = $this->createStub(IRootFolder::class);
+		$rootFolder->method('getUserFolder')->willReturn($userFolder);
+		return new GameController(
+			'arcade',
+			$this->createStub(IRequest::class),
+			$rootFolder,
+			$metadataManager,
+			$this->createStub(RecentService::class),
+			$this->createStub(StateService::class),
+			$bios ?? $this->createStub(BiosService::class),
+			$this->createStub(LoggerInterface::class),
+			'alice',
+		);
 	}
 
 	public function testFallsBackToThePathWhenNothingIsFiled(): void {
@@ -159,6 +225,7 @@ class GameControllerTest extends TestCase {
 			$this->createStub(IFilesMetadataManager::class),
 			$this->createStub(RecentService::class),
 			$this->createStub(StateService::class),
+			$this->createStub(BiosService::class),
 			$this->createStub(LoggerInterface::class),
 			'alice',
 		);
