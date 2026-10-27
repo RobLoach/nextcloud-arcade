@@ -9,13 +9,11 @@ use OCA\Arcade\CoreMap;
 use OCA\Arcade\Db\GameMapper;
 use OCA\Arcade\Listener\MetadataListener;
 use OCP\Config\IUserConfig;
-use OCP\Files\AppData\IAppDataFactory;
 use OCP\Files\File;
 use OCP\Files\Folder;
 use OCP\Files\IRootFolder;
 use OCP\FilesMetadata\IFilesMetadataManager;
 use OCP\Files\NotFoundException;
-use OCP\Files\SimpleFS\ISimpleFolder;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -66,16 +64,12 @@ class StateService {
 	public const STATES = 'states';
 
 	/** The highest slot of the app data of earlier versions. */
-	private const LEGACY_HIGHEST_SLOT = 6;
 
 	/**
 	 * The folders of the app data, found once per request. A null means
 	 * not looked for yet; the user folder may be looked for and not be
 	 * there.
 	 */
-	private ?ISimpleFolder $statesRoot = null;
-	/** @var array<string, ISimpleFolder|false> */
-	private array $userStates = [];
 	/**
 	 * The saves folder of each user, once resolved this request. A false
 	 * means looked for and not there.
@@ -120,7 +114,7 @@ class StateService {
 	private array $noted = [];
 
 	public function __construct(
-		private IAppDataFactory $appDataFactory,
+		private LegacyAppDataSaves $legacy,
 		private IRootFolder $rootFolder,
 		private SettingsService $settingsService,
 		private IFilesMetadataManager $metadataManager,
@@ -214,7 +208,7 @@ class StateService {
 	 * back the moment the first one is gone.
 	 */
 	public function deleteSram(string $userId, string $romPath): bool {
-		$removed = $this->deleteAppData($userId, self::sramFileName($this->key($userId, $romPath)));
+		$removed = $this->legacy->deleteSram($userId, $this->key($userId, $romPath));
 		return $this->removeEverywhere($userId, $romPath, self::SAVES, $this->sramName($userId, $romPath)) || $removed;
 	}
 
@@ -252,7 +246,7 @@ class StateService {
 			? $this->stemFor($userId, $romPath)
 			: $noted['name'];
 		foreach ($keys as $key) {
-			$this->deleteLegacy($userId, $key);
+			$this->legacy->deleteGame($userId, $key);
 		}
 		$this->forgetKeys($userId, ...$keys);
 		$this->removeGame($userId, $romPath, $core, $stem);
@@ -266,7 +260,7 @@ class StateService {
 	public function deleteAllForFileId(string $userId, int $fileId): void {
 		$key = (string)$fileId;
 		$entry = $this->gameMapper->entryOf($userId, $key);
-		$this->deleteLegacy($userId, $key);
+		$this->legacy->deleteGame($userId, $key);
 		if ($entry !== null && $entry['path'] !== '') {
 			$this->removeGame(
 				$userId,
@@ -284,11 +278,7 @@ class StateService {
 	 */
 	public function deleteAllForUser(string $userId): void {
 		$this->gameMapper->deleteAllForUser($userId);
-		try {
-			$this->statesRoot()->getFolder(self::userKey($userId))->delete();
-		} catch (NotFoundException) {
-			// Nothing was ever stored for this user.
-		}
+		$this->legacy->deleteUser($userId);
 	}
 
 	/**
@@ -578,7 +568,7 @@ class StateService {
 		}
 		$root = Folders::forUser($this->rootFolder, $userId, $path);
 		if ($root === null && $create) {
-			$root = $this->makeFolder($this->rootFolder->getUserFolder($userId), $path);
+			$root = Folders::make($this->rootFolder->getUserFolder($userId), $path);
 		}
 		$this->roots[$userId] = $root ?? false;
 		return $root;
@@ -642,7 +632,7 @@ class StateService {
 			}
 		} else {
 			$dir = $dirs[0];
-			$folder = $this->makeFolder($root, $dir);
+			$folder = Folders::make($root, $dir);
 			if ($folder === null) {
 				throw new NotFoundException("$dir is not a folder");
 			}
@@ -809,14 +799,11 @@ class StateService {
 						continue;
 					}
 					try {
-						$folder = $this->makeFolder($root, $target);
+						$folder = Folders::make($root, $target);
 						if ($folder === null || $folder->nodeExists($newName)) {
 							continue;
 						}
-						// The storage's own hash where it has one, rather than
-						// reading a save of megabytes in whole for it.
-						$hash = $file->hash('md5');
-						$hash = is_string($hash) && $hash !== '' ? $hash : md5($file->getContent());
+						$hash = Folders::md5Of($file);
 						$file->move($folder->getPath() . '/' . $newName);
 						$moved["$dir/$name"] = '';
 						$moved["$target/$newName"] = $hash;
@@ -852,26 +839,6 @@ class StateService {
 				'exception' => $e,
 			]);
 		}
-	}
-
-	/** Creates the folders of a path one level at a time. */
-	private function makeFolder(Folder $base, string $path): ?Folder {
-		$folder = $base;
-		foreach (explode('/', trim($path, '/')) as $segment) {
-			if ($segment === '' || $segment === '.') {
-				continue;
-			}
-			try {
-				$node = $folder->get($segment);
-				if (!$node instanceof Folder) {
-					return null;
-				}
-				$folder = $node;
-			} catch (NotFoundException) {
-				$folder = $folder->newFolder($segment);
-			}
-		}
-		return $folder;
 	}
 
 	/** Notes where a game is now, so it can be followed if it moves. */
@@ -990,159 +957,6 @@ class StateService {
 		return ctype_digit($key) ? (int)$key : 0;
 	}
 
-	// What earlier versions left in the app data, which is only ever
-	// removed now.
-
-	/**
-	 * The folders of the app data holding states, by the key of their user.
-	 *
-	 * Through the files of the instance rather than the app data's own
-	 * folders, which list files and never the folders beside them.
-	 *
-	 * @return array<string, Folder>
-	 */
-	public function userFolders(): array {
-		$folders = [];
-		foreach ($this->appDataStates()?->getDirectoryListing() ?? [] as $node) {
-			if ($node instanceof Folder) {
-				$folders[$node->getName()] = $node;
-			}
-		}
-		return $folders;
-	}
-
-	public function folderKeyOf(string $userId): string {
-		return self::userKey($userId);
-	}
-
-	/**
-	 * What versions before 0.48.8 left in the app data, which is no longer
-	 * read: every file under the states folder, of every user and of
-	 * nobody. The sizes come from the file cache; nothing is read.
-	 *
-	 * @return array{files: int, bytes: int}
-	 */
-	public function appDataSaves(): array {
-		$files = 0;
-		$bytes = 0;
-		foreach ($this->filesUnder($this->appDataStates()) as $file) {
-			$files++;
-			$bytes += (int)$file->getSize();
-		}
-		return ['files' => $files, 'bytes' => $bytes];
-	}
-
-	/**
-	 * Remove everything versions before 0.48.8 left in the app data. Says
-	 * how many files went.
-	 */
-	public function deleteAppDataSaves(): int {
-		$states = $this->appDataStates();
-		$removed = count($this->filesUnder($states));
-		foreach ($states?->getDirectoryListing() ?? [] as $node) {
-			$node->delete();
-		}
-		$this->userStates = [];
-		return $removed;
-	}
-
-	/**
-	 * The states folder of the app data, as a folder of the instance's files:
-	 * the app data's own folders cannot say what folders they hold.
-	 */
-	private function appDataStates(): ?Folder {
-		try {
-			$node = $this->rootFolder->get($this->rootFolder->getAppDataDirectoryName() . '/' . Application::APP_ID . '/states');
-		} catch (NotFoundException) {
-			return null;
-		}
-		return $node instanceof Folder ? $node : null;
-	}
-
-	/**
-	 * Every file under a folder, however deep.
-	 *
-	 * @return list<File>
-	 */
-	private function filesUnder(?Folder $folder): array {
-		$files = [];
-		foreach ($folder?->getDirectoryListing() ?? [] as $node) {
-			if ($node instanceof File) {
-				$files[] = $node;
-			} elseif ($node instanceof Folder) {
-				array_push($files, ...$this->filesUnder($node));
-			}
-		}
-		return $files;
-	}
-
-	/** Remove what the app data holds of a game, under one of its keys. */
-	private function deleteLegacy(string $userId, string $key): void {
-		foreach (self::legacySlots() as $slot) {
-			$this->deleteAppData($userId, self::fileName($key, $slot, 'state'));
-			$this->deleteAppData($userId, self::fileName($key, $slot, 'png'));
-		}
-		$this->deleteAppData($userId, self::sramFileName($key));
-	}
-
-	private function deleteAppData(string $userId, string $name): bool {
-		$folder = $this->userStates($userId);
-		try {
-			if ($folder !== null && $folder->fileExists($name)) {
-				$folder->getFile($name)->delete();
-				return true;
-			}
-		} catch (NotFoundException) {
-			// Gone between the look and the delete.
-		}
-		return false;
-	}
-
-	private function statesRoot(): ISimpleFolder {
-		if ($this->statesRoot !== null) {
-			return $this->statesRoot;
-		}
-		$appData = $this->appDataFactory->get(Application::APP_ID);
-		try {
-			return $this->statesRoot = $appData->getFolder('states');
-		} catch (NotFoundException) {
-			return $this->statesRoot = $appData->newFolder('states');
-		}
-	}
-
-	private function userStates(string $userId): ?ISimpleFolder {
-		$found = $this->userStates[$userId] ?? null;
-		if ($found !== null) {
-			return $found === false ? null : $found;
-		}
-		try {
-			return $this->userStates[$userId] = $this->statesRoot()->getFolder(self::userKey($userId));
-		} catch (NotFoundException) {
-			$this->userStates[$userId] = false;
-			return null;
-		}
-	}
-
-	/**
-	 * The slots the app data was filed under, the automatic one (0 back
-	 * then) first.
-	 *
-	 * @return list<int>
-	 */
-	public static function legacySlots(): array {
-		return range(0, self::LEGACY_HIGHEST_SLOT);
-	}
-
-	/** How a state or screenshot of a slot was named in the app data. */
-	public static function fileName(string $key, int $slot, string $extension): string {
-		return $key . '-' . $slot . '.' . $extension;
-	}
-
-	/** How the battery save was named in the app data. */
-	public static function sramFileName(string $key): string {
-		return $key . '.srm';
-	}
-
 	/**
 	 * What a game is filed under in the registry: the id Nextcloud gave
 	 * the file, so renaming or moving a ROM does not lose track of it.
@@ -1152,10 +966,5 @@ class StateService {
 	private function key(string $userId, string $romPath): string {
 		$id = $this->fileIdOf($userId, $romPath);
 		return $id === null ? hash('sha256', $romPath) : (string)$id;
-	}
-
-	/** What a user's states folder in the app data is named after. */
-	public static function userKey(string $userId): string {
-		return hash('sha256', $userId);
 	}
 }

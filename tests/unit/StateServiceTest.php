@@ -7,6 +7,7 @@ namespace OCA\Arcade\Tests\Unit;
 use OCA\Arcade\Db\GameMapper;
 use OCA\Arcade\Service\CloudSyncManifest;
 use OCA\Arcade\Service\SettingsService;
+use OCA\Arcade\Service\LegacyAppDataSaves;
 use OCA\Arcade\Service\SavesLayoutConverter;
 use OCA\Arcade\Service\StateService;
 use OCP\Config\IUserConfig;
@@ -54,7 +55,7 @@ class StateServiceTest extends TestCase {
 		$settings->method('getUserSettings')->willReturn(['saves_folder' => $savesFolder]);
 
 		return new StateService(
-			$this->appDataFactory(),
+			$this->legacy(),
 			$this->rootFolder(),
 			$settings,
 			$this->metadataManager(),
@@ -67,6 +68,10 @@ class StateServiceTest extends TestCase {
 			$this->createStub(SavesLayoutConverter::class),
 			$this->createStub(LoggerInterface::class),
 		);
+	}
+
+	private function legacy(): LegacyAppDataSaves {
+		return new LegacyAppDataSaves($this->appDataFactory(), $this->rootFolder());
 	}
 
 	/** When each user last reconciled, as the user config holds it. */
@@ -675,7 +680,7 @@ class StateServiceTest extends TestCase {
 	public function testWhatEarlierVersionsLeftInTheAppDataGoesWithTheGame(): void {
 		$this->files['Games/NES/Mario.nes'] = 'rom';
 		$this->ids['Games/NES/Mario.nes'] = 42;
-		$folder = 'states/' . StateService::userKey(self::USER);
+		$folder = 'states/' . LegacyAppDataSaves::keyOf(self::USER);
 		$this->appData['states'] = [];
 		$this->appData[$folder] = ['42-0.state' => 'auto', '42-1.png' => 'pic', '42.srm' => 'sram', '7-1.state' => 'other'];
 
@@ -694,10 +699,10 @@ class StateServiceTest extends TestCase {
 
 	public function testEverythingOfAUserGoesWithThem(): void {
 		$this->appData['states'] = [];
-		$this->appData['states/' . StateService::userKey(self::USER)] = ['1-1.state' => 'x'];
+		$this->appData['states/' . LegacyAppDataSaves::keyOf(self::USER)] = ['1-1.state' => 'x'];
 		$this->games[self::USER] = ['1' => ['file_id' => 1, 'path' => self::GAME, 'md5' => '']];
 		$this->service()->deleteAllForUser(self::USER);
-		$this->assertArrayNotHasKey('states/' . StateService::userKey(self::USER), $this->appData);
+		$this->assertArrayNotHasKey('states/' . LegacyAppDataSaves::keyOf(self::USER), $this->appData);
 		$this->assertArrayNotHasKey(self::USER, $this->games);
 	}
 
@@ -906,18 +911,18 @@ class StateServiceTest extends TestCase {
 		// the app data's own listing never shows.
 		$states = 'appdata_test/arcade/states';
 		$this->files["$states/flat-file"] = '12345';
-		$this->files["$states/" . StateService::userKey(self::USER) . '/1-1.state'] = 'abc';
-		$this->files["$states/" . StateService::userKey(self::USER) . '/1.srm'] = 'de';
+		$this->files["$states/" . LegacyAppDataSaves::keyOf(self::USER) . '/1-1.state'] = 'abc';
+		$this->files["$states/" . LegacyAppDataSaves::keyOf(self::USER) . '/1.srm'] = 'de';
 		$this->files["$states/" . hash('sha256', 'nobody') . '/2-0.state'] = 'f';
-		$service = $this->service();
+		$legacy = $this->legacy();
 
-		$this->assertSame(['files' => 4, 'bytes' => 11], $service->appDataSaves());
+		$this->assertSame(['files' => 4, 'bytes' => 11], $legacy->count());
 		$this->assertSame(
-			[StateService::userKey(self::USER), hash('sha256', 'nobody')],
-			array_keys($service->userFolders()),
+			[LegacyAppDataSaves::keyOf(self::USER), hash('sha256', 'nobody')],
+			array_keys($legacy->userFolders()),
 		);
-		$this->assertSame(4, $service->deleteAppDataSaves());
-		$this->assertSame(['files' => 0, 'bytes' => 0], $service->appDataSaves());
+		$this->assertSame(4, $legacy->deleteAll());
+		$this->assertSame(['files' => 0, 'bytes' => 0], $legacy->count());
 	}
 
 	// The name the saves of a zipped game go by.

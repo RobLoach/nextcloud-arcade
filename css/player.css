@@ -3,6 +3,18 @@
    The overlay sits on the game picture itself, so it keeps a fixed dark
    scrim in every theme; sizes and radii follow the Nextcloud variables. */
 
+/* The spacing steps of the app: the grid baseline of the server, and
+   multiples of it. */
+:root {
+	--arcade-space-1: var(--default-grid-baseline, 4px);
+	--arcade-space-2: calc(var(--default-grid-baseline, 4px) * 2);
+	--arcade-space-3: calc(var(--default-grid-baseline, 4px) * 3);
+	--arcade-space-4: calc(var(--default-grid-baseline, 4px) * 4);
+	--arcade-space-5: calc(var(--default-grid-baseline, 4px) * 5);
+	--arcade-space-6: calc(var(--default-grid-baseline, 4px) * 6);
+	--arcade-space-8: calc(var(--default-grid-baseline, 4px) * 8);
+}
+
 .arcade-player-container {
 	position: relative;
 	/* The player is black wherever the game does not draw, and before it
@@ -14,8 +26,21 @@
 	   rounded up to leave a theme room to set the padding larger, and the
 	   pieces are spaced by the same baseline as everything else. */
 	--arcade-pill-height: 48px;
-	--arcade-pill-gap: calc(var(--default-grid-baseline, 4px) * 2);
-	--arcade-chrome-top: calc(var(--default-grid-baseline, 4px) * 2 + env(safe-area-inset-top, 0px));
+	--arcade-pill-gap: var(--arcade-space-2);
+	--arcade-chrome-top: calc(var(--arcade-space-2) + env(safe-area-inset-top, 0px));
+	/* The few colours of everything laid over the game: fixed, whatever
+	   the theme, because what is under them is the game's picture. */
+	--arcade-scrim: rgba(0, 0, 0, 0.85);
+	--arcade-chrome: rgba(0, 0, 0, 0.65);
+	--arcade-ink: #fff;
+	--arcade-ink-muted: rgba(255, 255, 255, 0.7);
+	--arcade-fill: rgba(255, 255, 255, 0.15);
+	--arcade-fill-strong: rgba(255, 255, 255, 0.3);
+	--arcade-hairline: rgba(255, 255, 255, 0.2);
+	--arcade-placeholder: rgba(255, 255, 255, 0.1);
+	/* Text is sized from the server's own size, so a theme or a setting
+	   that makes it larger makes the player's larger too. */
+	font-size: var(--default-font-size, 15px);
 }
 /* While a message is on screen the top-right cluster steps aside. The
    toaster hangs a toast in that same corner, and the chrome is z-index
@@ -37,11 +62,11 @@
 .arcade-topbar {
 	position: absolute;
 	display: flex;
-	gap: var(--default-grid-baseline, 4px);
+	gap: var(--arcade-space-1);
 	align-items: center;
-	background-color: rgba(0, 0, 0, 0.65);
+	background-color: var(--arcade-chrome);
 	border-radius: var(--border-radius-large, 8px);
-	padding: var(--default-grid-baseline, 4px) calc(var(--default-grid-baseline, 4px) * 2);
+	padding: var(--arcade-space-1) var(--arcade-space-2);
 	z-index: 20100;
 	opacity: 0.4;
 	transition: opacity 200ms;
@@ -62,7 +87,7 @@
 }
 .arcade-topbar {
 	top: var(--arcade-chrome-top);
-	inset-inline-end: calc(var(--default-grid-baseline, 4px) * 2 + env(safe-area-inset-right, 0px));
+	inset-inline-end: calc(var(--arcade-space-2) + env(safe-area-inset-right, 0px));
 }
 /* Given the width, the two share the one line and give the picture the
    other back. The bar is at most seven 34px buttons in 4px gaps inside
@@ -114,25 +139,33 @@
 	justify-content: center;
 }
 .arcade-toolbar > button:hover,
-.arcade-topbar > button:hover { background-color: rgba(255, 255, 255, 0.2); }
+.arcade-topbar > button:hover { background-color: var(--arcade-hairline); }
 .arcade-toolbar > button.active,
-.arcade-topbar > button.active { background-color: rgba(255, 255, 255, 0.35); }
+.arcade-topbar > button.active { background-color: var(--arcade-fill-strong); }
 .arcade-toolbar > button svg,
-.arcade-topbar > button svg { width: 20px; height: 20px; fill: #fff; }
-/* The two panels under the toolbar -- save states and screenshots --
-   share one dress; the gallery only adds a width cap for its grid. */
+.arcade-topbar > button svg { width: 20px; height: 20px; fill: var(--arcade-ink); }
+/* Everything the player puts in a box over the game -- the two panels
+   under the toolbar, the offer to resume, the loading and closing box --
+   is dressed alike; each rule below only places and lays out its own. */
+.arcade-states,
+.arcade-gallery,
+.arcade-resume,
+.arcade-loading {
+	position: absolute;
+	background-color: var(--arcade-scrim);
+	border-radius: var(--border-radius-large, 8px);
+	z-index: 20100;
+	color: var(--arcade-ink);
+	font-size: 0.875em;
+}
 .arcade-states,
 .arcade-gallery {
-	position: absolute;
 	/* Under the bar, which is what opens them. */
 	top: calc(var(--arcade-chrome-top) + var(--arcade-pill-height) * 2 + var(--arcade-pill-gap) * 2);
 	left: 50%;
 	transform: translateX(-50%);
-	background-color: rgba(0, 0, 0, 0.85);
-	border-radius: var(--border-radius-large, 8px);
-	padding: calc(var(--default-grid-baseline, 4px) * 3);
-	z-index: 20100;
-	color: #fff;
+	padding: var(--arcade-space-3);
+	font-size: 1em;
 	max-height: 70%;
 	overflow-y: auto;
 	min-width: 320px;
@@ -141,98 +174,89 @@
 .arcade-states.hidden,
 .arcade-gallery.hidden { display: none; }
 .arcade-states h3,
-.arcade-gallery h3 { color: #fff; margin: 0 0 8px 0; font-size: 14px; }
+.arcade-gallery h3 { color: var(--arcade-ink); margin: 0 0 8px 0; font-size: 0.95em; }
 .arcade-states-slot {
 	display: flex;
 	align-items: center;
-	gap: calc(var(--default-grid-baseline, 4px) * 2);
-	padding: var(--default-grid-baseline, 4px) 0;
+	gap: var(--arcade-space-2);
+	padding: var(--arcade-space-1) 0;
 }
 .arcade-states-thumbnail {
 	width: 64px;
 	height: 48px;
 	object-fit: cover;
 	border-radius: var(--border-radius, 4px);
-	background-color: rgba(255, 255, 255, 0.1);
+	background-color: var(--arcade-placeholder);
 	flex-shrink: 0;
 }
 .arcade-states-label {
 	flex: 1;
-	font-size: 12px;
+	font-size: 0.8em;
 	line-height: 1.3;
 }
 .arcade-states-slot button,
 .arcade-gallery-empty button,
 .arcade-resume button {
-	background-color: rgba(255, 255, 255, 0.15);
+	background-color: var(--arcade-fill);
 	border: none;
 	border-radius: var(--border-radius, 6px);
-	color: #fff;
+	color: var(--arcade-ink);
 	margin: 0;
 	min-height: 0;
 	cursor: pointer;
 }
 .arcade-states-slot button,
 .arcade-gallery-empty button {
-	font-size: 12px;
+	font-size: 0.8em;
 	padding: 6px 10px;
 }
-.arcade-gallery-empty button { margin-inline-start: 8px; }
+.arcade-gallery-empty button {
+	/* Inside the message, which is already the smaller size. */
+	font-size: 1em;
+	margin-inline-start: 8px;
+}
 .arcade-resume button {
-	font-size: 13px;
+	font-size: 1em;
 	padding: 6px 12px;
 }
 .arcade-states-slot button:hover:not(:disabled),
 .arcade-gallery-empty button:hover,
-.arcade-resume button:hover { background-color: rgba(255, 255, 255, 0.3); }
+.arcade-resume button:hover { background-color: var(--arcade-fill-strong); }
 .arcade-states-slot button:disabled { opacity: 0.4; cursor: default; }
 .arcade-states-sram {
-	margin-top: calc(var(--default-grid-baseline, 4px) * 2);
-	padding-top: var(--default-grid-baseline, 4px);
-	border-top: 1px solid rgba(255, 255, 255, 0.2);
+	margin-top: var(--arcade-space-2);
+	padding-top: var(--arcade-space-1);
+	border-top: 1px solid var(--arcade-hairline);
 }
 .arcade-states-slot button.arcade-states-confirm { background-color: var(--color-error, #d91812); }
 .arcade-states-slot button.arcade-states-confirm:hover:not(:disabled) { background-color: var(--color-error-hover, #ea3c34); }
 /* The offer sits along the bottom, out of the way of the game, and goes
    by itself after a few seconds. The chrome has the top. */
 .arcade-resume {
-	position: absolute;
-	bottom: calc(var(--default-grid-baseline, 4px) * 6);
+	bottom: var(--arcade-space-6);
 	left: 50%;
 	transform: translateX(-50%);
-	max-width: calc(100% - var(--default-grid-baseline, 4px) * 8);
+	max-width: calc(100% - var(--arcade-space-8));
 	flex-wrap: wrap;
 	justify-content: center;
 	display: flex;
-	gap: calc(var(--default-grid-baseline, 4px) * 2);
+	gap: var(--arcade-space-2);
 	align-items: center;
-	background-color: rgba(0, 0, 0, 0.8);
-	border-radius: var(--border-radius-large, 8px);
-	padding: calc(var(--default-grid-baseline, 4px) * 2) calc(var(--default-grid-baseline, 4px) * 3);
-	z-index: 20100;
-	color: #fff;
-	font-size: 13px;
+	padding: var(--arcade-space-2) var(--arcade-space-3);
 }
-/* The bar over a game that is still on its way, in the same dress as the
-   offer to resume. The bar itself is the server's: Nextcloud styles a
-   native progress element the way its own progress bars look, so only
-   its size is set here. */
+/* The bar over a game that is still on its way. The bar itself is the
+   server's: Nextcloud styles a native progress element the way its own
+   progress bars look, so only its size is set here. */
 .arcade-loading {
-	position: absolute;
 	top: 50%;
 	left: 50%;
 	transform: translate(-50%, -50%);
 	display: flex;
 	flex-direction: column;
-	gap: calc(var(--default-grid-baseline, 4px) * 2);
+	gap: var(--arcade-space-2);
 	align-items: stretch;
 	width: min(360px, 80%);
-	background-color: rgba(0, 0, 0, 0.8);
-	border-radius: var(--border-radius-large, 8px);
-	padding: calc(var(--default-grid-baseline, 4px) * 3) calc(var(--default-grid-baseline, 4px) * 4);
-	z-index: 20100;
-	color: #fff;
-	font-size: 13px;
+	padding: var(--arcade-space-3) var(--arcade-space-4);
 	text-align: center;
 }
 .arcade-loading-label {
@@ -243,7 +267,7 @@
 .arcade-loading .arcade-loading-bar {
 	flex: none;
 	width: 100%;
-	height: calc(var(--default-grid-baseline, 4px) * 2);
+	height: var(--arcade-space-2);
 	accent-color: var(--color-primary-element, #00679e);
 }
 /* The server eases the bar to each new value, which restarts with every
@@ -273,21 +297,15 @@
 	}
 }
 .arcade-loading-detail {
-	opacity: 0.8;
+	color: var(--arcade-ink-muted);
 	font-variant-numeric: tabular-nums;
 	min-height: 1lh;
 }
-.arcade-resume button.primary-action { background-color: rgba(255, 255, 255, 0.3); font-weight: bold; }
-/* The same narrowest-phone bucket the gamepad draws itself smaller in:
-   there the middle of the screen reaches the shoulder buttons, and the
-   offer paints over them, so it sits a little above centre instead. */
-@media (max-width: 359px) {
-	.arcade-resume { top: 42%; }
-}
+.arcade-resume button.primary-action { background-color: var(--arcade-fill-strong); font-weight: bold; }
 .arcade-gallery-grid {
 	display: grid;
 	grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-	gap: calc(var(--default-grid-baseline, 4px) * 2);
+	gap: var(--arcade-space-2);
 }
 .arcade-gallery-item { position: relative; }
 .arcade-gallery-item img {
@@ -295,19 +313,19 @@
 	aspect-ratio: 4 / 3;
 	object-fit: cover;
 	border-radius: var(--border-radius, 4px);
-	background-color: rgba(255, 255, 255, 0.1);
+	background-color: var(--arcade-placeholder);
 	display: block;
 }
 .arcade-gallery-item figcaption {
-	font-size: 11px;
-	color: rgba(255, 255, 255, 0.7);
+	font-size: 0.75em;
+	color: var(--arcade-ink-muted);
 	margin-top: 2px;
 }
 .arcade-gallery-item button {
 	position: absolute;
-	top: var(--default-grid-baseline, 4px);
-	inset-inline-end: var(--default-grid-baseline, 4px);
-	background-color: rgba(0, 0, 0, 0.6);
+	top: var(--arcade-space-1);
+	inset-inline-end: var(--arcade-space-1);
+	background-color: var(--arcade-chrome);
 	border: none;
 	border-radius: var(--border-radius, 4px);
 	padding: 4px;
@@ -320,8 +338,8 @@
 }
 .arcade-gallery-item:hover button,
 .arcade-gallery-item button:focus-visible { opacity: 1; }
-.arcade-gallery-item button svg { width: 16px; height: 16px; fill: #fff; }
-.arcade-gallery-empty { font-size: 12px; color: rgba(255, 255, 255, 0.7); }
+.arcade-gallery-item button svg { width: 16px; height: 16px; fill: var(--arcade-ink); }
+.arcade-gallery-empty { font-size: 0.8em; color: var(--arcade-ink-muted); }
 
 /* The three-dots actions menu, dressed like a core action menu: the theme's
    own background and shadow rather than the scrim of the panels, because it
@@ -331,14 +349,14 @@
 	position: absolute;
 	top: 100%;
 	inset-inline-end: 0;
-	margin-top: var(--default-grid-baseline, 4px);
+	margin-top: var(--arcade-space-1);
 	display: flex;
 	flex-direction: column;
 	min-width: 200px;
 	background-color: var(--color-main-background, #fff);
 	border-radius: var(--border-radius-large, 8px);
 	box-shadow: 0 1px 10px var(--color-box-shadow, rgba(0, 0, 0, 0.5));
-	padding: var(--default-grid-baseline, 4px);
+	padding: var(--arcade-space-1);
 	z-index: 20101;
 }
 .arcade-actions-menu.hidden { display: none; }
@@ -352,13 +370,13 @@
 .arcade-actions-menu button.arcade-actions-item {
 	display: flex;
 	align-items: center;
-	gap: calc(var(--default-grid-baseline, 4px) * 2);
+	gap: var(--arcade-space-2);
 	width: 100%;
 	background-color: transparent;
 	border: none;
 	border-radius: var(--border-radius, 6px);
 	color: var(--color-main-text, #222);
-	font-size: 13px;
+	font-size: 0.875em;
 	font-weight: normal;
 	text-align: start;
 	text-decoration: none;
@@ -383,7 +401,7 @@
 
 .arcade-states-stale {
 	color: var(--color-warning, #e9a13b);
-	font-size: 11px;
+	font-size: 0.75em;
 	margin-inline-start: 6px;
 }
 
@@ -392,4 +410,98 @@
    to 256px. The offer goes above all of it. */
 .arcade-player-container:has(> .arcade-touch:not(.hidden)) .arcade-resume {
 	bottom: 268px;
+}
+
+/* The touch gamepad, over the bottom of the game: a stick on the left, the
+   face buttons on the right, Start and Select between them, the shoulders
+   above. Only drawn on devices where touch is how the game is played. */
+.arcade-touch {
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+	z-index: 20090;
+	user-select: none;
+	-webkit-user-select: none;
+}
+.arcade-touch.hidden { display: none; }
+.arcade-touch * { touch-action: none; }
+.arcade-touch-dpad {
+	position: absolute;
+	bottom: 70px;
+	left: 20px;
+	width: 140px;
+	height: 140px;
+	border-radius: 50%;
+	background-color: rgba(255, 255, 255, 0.08);
+	border: 2px solid rgba(255, 255, 255, 0.25);
+	pointer-events: auto;
+}
+.arcade-touch-dpad::before {
+	content: '';
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	width: 46px;
+	height: 46px;
+	transform: translate(-50%, -50%);
+	border-radius: 50%;
+	background-color: rgba(255, 255, 255, 0.2);
+}
+.arcade-touch-buttons {
+	position: absolute;
+	bottom: 70px;
+	right: 20px;
+	width: 150px;
+	height: 150px;
+	pointer-events: none;
+}
+.arcade-touch-button {
+	position: absolute;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 50%;
+	background-color: rgba(255, 255, 255, 0.15);
+	border: 2px solid rgba(255, 255, 255, 0.3);
+	color: rgba(255, 255, 255, 0.85);
+	font-weight: bold;
+	font-size: 1.05em;
+	pointer-events: auto;
+}
+.arcade-touch-button.pressed { background-color: rgba(255, 255, 255, 0.45); }
+.arcade-touch-button.face {
+	width: 52px;
+	height: 52px;
+}
+.arcade-touch-buttons .face-a { right: 0; top: 50%; transform: translateY(-50%); }
+.arcade-touch-buttons .face-b { bottom: 0; left: 50%; transform: translateX(-50%); }
+.arcade-touch-buttons .face-x { top: 0; left: 50%; transform: translateX(-50%); }
+.arcade-touch-buttons .face-y { left: 0; top: 50%; transform: translateY(-50%); }
+.arcade-touch-button.pill {
+	border-radius: 16px;
+	font-size: 0.75em;
+	width: 64px;
+	height: 28px;
+}
+.arcade-touch-select { position: absolute; bottom: 24px; left: 50%; transform: translateX(-108%); }
+.arcade-touch-start { position: absolute; bottom: 24px; left: 50%; transform: translateX(8%); }
+/* The shoulders used to sit in the top corners, below the chrome -- which
+   held only as long as the chrome stayed where it was measured. It does
+   not: the top-right cluster starts under the notch, and with the pad up
+   the control bar moves to the top as well, landing on both shoulders.
+   So the top belongs to the chrome and the bottom to the pad, with no
+   line drawn between them to be crossed. Each shoulder sits just above
+   the cluster the same thumb is already on -- 220px is the top edge of
+   the taller of the two, the face buttons. */
+.arcade-touch-l { position: absolute; bottom: 228px; left: 20px; }
+.arcade-touch-r { position: absolute; bottom: 228px; right: 20px; }
+/* The pad asks for 140 and 150 either side of 20px margins: 330px, which
+   the narrowest phones do not have, and the two clusters met in the
+   middle. Below that it is drawn a size smaller. */
+@media (max-width: 359px) {
+	.arcade-touch-dpad { left: 8px; width: 124px; height: 124px; }
+	.arcade-touch-buttons { right: 8px; width: 134px; height: 134px; }
+	.arcade-touch-button.face { width: 46px; height: 46px; }
+	.arcade-touch-l { left: 8px; }
+	.arcade-touch-r { right: 8px; }
 }

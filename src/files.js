@@ -171,6 +171,28 @@ export function opensElsewhere(event) {
 	return event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey
 }
 
+/**
+ * A link to a picture: it opens in the Viewer where there is one, over the
+ * page rather than taking it away, and in Files where there is not -- or
+ * when the click asks for a new tab or window.
+ *
+ * @param {number} fileId the file of the picture
+ * @param {string} path its path, for the Viewer; empty when not known
+ * @return {HTMLAnchorElement} the link
+ */
+function pictureLink(fileId, path) {
+	const link = document.createElement('a')
+	link.href = generateUrl('/f/{fileId}', { fileId })
+	link.addEventListener('click', (event) => {
+		if (opensElsewhere(event) || window.OCA?.Viewer?.open === undefined || path === '') {
+			return
+		}
+		event.preventDefault()
+		window.OCA.Viewer.open({ path })
+	})
+	return link
+}
+
 // What each kind of picture of the thumbnail packs is called.
 const THUMBNAIL_KINDS = {
 	boxart: () => t('arcade', 'Box art'),
@@ -195,17 +217,7 @@ function renderThumbnails(thumbnails) {
 	list.className = 'arcade-sidebar-thumbnail-list'
 	for (const [kind, { fileId, path }] of Object.entries(thumbnails)) {
 		const item = document.createElement('li')
-		const link = document.createElement('a')
-		link.href = generateUrl('/f/{fileId}', { fileId })
-		// In the Viewer where there is one, so the picture opens over the
-		// page rather than taking it away.
-		link.addEventListener('click', (event) => {
-			if (opensElsewhere(event) || window.OCA?.Viewer?.open === undefined || !path) {
-				return
-			}
-			event.preventDefault()
-			window.OCA.Viewer.open({ path })
-		})
+		const link = pictureLink(fileId, path)
 		const picture = document.createElement('img')
 		picture.alt = THUMBNAIL_KINDS[kind]?.() ?? kind
 		picture.loading = 'lazy'
@@ -349,18 +361,8 @@ async function fillScreenshots(section, file) {
 	const folder = String(data.folder ?? '').replace(/\/+$/, '')
 	for (const shot of shots) {
 		const item = document.createElement('li')
-		const link = document.createElement('a')
-		link.href = generateUrl('/f/{fileId}', { fileId: shot.fileId })
+		const link = pictureLink(shot.fileId, folder === '' ? '' : `${folder}/${shot.basename}`)
 		link.title = shot.basename
-		// In the Viewer where there is one, so the picture opens over the
-		// page rather than taking it away.
-		link.addEventListener('click', (event) => {
-			if (opensElsewhere(event) || window.OCA?.Viewer?.open === undefined || folder === '') {
-				return
-			}
-			event.preventDefault()
-			window.OCA.Viewer.open({ path: `${folder}/${shot.basename}` })
-		})
 		const picture = document.createElement('img')
 		picture.alt = shot.basename
 		picture.loading = 'lazy'

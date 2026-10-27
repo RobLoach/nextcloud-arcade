@@ -32,7 +32,7 @@ class Maintenance {
 		private IAppManager $appManager,
 		private IConfig $config,
 		private CleanupService $cleanupService,
-		private StateService $stateService,
+		private LegacyAppDataSaves $legacy,
 		private RegisterMimeTypes $mimeTypes,
 		private JobHistory $jobHistory,
 	) {
@@ -105,7 +105,7 @@ class Maintenance {
 	public function status(): array {
 		return [
 			'database' => $this->databaseProblems(),
-			'appData' => $this->stateService->appDataSaves(),
+			'appData' => $this->legacy->count(),
 			'jobs' => $this->jobs(),
 		];
 	}
@@ -142,7 +142,7 @@ class Maintenance {
 
 	/** Remove what earlier versions left in the app data; says how many files went. */
 	public function removeAppDataSaves(): int {
-		return $this->stateService->deleteAppDataSaves();
+		return $this->legacy->deleteAll();
 	}
 
 	/**

@@ -22,8 +22,8 @@ $cloudSyncUrl = $_['cloudSyncUrl'];
 			'arcade-pause-hidden' => ['pause_when_hidden', $l->t('Pause the game while the tab is in the background')],
 			'arcade-autoload' => ['autoload_on_start', $l->t('Continue from the latest save when a game starts, without asking')],
 		] as $id => [$key, $label]): ?>
-			<p class="checkbox-radio-switch">
-				<input type="checkbox" id="<?php p($id); ?>" class="checkbox-radio-switch__input arcade-setting"
+			<p class="arcade-switch">
+				<input type="checkbox" id="<?php p($id); ?>" class="arcade-switch__input arcade-setting"
 					data-setting="<?php p($key); ?>" <?php if ($settings[$key]) { p('checked'); } ?>>
 				<label for="<?php p($id); ?>"><?php p($label); ?></label>
 			</p>

@@ -95,6 +95,8 @@ All notable changes to NextCloud Arcade. The format follows
   the Files app, so there the button opens the game's details in Files.
 
 ### Changed
+- The player's text is sized from the server's own font size, so a larger
+  one makes the player's larger too.
 - The offer to continue from the last save sits along the bottom of the
   game and goes by itself after seven seconds, waiting while the pointer
   or the focus is on it.
@@ -163,6 +165,9 @@ All notable changes to NextCloud Arcade. The format follows
   what each limit is currently set to.
 
 ### Fixed
+- On the narrowest phones, the offer to continue from the last save
+  stretched into a tall box: a rule from when it sat mid-screen was left
+  pulling its top up while the new one held its bottom down.
 - A save brought into the saves folder some other way -- the desktop
   client, Files -- could be passed over by the Cloud Sync check for good,
   whenever a save in the player had written the manifest since. The check

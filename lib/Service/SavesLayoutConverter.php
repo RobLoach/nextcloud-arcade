@@ -148,7 +148,7 @@ class SavesLayoutConverter {
 				$dir = $core === '' ? $kind : "$kind/$core";
 				$target = "$dir/$name";
 				try {
-					$into = $this->makeFolder($root, $dir);
+					$into = Folders::make($root, $dir);
 					if ($into === null || $into->nodeExists($name)) {
 						$this->logger->warning('A save of an earlier version was left where it is: the new place is taken', [
 							'user' => $userId,
@@ -158,8 +158,7 @@ class SavesLayoutConverter {
 						$kept++;
 						continue;
 					}
-					$hash = $file->hash('md5');
-					$hash = is_string($hash) && $hash !== '' ? $hash : md5($file->getContent());
+					$hash = Folders::md5Of($file);
 					$file->move($into->getPath() . '/' . $name);
 					$changes[$target] = $hash;
 					$moved++;
@@ -377,23 +376,6 @@ class SavesLayoutConverter {
 			$archive->close();
 		}
 		return $largest === null ? null : pathinfo(basename($largest), PATHINFO_FILENAME);
-	}
-
-	/** Creates the folders of a path one level at a time. */
-	private function makeFolder(Folder $base, string $path): ?Folder {
-		$folder = $base;
-		foreach (explode('/', trim($path, '/')) as $segment) {
-			try {
-				$node = $folder->get($segment);
-				if (!$node instanceof Folder) {
-					return null;
-				}
-				$folder = $node;
-			} catch (NotFoundException) {
-				$folder = $folder->newFolder($segment);
-			}
-		}
-		return $folder;
 	}
 
 	private function removeIfEmpty(Folder $folder): void {

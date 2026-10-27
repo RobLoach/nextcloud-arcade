@@ -7,7 +7,7 @@ namespace OCA\Arcade\Command;
 use OCA\Arcade\Db\GameMapper;
 use OCA\Arcade\Db\PlayMapper;
 use OCA\Arcade\Service\Maintenance;
-use OCA\Arcade\Service\StateService;
+use OCA\Arcade\Service\LegacyAppDataSaves;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -25,7 +25,7 @@ use Symfony\Component\Console\Output\OutputInterface;
  */
 class Status extends Command {
 	public function __construct(
-		private StateService $stateService,
+		private LegacyAppDataSaves $legacy,
 		private GameMapper $gameMapper,
 		private PlayMapper $playMapper,
 		private Maintenance $maintenance,
@@ -74,7 +74,7 @@ class Status extends Command {
 		$status = [
 			'users' => $users,
 			'totals' => $totals,
-			'appDataSaves' => $this->stateService->appDataSaves(),
+			'appDataSaves' => $this->legacy->count(),
 			'jobs' => $this->maintenance->jobs(),
 		];
 

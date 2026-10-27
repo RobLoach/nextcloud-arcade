@@ -1,97 +1,3 @@
-const STYLE_ID = 'arcade-touch-style'
-const STYLE = `
-.arcade-touch {
-	position: absolute;
-	inset: 0;
-	pointer-events: none;
-	z-index: 20090;
-	user-select: none;
-	-webkit-user-select: none;
-}
-.arcade-touch.hidden { display: none; }
-.arcade-touch * { touch-action: none; }
-.arcade-touch-dpad {
-	position: absolute;
-	bottom: 70px;
-	left: 20px;
-	width: 140px;
-	height: 140px;
-	border-radius: 50%;
-	background-color: rgba(255, 255, 255, 0.08);
-	border: 2px solid rgba(255, 255, 255, 0.25);
-	pointer-events: auto;
-}
-.arcade-touch-dpad::before {
-	content: '';
-	position: absolute;
-	top: 50%;
-	left: 50%;
-	width: 46px;
-	height: 46px;
-	transform: translate(-50%, -50%);
-	border-radius: 50%;
-	background-color: rgba(255, 255, 255, 0.2);
-}
-.arcade-touch-buttons {
-	position: absolute;
-	bottom: 70px;
-	right: 20px;
-	width: 150px;
-	height: 150px;
-	pointer-events: none;
-}
-.arcade-touch-button {
-	position: absolute;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	border-radius: 50%;
-	background-color: rgba(255, 255, 255, 0.15);
-	border: 2px solid rgba(255, 255, 255, 0.3);
-	color: rgba(255, 255, 255, 0.85);
-	font-weight: bold;
-	font-size: 16px;
-	pointer-events: auto;
-}
-.arcade-touch-button.pressed { background-color: rgba(255, 255, 255, 0.45); }
-.arcade-touch-button.face {
-	width: 52px;
-	height: 52px;
-}
-.arcade-touch-buttons .face-a { right: 0; top: 50%; transform: translateY(-50%); }
-.arcade-touch-buttons .face-b { bottom: 0; left: 50%; transform: translateX(-50%); }
-.arcade-touch-buttons .face-x { top: 0; left: 50%; transform: translateX(-50%); }
-.arcade-touch-buttons .face-y { left: 0; top: 50%; transform: translateY(-50%); }
-.arcade-touch-button.pill {
-	border-radius: 16px;
-	font-size: 11px;
-	width: 64px;
-	height: 28px;
-}
-.arcade-touch-select { position: absolute; bottom: 24px; left: 50%; transform: translateX(-108%); }
-.arcade-touch-start { position: absolute; bottom: 24px; left: 50%; transform: translateX(8%); }
-/* The shoulders used to sit in the top corners, below the chrome -- which
-   held only as long as the chrome stayed where it was measured. It does
-   not: the top-right cluster starts under the notch, and with the pad up
-   the control bar moves to the top as well, landing on both shoulders.
-   So the top belongs to the chrome and the bottom to the pad, with no
-   line drawn between them to be crossed. Each shoulder sits just above
-   the cluster the same thumb is already on -- 220px is the top edge of
-   the taller of the two, the face buttons. */
-.arcade-touch-l { position: absolute; bottom: 228px; left: 20px; }
-.arcade-touch-r { position: absolute; bottom: 228px; right: 20px; }
-/* The pad asks for 140 and 150 either side of 20px margins: 330px, which
-   the narrowest phones do not have, and the two clusters met in the
-   middle. Below that it is drawn a size smaller. */
-@media (max-width: 359px) {
-	.arcade-touch-dpad { left: 8px; width: 124px; height: 124px; }
-	.arcade-touch-buttons { right: 8px; width: 134px; height: 134px; }
-	.arcade-touch-button.face { width: 46px; height: 46px; }
-	.arcade-touch-l { left: 8px; }
-	.arcade-touch-r { right: 8px; }
-}
-`
-
 /**
  * Whether the overlay is worth offering at all.
  *
@@ -117,16 +23,6 @@ export function isTouchPrimary() {
 	return window.matchMedia?.('(pointer: coarse)').matches === true
 }
 
-function ensureStyle() {
-	if (document.getElementById(STYLE_ID) !== null) {
-		return
-	}
-	const style = document.createElement('style')
-	style.id = STYLE_ID
-	style.textContent = STYLE
-	document.head.appendChild(style)
-}
-
 /**
  * Attach a virtual gamepad overlay for touch play.
  *
@@ -136,7 +32,6 @@ function ensureStyle() {
  * @return {{element: HTMLElement, release: Function, detach: Function}} the overlay
  */
 export function attachTouchControls({ container, instance }) {
-	ensureStyle()
 
 	const overlay = document.createElement('div')
 	overlay.className = 'arcade-touch'

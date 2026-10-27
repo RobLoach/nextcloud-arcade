@@ -8,7 +8,7 @@ use OCA\Arcade\Command\Status;
 use OCA\Arcade\Db\GameMapper;
 use OCA\Arcade\Db\PlayMapper;
 use OCA\Arcade\Service\Maintenance;
-use OCA\Arcade\Service\StateService;
+use OCA\Arcade\Service\LegacyAppDataSaves;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Console\Tester\CommandTester;
 
@@ -29,8 +29,8 @@ class StatusTest extends TestCase {
 	private array $jobs = [];
 
 	private function tester(): CommandTester {
-		$stateService = $this->createStub(StateService::class);
-		$stateService->method('appDataSaves')->willReturnCallback(fn (): array => $this->appData);
+		$legacy = $this->createStub(LegacyAppDataSaves::class);
+		$legacy->method('count')->willReturnCallback(fn (): array => $this->appData);
 
 		$gameMapper = $this->createStub(GameMapper::class);
 		$gameMapper->method('countsByUser')->willReturnCallback(fn (): array => $this->games);
@@ -42,7 +42,7 @@ class StatusTest extends TestCase {
 		$maintenance->method('databaseProblems')->willReturnCallback(fn (): array => $this->problems);
 		$maintenance->method('jobs')->willReturnCallback(fn (): array => $this->jobs);
 
-		return new CommandTester(new Status($stateService, $gameMapper, $playMapper, $maintenance));
+		return new CommandTester(new Status($legacy, $gameMapper, $playMapper, $maintenance));
 	}
 
 	public function testEveryUserWithSavesOrPlaysIsReportedWithTheTotals(): void {

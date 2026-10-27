@@ -27,6 +27,7 @@ class CleanupService {
 		private IUserManager $userManager,
 		private IRootFolder $rootFolder,
 		private UserFilesystems $userFilesystems,
+		private LegacyAppDataSaves $legacy,
 	) {
 	}
 
@@ -53,13 +54,13 @@ class CleanupService {
 		// every backend (an LDAP one at length) about users who cannot.
 		$keys = [];
 		$this->userManager->callForSeenUsers(function ($user) use (&$keys): void {
-			$keys[$this->stateService->folderKeyOf($user->getUID())] = $user->getUID();
+			$keys[LegacyAppDataSaves::keyOf($user->getUID())] = $user->getUID();
 		});
 
 		$users = 0;
 		$games = 0;
 		$cleaned = [];
-		foreach ($this->stateService->userFolders() as $key => $folder) {
+		foreach ($this->legacy->userFolders() as $key => $folder) {
 			$userId = $keys[$key] ?? null;
 			if ($userId === null) {
 				$report("Removing the states of a user that no longer exists ($key)");
@@ -92,13 +93,13 @@ class CleanupService {
 			$games += $this->cleanUser($userId, $dryRun, $report);
 		}
 
-		$appData = $this->stateService->appDataSaves();
+		$appData = $this->legacy->count();
 		$appDataRemoved = 0;
 		if ($legacy && $appData['files'] > 0) {
 			$report("Removing the {$appData['files']} save files earlier versions left in the app data");
 			if (!$dryRun) {
-				$appDataRemoved = $this->stateService->deleteAppDataSaves();
-				$appData = $this->stateService->appDataSaves();
+				$appDataRemoved = $this->legacy->deleteAll();
+				$appData = $this->legacy->count();
 			}
 		}
 

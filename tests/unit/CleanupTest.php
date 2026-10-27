@@ -7,6 +7,7 @@ namespace OCA\Arcade\Tests\Unit;
 use OCA\Arcade\Command\Cleanup;
 use OCA\Arcade\Db\GameMapper;
 use OCA\Arcade\Service\CleanupService;
+use OCA\Arcade\Service\LegacyAppDataSaves;
 use OCA\Arcade\Service\StateService;
 use OCA\Arcade\Service\UserFilesystems;
 use OCP\Files\Folder;
@@ -54,10 +55,21 @@ class CleanupTest extends TestCase {
 
 	private function tester(): CommandTester {
 		$stateService = $this->createStub(StateService::class);
-		$stateService->method('folderKeyOf')->willReturnCallback(
-			static fn (string $userId): string => hash('sha256', $userId),
+		$stateService->method('gamesOf')->willReturnCallback(
+			fn (string $userId): array => $this->games[$userId] ?? [],
 		);
-		$stateService->method('userFolders')->willReturnCallback(
+		$stateService->method('deleteAllForGame')->willReturnCallback(
+			function (string $userId, string $path): void {
+				$this->deletedGames[] = "$userId:$path";
+			},
+		);
+		$stateService->method('deleteAllForUser')->willReturnCallback(
+			function (string $userId): void {
+				$this->deletedUsers[] = $userId;
+			},
+		);
+		$legacy = $this->createStub(LegacyAppDataSaves::class);
+				$legacy->method('userFolders')->willReturnCallback(
 			function (): array {
 				$folders = [];
 				foreach ($this->folders as $uid => $_) {
@@ -72,23 +84,10 @@ class CleanupTest extends TestCase {
 				return $folders;
 			},
 		);
-		$stateService->method('gamesOf')->willReturnCallback(
-			fn (string $userId): array => $this->games[$userId] ?? [],
-		);
-		$stateService->method('deleteAllForGame')->willReturnCallback(
-			function (string $userId, string $path): void {
-				$this->deletedGames[] = "$userId:$path";
-			},
-		);
-		$stateService->method('deleteAllForUser')->willReturnCallback(
-			function (string $userId): void {
-				$this->deletedUsers[] = $userId;
-			},
-		);
-		$stateService->method('appDataSaves')->willReturnCallback(
+		$legacy->method('count')->willReturnCallback(
 			fn (): array => ['files' => $this->legacy, 'bytes' => $this->legacy * 100],
 		);
-		$stateService->method('deleteAppDataSaves')->willReturnCallback(
+		$legacy->method('deleteAll')->willReturnCallback(
 			function (): int {
 				$removed = $this->legacy;
 				$this->legacy = 0;
@@ -125,7 +124,7 @@ class CleanupTest extends TestCase {
 		$rootFolder->method('getUserFolder')->willReturn($userFolder);
 
 		return new CommandTester(new Cleanup(
-			new CleanupService($stateService, $gameMapper, $userManager, $rootFolder, $this->filesystems($userManager)),
+			new CleanupService($stateService, $gameMapper, $userManager, $rootFolder, $this->filesystems($userManager), $legacy),
 		));
 	}
 
