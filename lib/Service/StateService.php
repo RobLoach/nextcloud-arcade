@@ -127,6 +127,7 @@ class StateService {
 		private GameMapper $gameMapper,
 		private CloudSyncManifest $manifest,
 		private IUserConfig $userConfig,
+		private SavesLayoutConverter $layoutConverter,
 		private LoggerInterface $logger,
 	) {
 	}
@@ -559,6 +560,14 @@ class StateService {
 		$found = $this->roots[$userId] ?? null;
 		if ($found instanceof Folder) {
 			return $found;
+		}
+		// Saves of an earlier version are moved to where they are looked
+		// for before anything is: a game read from an empty place now and
+		// saved over would lose what the player had.
+		try {
+			$this->layoutConverter->convertIfNeeded($userId);
+		} catch (\Throwable $e) {
+			$this->logger->warning('Could not move the saves of an earlier version', ['user' => $userId, 'exception' => $e]);
 		}
 		if ($found === false && !$create) {
 			return null;

@@ -7,6 +7,7 @@ namespace OCA\Arcade\Tests\Unit;
 use OCA\Arcade\Db\GameMapper;
 use OCA\Arcade\Service\CloudSyncManifest;
 use OCA\Arcade\Service\SettingsService;
+use OCA\Arcade\Service\SavesLayoutConverter;
 use OCA\Arcade\Service\StateService;
 use OCP\Config\IUserConfig;
 use OCP\Files\AppData\IAppDataFactory;
@@ -63,6 +64,7 @@ class StateServiceTest extends TestCase {
 				$this->createStub(LoggerInterface::class),
 			),
 			$this->userConfig(),
+			$this->createStub(SavesLayoutConverter::class),
 			$this->createStub(LoggerInterface::class),
 		);
 	}

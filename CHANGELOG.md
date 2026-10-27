@@ -7,6 +7,14 @@ All notable changes to NextCloud Arcade. The format follows
 ## [Unreleased]
 
 ### Added
+- The saves of earlier versions are moved to the new layout: each game's
+  folder of `Auto.state`, `Slot N.state` and its battery save becomes
+  `states/<core>/<game>.state.auto`, `.stateN` and
+  `saves/<core>/<game>.srm`, recorded for RetroArch Cloud Sync. A zip's
+  saves go by the game inside it. Nothing is overwritten: a save whose
+  new place is taken stays where it was, and is logged. A user's saves are
+  moved the first time Arcade asks after them -- before a game can start
+  without them -- and a background job moves the rest.
 - RetroArch Cloud Sync. The saves folder is laid out the way RetroArch
   keeps its own -- `saves/` and `states/`, filed under the name of the
   core, with RetroArch's file names -- and every save and delete is
