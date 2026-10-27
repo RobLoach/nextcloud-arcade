@@ -28,6 +28,8 @@ class SavesLayoutConverterTest extends TestCase {
 
 	/** The user's files, by path under their root: content, or null for a folder. */
 	private array $files = [];
+	/** The id of each file, by path, for the games found by id. */
+	private array $ids = [];
 	/** The games table: key => path, md5, core, name. */
 	private array $games = [];
 	/** What was recorded in the manifest. */
@@ -97,6 +99,13 @@ class SavesLayoutConverterTest extends TestCase {
 			}
 			return $nodes;
 		});
+		$folder->method('getFirstNodeById')->willReturnCallback(function (int $id) {
+			$path = array_search($id, $this->ids, true);
+			return $path === false || !array_key_exists($path, $this->files) ? null : $this->file($path);
+		});
+		$folder->method('getRelativePath')->willReturnCallback(
+			fn (string $full): ?string => str_starts_with($full, '/' . self::USER . '/files/') ? substr($full, strlen('/' . self::USER . '/files')) : null,
+		);
 		$folder->method('delete')->willReturnCallback(function () use ($path): void {
 			unset($this->files[$path]);
 		});
@@ -106,6 +115,7 @@ class SavesLayoutConverterTest extends TestCase {
 	private function file(string $path): File {
 		$file = $this->createStub(File::class);
 		$file->method('getName')->willReturn(basename($path));
+		$file->method('getPath')->willReturn('/' . self::USER . '/files/' . $path);
 		$file->method('hash')->willReturnCallback(fn (): string => md5((string)$this->files[$path]));
 		$file->method('getContent')->willReturnCallback(fn (): string => (string)$this->files[$path]);
 		$file->method('move')->willReturnCallback(function (string $target) use ($path): File {
@@ -179,15 +189,100 @@ class SavesLayoutConverterTest extends TestCase {
 		$this->assertSame('old', $this->files['Saves/Nintendo/Mario/Slot 1.state']);
 	}
 
-	public function testAFolderNoGameIsKnownForGoesByItsNames(): void {
-		$this->given(['Saves/Game Boy/Tetris/Slot 2.state' => 'two', 'Saves/Tetris DX/Tetris DX.srm' => 'battery']);
+	public function testAFolderInASystemFolderNoGameClaimsGoesByItsNames(): void {
+		// A game deleted since: moved where its saves would be found again,
+		// had it come back -- as those versions would have found them.
+		$this->given(['Saves/Game Boy/Tetris/Slot 2.state' => 'two']);
 
 		$this->converter()->convertIfNeeded(self::USER);
 
-		$this->assertSame([
-			'Saves/saves/Tetris DX.srm' => 'battery',
-			'Saves/states/Gambatte/Tetris.state2' => 'two',
-		], $this->onlyFiles());
+		$this->assertSame(['Saves/states/Gambatte/Tetris.state2' => 'two'], $this->onlyFiles());
+	}
+
+	public function testAFolderAtTheTopNoGameClaimsIsLeftAlone(): void {
+		// Those versions never loaded it for a game with a system; moved, a
+		// game they did not give it to would find it.
+		$this->given(['Saves/Tetris DX/Tetris DX.srm' => 'battery']);
+		$this->games = ['1' => ['path' => '/Games/GB/Tetris DX.gb', 'md5' => '', 'core' => '', 'name' => '']];
+
+		$this->assertSame([0, 0], $this->converter()->convertIfNeeded(self::USER));
+		$this->assertSame(['Saves/Tetris DX/Tetris DX.srm' => 'battery'], $this->onlyFiles());
+	}
+
+	public function testAGameOfNoSystemHasItsFolderAtTheTop(): void {
+		$this->given(['Saves/Pack/Slot 1.state' => 'one']);
+		$this->games = ['1' => ['path' => '/Downloads/Pack.zip', 'md5' => '', 'core' => '', 'name' => '']];
+
+		$this->converter()->convertIfNeeded(self::USER);
+
+		$this->assertSame(['Saves/states/Pack.state1' => 'one'], $this->onlyFiles());
+	}
+
+	public function testAFolderIsOnlyAGamesWithItsCaseAsThoseVersionsWroteIt(): void {
+		// They looked a folder up by its exact path, so "mario" was never
+		// Mario.nes's. It moves by its own names, and Mario.nes still does
+		// not see it -- as before.
+		$this->given(['Saves/Nintendo/mario/Slot 1.state' => 'one']);
+		$this->games = ['1' => ['path' => '/Games/NES/Mario.nes', 'md5' => '', 'core' => '', 'name' => '']];
+
+		$this->converter()->convertIfNeeded(self::USER);
+
+		$this->assertSame(['Saves/states/FCEUmm/mario.state1' => 'one'], $this->onlyFiles());
+	}
+
+	public function testARenamedGamesFolderIsFoundWhereItWasLastSaved(): void {
+		// Saved as Mario.nes, renamed since: those versions followed it to
+		// the folder of its old name, and it moves under the name it has.
+		$this->given([
+			'Games/NES/Super Mario.nes' => 'rom',
+			'Saves/Nintendo/Mario/Slot 1.state' => 'one',
+			'Saves/Nintendo/Mario/Mario.srm' => 'battery',
+		]);
+		$this->ids = ['Games/NES/Super Mario.nes' => 42];
+		$this->games = ['42' => ['path' => '/Games/NES/Mario.nes', 'md5' => '', 'core' => '', 'name' => '']];
+
+		$this->converter()->convertIfNeeded(self::USER);
+
+		$this->assertSame('one', $this->files['Saves/states/FCEUmm/Super Mario.state1']);
+		$this->assertSame('battery', $this->files['Saves/saves/FCEUmm/Super Mario.srm']);
+	}
+
+	public function testTheFolderOfTheGamesNameNowComesFirst(): void {
+		// Both there: those versions loaded the one of the name it has now.
+		$this->given([
+			'Games/NES/Super Mario.nes' => 'rom',
+			'Saves/Nintendo/Super Mario/Slot 1.state' => 'now',
+			'Saves/Nintendo/Mario/Slot 1.state' => 'before',
+		]);
+		$this->ids = ['Games/NES/Super Mario.nes' => 42];
+		$this->games = ['42' => ['path' => '/Games/NES/Mario.nes', 'md5' => '', 'core' => '', 'name' => '']];
+
+		$this->converter()->convertIfNeeded(self::USER);
+
+		$this->assertSame('now', $this->files['Saves/states/FCEUmm/Super Mario.state1']);
+		// The other is a folder of its own, of a game not there any more.
+		$this->assertSame('before', $this->files['Saves/states/FCEUmm/Mario.state1']);
+	}
+
+	public function testAGameNamedLikeAFolderOfTheNewLayoutDoesNotTakeIt(): void {
+		$this->given(['Saves/saves/Pokemon.srm' => 'from retroarch']);
+		$this->games = ['1' => ['path' => '/Downloads/saves.zip', 'md5' => '', 'core' => '', 'name' => '']];
+
+		$this->assertSame([0, 0], $this->converter()->convertIfNeeded(self::USER));
+		$this->assertSame(['Saves/saves/Pokemon.srm' => 'from retroarch'], $this->onlyFiles());
+	}
+
+	public function testTheBatterySaveOfTheGamesNameWins(): void {
+		$this->given([
+			'Saves/Nintendo/Mario/Another.srm' => 'stray',
+			'Saves/Nintendo/Mario/Mario.srm' => 'the game\'s',
+		]);
+		$this->games = ['1' => ['path' => '/Games/NES/Mario.nes', 'md5' => '', 'core' => '', 'name' => '']];
+
+		$this->converter()->convertIfNeeded(self::USER);
+
+		$this->assertSame('the game\'s', $this->files['Saves/saves/FCEUmm/Mario.srm']);
+		$this->assertSame('stray', $this->files['Saves/Nintendo/Mario/Another.srm']);
 	}
 
 	public function testTheCoreThePlayerRanWinsOverThePath(): void {
@@ -252,27 +347,6 @@ class SavesLayoutConverterTest extends TestCase {
 		$this->assertSame([1, 0], $this->converter()->convertIfNeeded(self::USER));
 		$this->assertTrue($this->done);
 		$this->assertArrayHasKey('Saves/states/FCEUmm/Mario.state2', $this->files);
-	}
-
-	public function testFoldersAreMatchedTheWayThoseVersionsFoundThem(): void {
-		// Another case than the ROM's, and a folder from before the system
-		// was part of the path: both the same game, so the core and the
-		// name come from the table, not from the folders.
-		$this->given([
-			'Saves/Nintendo/mario/Slot 1.state' => 'one',
-			'Saves/Zelda/Slot 2.state' => 'two',
-		]);
-		$this->games = [
-			'1' => ['path' => '/Games/NES/Mario.nes', 'md5' => '', 'core' => '', 'name' => ''],
-			'2' => ['path' => '/Games/NES/Zelda.nes', 'md5' => '', 'core' => '', 'name' => ''],
-		];
-
-		$this->converter()->convertIfNeeded(self::USER);
-
-		$this->assertSame([
-			'Saves/states/FCEUmm/Mario.state1' => 'one',
-			'Saves/states/FCEUmm/Zelda.state2' => 'two',
-		], $this->onlyFiles());
 	}
 
 	public function testABatteryBesideTheOneMovedIsLeftAndSaid(): void {

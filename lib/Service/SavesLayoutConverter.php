@@ -159,18 +159,12 @@ class SavesLayoutConverter {
 			return null;
 		}
 
-		$games = $this->knownGames($userId);
-
 		$moved = 0;
 		$taken = 0;
 		$failed = 0;
 		$changes = [];
-		foreach ($this->gameFolders($root) as $relative => $folder) {
-			$game = $this->gameOf($games, $relative);
-			[$core, $stem] = $game === null
-				? $this->guessed($relative, $folder)
-				: $this->fromTheTable($game);
-			[$plan, $extra] = $this->plan($folder, $stem);
+		foreach ($this->oldFolders($userId, $userFolder, $root) as $relative => [$folder, $core, $stem, $batteryNames]) {
+			[$plan, $extra] = $this->plan($folder, $stem, $batteryNames);
 			foreach ($extra as $file) {
 				$this->logger->warning('A battery save of an earlier version was left where it is: the game has another', [
 					'user' => $userId,
@@ -226,66 +220,96 @@ class SavesLayoutConverter {
 	}
 
 	/**
-	 * The games the table knows, by the folder those versions kept their
-	 * saves in: exactly, as they wrote it, and without regard to case, as
-	 * they also found it -- and by the game's name alone, for a folder from
-	 * before the system was part of the path.
+	 * The folders of the old layout to move, each with the core and the name
+	 * its saves go by now, and the names its battery save may have, the
+	 * likeliest first.
 	 *
-	 * @return array{exact: array<string, array>, folded: array<string, array>, byName: array<string, list<array>>}
-	 */
-	private function knownGames(string $userId): array {
-		$games = ['exact' => [], 'folded' => [], 'byName' => []];
-		foreach ($this->gameMapper->entriesOf($userId) as $entry) {
-			$path = $entry['path'];
-			$system = CoreMap::shortNameForPath($path);
-			$stem = StateService::stemOf($path);
-			$relative = $system === '' ? $stem : "$system/$stem";
-			$games['exact'][$relative] = $entry;
-			$games['folded'][mb_strtolower($relative)] ??= $entry;
-			$games['byName'][mb_strtolower($stem)][] = $entry;
-		}
-		return $games;
-	}
-
-	/**
-	 * The game a folder of saves belongs to, or null when the table knows
-	 * none -- or more than one by that name, which is no answer either.
+	 * Found exactly as those versions found a game's folder when loading it,
+	 * so whatever they loaded for a game is what is moved for it:
 	 *
-	 * @param array{exact: array<string, array>, folded: array<string, array>, byName: array<string, list<array>>} $games
-	 * @return ?array{path: string, md5: string, core: string, name: string}
-	 */
-	private function gameOf(array $games, string $relative): ?array {
-		$byName = $games['byName'][mb_strtolower(basename($relative))] ?? [];
-		return $games['exact'][$relative]
-			?? $games['folded'][mb_strtolower($relative)]
-			?? (count($byName) === 1 ? $byName[0] : null);
-	}
-
-	/**
-	 * The folders of games in the old layout, by their path under the saves
-	 * folder: one under each system folder, and one at the top for a game
-	 * no system could be told for.
+	 *  1. The folder of the game's path as it is now --
+	 *     <saves>/<system>/<name>, or <saves>/<name> for a game of no system
+	 *     they could tell, with the case as it is.
+	 *  2. Failing that, the folder of the path the game had when it was last
+	 *     saved, which they followed to a renamed or moved game.
 	 *
-	 * @return array<string, Folder>
+	 * Two games of the same name and system shared one folder; it goes to
+	 * the first, and the second, going by the same names, finds the saves
+	 * all the same.
+	 *
+	 * A folder in a system folder that no game claims -- a game deleted
+	 * since -- moves by its own names: that is the folder those versions
+	 * would have loaded had the game come back, and now it is found the
+	 * same way. A folder at the top that no game claims is left alone:
+	 * they never loaded it for any game with a system, and moved, it would
+	 * be found by games they did not give it to.
+	 *
+	 * @return array<string, array{0: Folder, 1: string, 2: string, 3: list<string>}>
 	 */
-	private function gameFolders(Folder $root): array {
-		$games = [];
-		foreach ($root->getDirectoryListing() as $node) {
-			$name = $node->getName();
-			if (!$node instanceof Folder || in_array($name, self::OURS, true) || str_starts_with($name, '.')) {
+	private function oldFolders(string $userId, Folder $userFolder, Folder $root): array {
+		$folders = [];
+		foreach ($this->gameMapper->entriesOf($userId) as $key => $entry) {
+			$current = $this->currentPath($userFolder, (string)$key);
+			$romPath = $current ?? $entry['path'];
+			if ($romPath === '') {
 				continue;
 			}
-			if ($this->isSystemFolder($name)) {
-				foreach ($node->getDirectoryListing() as $game) {
-					if ($game instanceof Folder && $this->holdsSaves($game)) {
-						$games["$name/{$game->getName()}"] = $game;
-					}
+			foreach (array_unique(array_filter([$current, $entry['path']])) as $path) {
+				$relative = self::oldFolderOf($path);
+				// A game of no system named like a folder of the new layout
+				// -- saves.zip -- is not to have that folder taken for its own.
+				if (isset($folders[$relative]) || in_array($relative, self::OURS, true)) {
+					break;
 				}
-			} elseif ($this->holdsSaves($node)) {
-				$games[$name] = $node;
+				$folder = Folders::folderAt($root, $relative);
+				if ($folder === null || !$this->holdsSaves($folder)) {
+					continue;
+				}
+				$folders[$relative] = [
+					$folder,
+					CoreMap::CORE_NAMES[$entry['core']] ?? CoreMap::coreNameForPath($romPath),
+					$entry['name'] !== '' ? $entry['name'] : StateService::stemOf($romPath),
+					array_values(array_unique([StateService::stemOf($romPath) . '.srm', $folder->getName() . '.srm'])),
+				];
+				break;
 			}
 		}
-		return $games;
+		foreach ($root->getDirectoryListing() as $system) {
+			if (!$system instanceof Folder || !$this->isSystemFolder($system->getName())) {
+				continue;
+			}
+			foreach ($system->getDirectoryListing() as $game) {
+				$relative = "{$system->getName()}/{$game->getName()}";
+				if (!$game instanceof Folder || isset($folders[$relative]) || !$this->holdsSaves($game)) {
+					continue;
+				}
+				$folders[$relative] = [$game, $this->coreOfSystemFolder($system->getName()), $game->getName(), [$game->getName() . '.srm']];
+			}
+		}
+		return $folders;
+	}
+
+	/**
+	 * Where those versions kept a game's saves, under the saves folder: by
+	 * the same CoreMap, which names systems and folders as it did then.
+	 */
+	private static function oldFolderOf(string $romPath): string {
+		$system = CoreMap::shortNameForPath($romPath);
+		$stem = StateService::stemOf($romPath);
+		return $system === '' ? $stem : "$system/$stem";
+	}
+
+	/** Where a game is now, by the file id it is filed under; null when gone. */
+	private function currentPath(Folder $userFolder, string $key): ?string {
+		if (!ctype_digit($key)) {
+			return null;
+		}
+		try {
+			$node = $userFolder->getFirstNodeById((int)$key);
+			return $node instanceof File ? $userFolder->getRelativePath($node->getPath()) : null;
+		} catch (\Throwable) {
+			return null;
+		}
 	}
 
 	private function isSystemFolder(string $name): bool {
@@ -306,51 +330,25 @@ class SavesLayoutConverter {
 		return false;
 	}
 
-	/**
-	 * The core and the name of a game the table knows: the core the player
-	 * noted, or the one its path names; the name its saves go by, or the
-	 * file's own.
-	 *
-	 * @param array{path: string, md5: string, core: string, name: string} $game
-	 * @return array{0: string, 1: string}
-	 */
-	private function fromTheTable(array $game): array {
-		return [
-			CoreMap::CORE_NAMES[$game['core']] ?? CoreMap::coreNameForPath($game['path']),
-			$game['name'] !== '' ? $game['name'] : StateService::stemOf($game['path']),
-		];
-	}
-
-	/**
-	 * The core and the name of a game the table does not know, read off
-	 * the folders: the system folder names the core, the game's folder
-	 * its name.
-	 *
-	 * @return array{0: string, 1: string}
-	 */
-	private function guessed(string $relative, Folder $folder): array {
-		$parts = explode('/', $relative);
-		$core = '';
-		if (count($parts) === 2) {
-			foreach (CoreMap::SYSTEMS as $system) {
-				if ($system['short'] === $parts[0]) {
-					$core = CoreMap::CORE_NAMES[$system['core']] ?? '';
-					break;
-				}
+	private function coreOfSystemFolder(string $name): string {
+		foreach (CoreMap::SYSTEMS as $system) {
+			if ($system['short'] === $name) {
+				return CoreMap::CORE_NAMES[$system['core']] ?? '';
 			}
 		}
-		return [$core, $folder->getName()];
+		return '';
 	}
 
 	/**
 	 * Where each file of a game's folder goes, as [file, kind, new name],
-	 * and the battery saves that go nowhere. A game has only one: the one
-	 * named after it, or else the first there is, as those versions read
-	 * it; the others are left where they are.
+	 * and the battery saves that go nowhere. A game has only one: the first
+	 * of the names given that is there, or else the first there is, as
+	 * those versions read it; the others are left where they are.
 	 *
+	 * @param list<string> $batteryNames the names to look for, likeliest first
 	 * @return array{0: list<array{0: File, 1: string, 2: string}>, 1: list<File>}
 	 */
-	private function plan(Folder $folder, string $stem): array {
+	private function plan(Folder $folder, string $stem, array $batteryNames): array {
 		$plan = [];
 		$batteries = [];
 		foreach ($folder->getDirectoryListing() as $node) {
@@ -368,7 +366,11 @@ class SavesLayoutConverter {
 			}
 			$plan[] = [$node, StateService::STATES, StateService::stateName($stem, $slot) . ($picture ? '.png' : '')];
 		}
-		usort($batteries, fn (File $a, File $b): int => (int)($b->getName() === "{$folder->getName()}.srm") - (int)($a->getName() === "{$folder->getName()}.srm"));
+		$rank = static function (File $file) use ($batteryNames): int {
+			$at = array_search($file->getName(), $batteryNames, true);
+			return $at === false ? count($batteryNames) : $at;
+		};
+		usort($batteries, static fn (File $a, File $b): int => $rank($a) <=> $rank($b));
 		if ($batteries !== []) {
 			$plan[] = [array_shift($batteries), StateService::SAVES, "$stem.srm"];
 		}
