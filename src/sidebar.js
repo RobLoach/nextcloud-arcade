@@ -1,5 +1,7 @@
 import { defaultRootPath } from '@nextcloud/files/dav'
+import { translate as t } from '@nextcloud/l10n'
 import { generateUrl } from '@nextcloud/router'
+import { ICONS, icon } from './icons.js'
 import { fileIdOf } from './player.js'
 
 /**
@@ -22,6 +24,46 @@ export function hasFilesSidebar() {
 }
 
 /**
+ * Give the sidebar the folder and the view the Files app would.
+ *
+ * Rendered on any page but the Files app, the sidebar of Nextcloud 35 has
+ * neither: its stand-in provider leaves both empty. The Sharing tab cannot
+ * do without them -- a Vue 2 component behind a web component, whose
+ * wrapper throws on the definitions of the two when they come empty, so
+ * the tab stayed blank. The provider keeps both in plain refs, so the
+ * game's own folder and a view for this page are put in them, which is
+ * what every tab and action of the sidebar is written against.
+ *
+ * @param {object} client the WebDAV client
+ * @param {Function} resultToNode turns a WebDAV answer into a node
+ * @param {Function} getDefaultPropfind what to ask WebDAV for
+ * @param {string} path the path of the game, from the root of the user's files
+ */
+export async function giveTheSidebarAContext(client, resultToNode, getDefaultPropfind, path) {
+	const provider = window.OCA?.Files?.Sidebar?._sharedState?.standaloneProvider
+	if (provider?.folder === undefined || provider?.view === undefined) {
+		return
+	}
+	try {
+		const dir = path.replace(/\/[^/]*$/, '') || '/'
+		const stat = await client.stat(`${defaultRootPath}${dir}`, { details: true, data: getDefaultPropfind() })
+		const folder = resultToNode(stat.data)
+		provider.folder.value = folder
+		provider.view.value ??= {
+			id: 'arcade',
+			name: t('arcade', 'Arcade'),
+			caption: '',
+			icon: icon(ICONS.gamepad),
+			order: 0,
+			getContents: async () => ({ folder, contents: [] }),
+		}
+	} catch (error) {
+		// Without them only the Sharing tab is the worse for it.
+		console.warn('arcade: could not give the sidebar the folder of the game', error)
+	}
+}
+
+/**
  * Open the Files sidebar on a game.
  *
  * @param {string} path the path of the game, from the root of the user's files
@@ -35,7 +77,9 @@ export async function openFilesSidebar(path) {
 	// and fetches nothing, so it is handed a whole one -- its permissions
 	// and attributes are what the other tabs go by.
 	const { getClient, getDefaultPropfind, resultToNode } = await import('@nextcloud/files/dav')
-	const stat = await getClient().stat(`${defaultRootPath}${path}`, { details: true, data: getDefaultPropfind() })
+	const client = getClient()
+	const stat = await client.stat(`${defaultRootPath}${path}`, { details: true, data: getDefaultPropfind() })
+	await giveTheSidebarAContext(client, resultToNode, getDefaultPropfind, path)
 	window.OCA.Files._sidebar().open(resultToNode(stat.data), 'arcade')
 	return true
 }

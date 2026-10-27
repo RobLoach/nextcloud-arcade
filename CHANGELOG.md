@@ -143,6 +143,10 @@ All notable changes to NextCloud Arcade. The format follows
   what each limit is currently set to.
 
 ### Fixed
+- The Sharing tab of the sidebar opened from the library stayed blank on
+  Nextcloud 35: away from the Files app the sidebar has no folder or view
+  to hand its tabs, and the Sharing tab cannot draw without them. The
+  sidebar is now given the game's folder and a view of its own.
 - Super Nintendo games never got their title or region: the header sits
   32 KiB into the file, and the read stopped at the 8 KiB a Nextcloud
   file stream hands over at a time.
