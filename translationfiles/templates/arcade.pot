@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Nextcloud 3.14159\n"
 "Report-Msgid-Bugs-To: translations\\@example.com\n"
-"POT-Creation-Date: 2026-10-27 13:03-0400\n"
+"POT-Creation-Date: 2026-10-27 14:52-0400\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -266,7 +266,7 @@ msgid "Played"
 msgstr ""
 
 #: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:127
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:89
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:92
 #: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:212
 #: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:265
 msgid "Save states"
@@ -313,18 +313,18 @@ msgid ""
 msgstr ""
 
 #: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:315
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:416
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:419
 msgid "made from another copy of this game"
 msgstr ""
 
 #: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:316
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:417
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:420
 msgid ""
 "The ROM has changed since this state was saved, so loading it may go wrong."
 msgstr ""
 
 #: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:325
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:432
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:435
 msgid "Load"
 msgstr ""
 
@@ -610,7 +610,7 @@ msgid "Could not read the screenshots."
 msgstr ""
 
 #: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/gallery.js:38
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:349
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:352
 msgid "Retry"
 msgstr ""
 
@@ -628,7 +628,7 @@ msgid "No screenshots of this game yet."
 msgstr ""
 
 #: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/gallery.js:103
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:441
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:444
 msgid "Delete"
 msgstr ""
 
@@ -671,126 +671,132 @@ msgid ""
 msgstr ""
 
 #: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:69
+msgid ""
+"your saves are being moved to the new layout of this version; try again in a "
+"moment"
+msgstr ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:72
 msgid "the server answered {status}"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:70
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:73
 msgid "no answer from the server"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:191
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:194
 msgid "The game did not hand over a save state, so the slot is unchanged"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:207
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:210
 msgid "Game saved"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:208
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:211
 msgid "State saved to slot {slot}"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:213
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:216
 msgid "Could not save the state"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:225
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:228
 msgid "That save state is empty, so there is nothing to load"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:248
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:251
 msgid "The game did not take the save state"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:257
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:260
 msgid ""
 "That save state would not load. It may have been made by another version of "
 "the emulator, as RetroArch on another device can be, or for another copy of "
 "the game."
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:261
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:264
 msgid "Game restored"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:262
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:265
 msgid "State loaded from slot {slot}"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:266
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:269
 msgid "Loading took too long and was stopped"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:267
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:270
 msgid "Could not load the state"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:277
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:280
 msgid "Could not delete the state"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:292
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:295
 msgid "Battery save deleted — reopen the game to start over"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:297
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:300
 msgid "Could not delete the battery save"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:310
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:313
 msgid "No battery save"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:313
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:316
 msgid "Battery save"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:316
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:319
 msgid "Delete battery save"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:317
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:320
 msgid "Really delete?"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:347
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:350
 #: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:235
 msgid "Could not read the save states ({why})."
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:402
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:405
 msgid "Auto — {date}"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:404
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:407
 msgid "Slot {slot} — {date}"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:407
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:410
 msgid "Slot {slot} — empty"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:425
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:428
 msgid "Save"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:428
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:431
 msgid "Save to slot {slot}"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:436
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:439
 msgid "Load the automatic save"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:437
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:440
 msgid "Load slot {slot}"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:445
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:448
 msgid "Delete the automatic save"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:446
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:449
 msgid "Delete slot {slot}"
 msgstr ""
 

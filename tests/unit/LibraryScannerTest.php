@@ -40,6 +40,7 @@ class LibraryScannerTest extends TestCase {
 	private int $tornDown = 0;
 	/** How often every scan was to be taken afresh. */
 	private int $forgotten = 0;
+	private int $forgottenBeforeScanning = 0;
 
 	private function scanner(): LibraryScanner {
 		$settings = $this->createStub(SettingsService::class);
@@ -57,6 +58,9 @@ class LibraryScannerTest extends TestCase {
 		);
 		$library->method('forgetEveryScan')->willReturnCallback(function (): void {
 			$this->forgotten++;
+			if ($this->scanned === []) {
+				$this->forgottenBeforeScanning++;
+			}
 		});
 
 		$root = $this->createStub(IRootFolder::class);
@@ -138,9 +142,10 @@ class LibraryScannerTest extends TestCase {
 		$this->libraries = ['alice' => true, 'bob' => false, 'carol' => true, 'dave' => true];
 		$this->assertSame(2, $this->scanner()->scanAll());
 		$this->assertSame(['alice (afresh)', 'dave (afresh)'], $this->scanned);
-		// Once, after all of them: the web server's cache may not be this
-		// process's, and is told to build every library anew.
+		// Once, before any of them: the web server's cache may not be this
+		// process's, and the scans made here are kept under the new count.
 		$this->assertSame(1, $this->forgotten);
+		$this->assertSame(1, $this->forgottenBeforeScanning);
 		// Every user let go of, the ones that failed too.
 		$this->assertSame(4, $this->tornDown);
 	}

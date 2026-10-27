@@ -12,9 +12,11 @@ All notable changes to Nextcloud Arcade. The format follows
   `states/<core>/<game>.state.auto`, `.stateN` and
   `saves/<core>/<game>.srm`, recorded for RetroArch Cloud Sync. Nothing
   is overwritten: a save whose new place is taken stays where it was, and
-  is logged. A user's saves are moved the first time Arcade asks after
-  them -- waiting for the background job if it is moving them just then,
-  so a game never starts without them -- and the job moves the rest.
+  is logged. A user's saves are moved the first time they open Arcade,
+  in their own request, so a game never starts without them and the
+  files keep their versions; a second tab asking meanwhile is told to try
+  again in a moment. A run that cannot move everything is retried on the
+  next two visits, then left and logged.
 - A zip's saves kept under the zip's own name, as earlier versions kept
   them, are renamed after the game inside the first time it is played.
 - RetroArch Cloud Sync. The saves folder is laid out the way RetroArch

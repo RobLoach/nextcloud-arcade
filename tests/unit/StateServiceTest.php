@@ -376,6 +376,13 @@ class StateServiceTest extends TestCase {
 				return $this->userFile($to);
 			},
 		);
+		$file->method('copy')->willReturnCallback(
+			function (string $target) use ($path): File {
+				$to = substr($target, strlen('/' . self::USER . '/files/'));
+				$this->files[$to] = $this->files[$path];
+				return $this->userFile($to);
+			},
+		);
 		return $file;
 	}
 
@@ -956,6 +963,8 @@ class StateServiceTest extends TestCase {
 		$this->ids['Games/SNES/Pack.zip'] = 5;
 		$this->files['Saves/states/Snes9x/Pack.state2'] = 'state';
 		$this->files['Saves/saves/Snes9x/Pack.srm'] = 'battery';
+		// Noted under the zip's own name when they were moved over.
+		$this->games[self::USER]['5'] = ['path' => '/Games/SNES/Pack.zip', 'md5' => '', 'core' => '', 'name' => 'Pack'];
 		$service = $this->service();
 		$service->useCore(self::USER, '/Games/SNES/Pack.zip', 'snes9x');
 		$service->useName(self::USER, '/Games/SNES/Pack.zip', 'Chrono Trigger (USA)');
@@ -967,11 +976,67 @@ class StateServiceTest extends TestCase {
 		$this->assertSame(md5('state'), $this->manifest()['states/Snes9x/Chrono Trigger (USA).state2'] ?? null, 'and RetroArch is told');
 	}
 
+	public function testTheSavesOfAGameNamedLikeTheZipAreNotTheZips(): void {
+		// Pack.sfc beside Pack.zip: the zip never had saves under its own
+		// name noted, so what goes by "Pack" is the cartridge's.
+		$this->files['Games/SNES/Pack.zip'] = 'zip';
+		$this->ids['Games/SNES/Pack.zip'] = 5;
+		$this->files['Saves/states/Snes9x/Pack.state1'] = 'the cartridge\'s';
+		$this->files['Saves/saves/Snes9x/Pack.srm'] = 'the cartridge\'s';
+		$service = $this->service();
+		$service->useCore(self::USER, '/Games/SNES/Pack.zip', 'snes9x');
+		$service->useName(self::USER, '/Games/SNES/Pack.zip', 'Chrono Trigger (USA)');
+
+		$this->assertNull($service->loadSram(self::USER, '/Games/SNES/Pack.zip'));
+		$this->assertSame('the cartridge\'s', $this->files['Saves/saves/Snes9x/Pack.srm']);
+		$this->assertSame('the cartridge\'s', $this->files['Saves/states/Snes9x/Pack.state1']);
+	}
+
+	public function testSavesAZipSharedWithACartridgeOfItsNameAreCopiedNotTaken(): void {
+		// Earlier versions kept one folder for Pack.sfc and Pack.zip both.
+		// The zip goes by the game inside now; the cartridge keeps "Pack".
+		$this->files['Games/SNES/Pack.zip'] = 'zip';
+		$this->ids['Games/SNES/Pack.zip'] = 5;
+		$this->files['Games/SNES/Pack.sfc'] = 'cartridge';
+		$this->ids['Games/SNES/Pack.sfc'] = 6;
+		$this->files['Saves/saves/Snes9x/Pack.srm'] = 'shared';
+		$this->games[self::USER]['5'] = ['path' => '/Games/SNES/Pack.zip', 'md5' => '', 'core' => '', 'name' => 'Pack'];
+		$this->games[self::USER]['6'] = ['path' => '/Games/SNES/Pack.sfc', 'md5' => '', 'core' => '', 'name' => ''];
+		$service = $this->service();
+		$service->useCore(self::USER, '/Games/SNES/Pack.zip', 'snes9x');
+		$service->useName(self::USER, '/Games/SNES/Pack.zip', 'Chrono Trigger (USA)');
+
+		$this->assertSame('shared', $service->loadSram(self::USER, '/Games/SNES/Pack.zip')?->getContent());
+		$this->assertSame('shared', $this->files['Saves/saves/Snes9x/Pack.srm'], 'the cartridge keeps its own');
+		$this->assertSame('shared', $this->service()->loadSram(self::USER, '/Games/SNES/Pack.sfc')?->getContent());
+	}
+
+	public function testAZipsSavesAreRenamedOnceAndTheNewNameNoted(): void {
+		$this->files['Games/SNES/Pack.zip'] = 'zip';
+		$this->ids['Games/SNES/Pack.zip'] = 5;
+		$this->files['Saves/saves/Snes9x/Pack.srm'] = 'battery';
+		$this->games[self::USER]['5'] = ['path' => '/Games/SNES/Pack.zip', 'md5' => '', 'core' => '', 'name' => 'Pack'];
+		$service = $this->service();
+		$service->useCore(self::USER, '/Games/SNES/Pack.zip', 'snes9x');
+		$service->useName(self::USER, '/Games/SNES/Pack.zip', 'Chrono Trigger (USA)');
+		$service->loadSram(self::USER, '/Games/SNES/Pack.zip');
+
+		$this->assertSame('Chrono Trigger (USA)', $this->games[self::USER]['5']['name']);
+		// A later request, with a Pack.srm come from somewhere: it stays.
+		$this->files['Saves/saves/Snes9x/Pack.srm'] = 'another';
+		$later = $this->service();
+		$later->useCore(self::USER, '/Games/SNES/Pack.zip', 'snes9x');
+		$later->useName(self::USER, '/Games/SNES/Pack.zip', 'Chrono Trigger (USA)');
+		$this->assertSame('battery', $later->loadSram(self::USER, '/Games/SNES/Pack.zip')?->getContent());
+		$this->assertSame('another', $this->files['Saves/saves/Snes9x/Pack.srm']);
+	}
+
 	public function testAZipsSaveUnderTheGameInsideIsNotOverwrittenByOneUnderItsOwnName(): void {
 		$this->files['Games/SNES/Pack.zip'] = 'zip';
 		$this->ids['Games/SNES/Pack.zip'] = 5;
 		$this->files['Saves/saves/Snes9x/Pack.srm'] = 'older';
 		$this->files['Saves/saves/Snes9x/Chrono Trigger (USA).srm'] = 'newer';
+		$this->games[self::USER]['5'] = ['path' => '/Games/SNES/Pack.zip', 'md5' => '', 'core' => '', 'name' => 'Pack'];
 		$service = $this->service();
 		$service->useCore(self::USER, '/Games/SNES/Pack.zip', 'snes9x');
 		$service->useName(self::USER, '/Games/SNES/Pack.zip', 'Chrono Trigger (USA)');

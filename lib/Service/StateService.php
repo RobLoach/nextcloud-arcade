@@ -280,10 +280,14 @@ class StateService {
 	 * marked stale when the ROM is no longer the dump the state was made
 	 * from, which the player warns about.
 	 *
+	 * $wait is for the player, which loads from what it lists; a listing
+	 * only shown -- the Files sidebar -- goes on with what is moved so far
+	 * when the saves of an earlier version are being moved just then.
+	 *
 	 * @return list<array{slot: int, size: int, mtime: int, hasThumbnail: bool, stale?: bool}>
 	 */
-	public function list(string $userId, string $romPath): array {
-		$root = $this->root($userId, false);
+	public function list(string $userId, string $romPath, bool $wait = true): array {
+		$root = $this->root($userId, false, $wait);
 		if ($root === null) {
 			return [];
 		}
@@ -353,7 +357,8 @@ class StateService {
 	 * @return array<string, array{slot: int, mtime: int}> rom path => slot
 	 */
 	public function thumbnailIndex(string $userId, array $romPaths): array {
-		$root = $romPaths === [] ? null : $this->root($userId, false);
+		// Pictures for the library: nothing to wait for a move over.
+		$root = $romPaths === [] ? null : $this->root($userId, false, false);
 		if ($root === null) {
 			return [];
 		}
@@ -539,7 +544,12 @@ class StateService {
 	 * The saves folder of a user, made when asked to; null when none is
 	 * set, or none is there and none was to be made.
 	 */
-	private function root(string $userId, bool $create): ?Folder {
+	/**
+	 * @param bool $wait whether to wait for the saves of an earlier version
+	 *                   being moved by another process: a game loaded or saved
+	 *                   must, a listing need not
+	 */
+	private function root(string $userId, bool $create, bool $wait = true): ?Folder {
 		$found = $this->roots[$userId] ?? null;
 		if ($found instanceof Folder) {
 			return $found;
@@ -548,7 +558,7 @@ class StateService {
 		// for before anything is: a game read from an empty place now and
 		// saved over would lose what the player had.
 		try {
-			$this->layoutConverter->convertIfNeeded($userId);
+			$this->layoutConverter->convertIfNeeded($userId, $wait);
 		} catch (SavesBeingMovedException $e) {
 			// Not answered from the new place while the old is still on its
 			// way over: the request fails, and the next one finds it moved.
@@ -785,31 +795,62 @@ class StateService {
 				$this->stemFor($userId, $romPath),
 			);
 		}
-		// A zip's saves filed under the zip's own name -- by versions that
-		// named them so, or moved over before the player had looked inside
-		// -- go by the game inside once the player says which it is.
+		// A zip whose saves were moved over from an earlier version under
+		// the zip's own name -- noted so with it, the game inside not being
+		// known then -- has them go by the game inside once the player says
+		// which it is. Only those: saves of another game that happens to be
+		// named like the zip are not this zip's to take. Noted anew after,
+		// so this is done once.
 		$said = $this->names[$userId][$romPath] ?? null;
 		$zipStem = self::stemOf($romPath);
-		if ($said !== null && $said !== $zipStem && strtolower(pathinfo($romPath, PATHINFO_EXTENSION)) === 'zip') {
-			$moved += $this->moveSaves($userId, $romPath, $root, $this->coreNameOf($userId, $romPath), $zipStem, $said);
+		$renamesZip = $said !== null && $said !== $zipStem
+			&& strtolower(pathinfo($romPath, PATHINFO_EXTENSION)) === 'zip'
+			&& $this->notedOf($userId, $romPath)['name'] === $zipStem;
+		if ($renamesZip) {
+			$core = $this->coreNameOf($userId, $romPath);
+			// Earlier versions kept one folder for every game of a name and
+			// system, so a Pack.sfc beside Pack.zip had the same saves. The
+			// two go by different names now; each keeps a copy rather than
+			// the zip taking them from the other.
+			$moved += $this->moveSaves($userId, $romPath, $root, $core, $zipStem, $said, $this->sharesItsName($userId, $romPath, $zipStem, $core));
 		}
 		if ($moved !== []) {
 			$this->record($root, $moved);
 		}
-		if ($was !== '' && $was !== $romPath) {
+		if (($was !== '' && $was !== $romPath) || $renamesZip) {
 			$this->remember($userId, $romPath);
+			unset($this->noted[$userId][$romPath]);
 		}
 	}
 
 	/**
+	 * Whether another game the user has saved goes by a name on the same
+	 * core -- one that would lose its saves were they moved away under it.
+	 */
+	private function sharesItsName(string $userId, string $romPath, string $name, string $core): bool {
+		$mine = $this->key($userId, $romPath);
+		foreach ($this->gameMapper->entriesOf($userId) as $key => $entry) {
+			if ((string)$key === $mine || $entry['path'] === '' || $entry['path'] === $romPath) {
+				continue;
+			}
+			$theirs = $entry['name'] !== '' ? $entry['name'] : self::stemOf($entry['path']);
+			if ($theirs === $name && self::coreName($entry['core'], $entry['path']) === $core) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
 	 * Move the saves of a game from one name, and the folders of one core,
-	 * to the name and the folders the game has now. Nothing is overwritten:
-	 * a save whose new place is taken stays where it is.
+	 * to the name and the folders the game has now -- or with $copy, copy
+	 * them, leaving the old for another game that goes by that name. Nothing
+	 * is overwritten: a save whose new place is taken stays where it is.
 	 *
 	 * @return array<string, string> the manifest changes: each old path
 	 *                               deleted, each new one with its hash
 	 */
-	private function moveSaves(string $userId, string $romPath, Folder $root, string $oldCore, string $oldStem, string $newStem): array {
+	private function moveSaves(string $userId, string $romPath, Folder $root, string $oldCore, string $oldStem, string $newStem, bool $copy = false): array {
 		$moved = [];
 		foreach ([self::STATES, self::SAVES] as $kind) {
 			$targets = $this->dirs($userId, $romPath, $kind);
@@ -831,8 +872,12 @@ class StateService {
 							continue;
 						}
 						$hash = Folders::md5Of($file);
-						$file->move($folder->getPath() . '/' . $newName);
-						$moved["$dir/$name"] = '';
+						if ($copy) {
+							$file->copy($folder->getPath() . '/' . $newName);
+						} else {
+							$file->move($folder->getPath() . '/' . $newName);
+							$moved["$dir/$name"] = '';
+						}
 						$moved["$target/$newName"] = $hash;
 					} catch (\Throwable $e) {
 						// Keeping the file where it is beats losing it. The

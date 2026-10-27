@@ -282,3 +282,11 @@ describe('the save states panel', () => {
 		expect(panel.element.textContent).toContain('Arcade database is repaired')
 	})
 })
+
+describe('whyFailed', () => {
+	test('says when the saves are being moved, rather than a status', async () => {
+		const { whyFailed } = await import('../../src/panels/states.js')
+		expect(whyFailed({ status: 503, reason: 'moving' })).toMatch(/being moved/)
+		expect(whyFailed({ status: 500 })).toMatch(/500/)
+	})
+})

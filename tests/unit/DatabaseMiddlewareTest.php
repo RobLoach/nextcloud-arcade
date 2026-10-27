@@ -7,6 +7,7 @@ namespace OCA\Arcade\Tests\Unit;
 use OCA\Arcade\Controller\ArcadeController;
 use OCA\Arcade\Middleware\DatabaseMiddleware;
 use OCA\Arcade\Service\Maintenance;
+use OCA\Arcade\Service\SavesBeingMovedException;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
 use OCP\DB\Exception as DbException;
@@ -46,6 +47,16 @@ class DatabaseMiddlewareTest extends TestCase {
 			->afterException($this->arcadeController(), 'save', new \RuntimeException('could not save', 0, new DbException('no such table')));
 
 		$this->assertSame(Http::STATUS_SERVICE_UNAVAILABLE, $response->getStatus());
+	}
+
+	public function testSavesBeingMovedAreSaidToBe(): void {
+		$maintenance = $this->createMock(Maintenance::class);
+		$maintenance->expects($this->never())->method('databaseProblems');
+		$response = (new DatabaseMiddleware($maintenance, $this->createStub(LoggerInterface::class)))
+			->afterException($this->arcadeController(), 'get', new SavesBeingMovedException('moving'));
+
+		$this->assertSame(Http::STATUS_SERVICE_UNAVAILABLE, $response->getStatus());
+		$this->assertSame(['error' => 'moving'], $response->getData());
 	}
 
 	public function testAnyOtherFailureGoesOnAsItWas(): void {

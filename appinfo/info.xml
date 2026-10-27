@@ -7,7 +7,7 @@
 	<description><![CDATA[Play retro console games straight from Nextcloud.
 
 Nextcloud Arcade runs RetroArch libretro cores in the browser. Seventeen systems are covered, from ColecoVision to the PlayStation, with a games library you can browse by keyboard, mouse, touch or gamepad.]]></description>
-	<version>0.48.27</version>
+	<version>0.48.28</version>
 	<licence>AGPL-3.0-or-later</licence>
 	<author homepage="https://robloach.net">Rob Loach</author>
 	<namespace>Arcade</namespace>
@@ -49,7 +49,6 @@ Nextcloud Arcade runs RetroArch libretro cores in the browser. Seventeen systems
 			<step>OCA\Arcade\Migration\RegisterMimeTypes</step>
 			<step>OCA\Arcade\Migration\RegisterMetadata</step>
 			<step>OCA\Arcade\Migration\ConvertLegacyStorage</step>
-			<step>OCA\Arcade\Migration\ConvertSavesFolderLayout</step>
 			<step>OCA\Arcade\Migration\RereadSnesHeaders</step>
 		</post-migration>
 		<install>

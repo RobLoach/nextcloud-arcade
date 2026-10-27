@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace OCA\Arcade\AppInfo;
 
 use OCA\Arcade\BackgroundJob\CleanupSweep;
-use OCA\Arcade\BackgroundJob\ConvertSavesLayout;
 use OCA\Arcade\BackgroundJob\FetchThumbnails;
 use OCA\Arcade\BackgroundJob\RefreshMetadata;
 use OCA\Arcade\BackgroundJob\RereadRoms;
@@ -56,7 +55,7 @@ class Application extends App implements IBootstrap {
 	 * brings it back when the app is enabled again.
 	 */
 	public const CACHES = [self::CACHE_LIBRARY, self::CACHE_FETCH, self::CACHE_PREVIEW];
-	public const JOBS = [FetchThumbnails::class, RefreshMetadata::class, CleanupSweep::class, RereadRoms::class, ConvertSavesLayout::class, ScanLibraries::class];
+	public const JOBS = [FetchThumbnails::class, RefreshMetadata::class, CleanupSweep::class, RereadRoms::class, ScanLibraries::class];
 
 	/** @psalm-suppress PossiblyUnusedMethod */
 	public function __construct() {

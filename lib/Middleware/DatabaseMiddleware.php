@@ -6,6 +6,7 @@ namespace OCA\Arcade\Middleware;
 
 use OCA\Arcade\Controller\ArcadeController;
 use OCA\Arcade\Service\Maintenance;
+use OCA\Arcade\Service\SavesBeingMovedException;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\JSONResponse;
@@ -37,7 +38,15 @@ class DatabaseMiddleware extends Middleware {
 	 * @throws \Exception the exception, when the tables are not to blame
 	 */
 	public function afterException(Controller $controller, string $methodName, \Exception $exception): Response {
-		if (!$controller instanceof ArcadeController || !self::fromTheDatabase($exception)) {
+		if (!$controller instanceof ArcadeController) {
+			throw $exception;
+		}
+		// The saves of an earlier version are being moved just then: said
+		// as such, for the player to tell, rather than as a failed save.
+		if ($exception instanceof SavesBeingMovedException) {
+			return new JSONResponse(['error' => 'moving'], Http::STATUS_SERVICE_UNAVAILABLE);
+		}
+		if (!self::fromTheDatabase($exception)) {
 			throw $exception;
 		}
 		try {

@@ -65,6 +65,9 @@ export function databaseBroken() {
  * @return {string} the reason
  */
 export function whyFailed(error) {
+	if (error?.reason === 'moving') {
+		return t('arcade', 'your saves are being moved to the new layout of this version; try again in a moment')
+	}
 	return Number.isFinite(error?.status)
 		? t('arcade', 'the server answered {status}', { status: error.status })
 		: t('arcade', 'no answer from the server')

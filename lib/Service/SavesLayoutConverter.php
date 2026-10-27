@@ -13,6 +13,7 @@ use OCP\Files\Folder;
 use OCP\Files\IRootFolder;
 use OCP\Files\NotFoundException;
 use OCP\Lock\ILockingProvider;
+use OCP\IUserSession;
 use OCP\Lock\LockedException;
 use Psr\Log\LoggerInterface;
 
@@ -34,11 +35,15 @@ use Psr\Log\LoggerInterface;
  * and every in-game save made before the upgrade would be lost to the
  * player -- and the first save after it would start the game afresh.
  *
- * Not done in the upgrade itself: Nextcloud upgrades with the apps that
- * keep a file's versions and its trash not started, and every move then
- * logs an error. A user's saves are converted the first time anything asks
- * after them -- before any is read or written, so a game is never started
- * on a blank cartridge -- and a background job converts the rest.
+ * Done in the user's own request, and only there: the first time anything
+ * asks after their saves -- the library, the sidebar, the player -- and
+ * before any is read or written, so a game is never started on a blank
+ * cartridge. Not in the upgrade, nor in a background job or occ, nor in
+ * an administrator's request that happens to touch them: Nextcloud keeps
+ * a file's versions with it through a move only in a request of its
+ * owner, and elsewhere leaves them behind under the old path, with an
+ * error logged for every folder emptied. Nothing reads the old layout in
+ * the meantime, so nothing is lost by waiting for the user to come by.
  *
  * Which game a folder holds is read off the games table where it can be:
  * the path noted there names the system and the core. A zip's saves go by
@@ -57,6 +62,11 @@ class SavesLayoutConverter {
 	/** In the user config: the user's saves are in the layout RetroArch keeps. */
 	private const DONE = 'saves_layout_converted';
 
+	/** In the user config: how many runs could not move everything. */
+	private const ATTEMPTS = 'saves_layout_attempts';
+	/** Runs after which what cannot be moved is left where it is for good. */
+	private const MAX_ATTEMPTS = 3;
+
 	/** How long a request waits for another process moving the same saves. */
 	private const LOCK_WAIT_MS = 30000;
 	private const LOCK_POLL_MS = 250;
@@ -66,6 +76,8 @@ class SavesLayoutConverter {
 
 	/** @var array<string, true> users seen to this request, converted or not */
 	private array $seen = [];
+	/** @var array<string, true> users whose move was waited for in vain this request */
+	private array $timedOut = [];
 
 	public function __construct(
 		private IRootFolder $rootFolder,
@@ -74,6 +86,7 @@ class SavesLayoutConverter {
 		private GameMapper $gameMapper,
 		private CloudSyncManifest $manifest,
 		private ILockingProvider $lockingProvider,
+		private IUserSession $userSession,
 		private LoggerInterface $logger,
 		private int $lockWaitMs = self::LOCK_WAIT_MS,
 	) {
@@ -84,15 +97,31 @@ class SavesLayoutConverter {
 	 * files were moved and how many left where they were; null when there
 	 * was nothing to do.
 	 *
-	 * Another process moving the same saves is waited for: answering from
-	 * the new place before it is through would start a game on a blank
-	 * cartridge.
+	 * With $wait, another process moving the same saves is waited for, as a
+	 * game being loaded or saved must: answered from the new place before it
+	 * is through, it would start on a blank cartridge, and be saved over the
+	 * real save. Without, the asking goes on at once with what is moved so
+	 * far -- a listing of the library has nothing to lose by that -- and the
+	 * next asking tries again.
 	 *
 	 * @return ?array{0: int, 1: int}
-	 * @throws SavesBeingMovedException when the other process takes too long
+	 * @throws SavesBeingMovedException when waited for, and the other
+	 *                                  process takes too long
 	 */
-	public function convertIfNeeded(string $userId): ?array {
+	public function convertIfNeeded(string $userId, bool $wait = true): ?array {
 		if (isset($this->seen[$userId])) {
+			return null;
+		}
+		// Only the user's own request moves their saves: see above.
+		if ($this->userSession->getUser()?->getUID() !== $userId) {
+			return null;
+		}
+		// Waited for once in vain, not waited for again this request: a
+		// request deleting fifty games would otherwise wait fifty times.
+		if (isset($this->timedOut[$userId])) {
+			if ($wait) {
+				throw new SavesBeingMovedException('The saves are still being moved to the new layout');
+			}
 			return null;
 		}
 		if ($this->userConfig->getValueBool($userId, Application::APP_ID, self::DONE)) {
@@ -100,7 +129,15 @@ class SavesLayoutConverter {
 			return null;
 		}
 		$lock = 'arcade/saves-layout/' . $userId;
-		$this->acquire($lock);
+		try {
+			$this->acquire($lock, $wait ? $this->lockWaitMs : 0);
+		} catch (SavesBeingMovedException $e) {
+			if ($wait) {
+				$this->timedOut[$userId] = true;
+				throw $e;
+			}
+			return null;
+		}
 		$this->seen[$userId] = true;
 		try {
 			// Asked again inside the lock: the one that held it may have
@@ -115,9 +152,19 @@ class SavesLayoutConverter {
 			}
 			[$moved, $taken, $failed] = $counts;
 			// A file that could not be moved this time may be moved the
-			// next; one whose new place is taken never will be.
-			if ($failed === 0) {
+			// next; one whose new place is taken never will be. Nor will one
+			// that failed run after run -- on a share it may not be moved
+			// from, say -- and it is left where it is rather than have every
+			// request of the user go through the whole move again.
+			$attempts = $failed === 0 ? 0 : $this->userConfig->getValueInt($userId, Application::APP_ID, self::ATTEMPTS) + 1;
+			if ($failed === 0 || $attempts >= self::MAX_ATTEMPTS) {
+				if ($failed > 0) {
+					$this->logger->warning("Gave up moving $failed saves of an earlier version after $attempts tries; they are where they were, and listed above", ['user' => $userId]);
+				}
 				$this->userConfig->setValueBool($userId, Application::APP_ID, self::DONE, true);
+				$this->userConfig->deleteUserConfig($userId, Application::APP_ID, self::ATTEMPTS);
+			} else {
+				$this->userConfig->setValueInt($userId, Application::APP_ID, self::ATTEMPTS, $attempts);
 			}
 			return [$moved, $taken + $failed];
 		} finally {
@@ -125,14 +172,14 @@ class SavesLayoutConverter {
 		}
 	}
 
-	/** @throws SavesBeingMovedException */
-	private function acquire(string $lock): void {
+	/** @throws SavesBeingMovedException when still taken after $waitMs */
+	private function acquire(string $lock, int $waitMs): void {
 		for ($waited = 0; ; $waited += self::LOCK_POLL_MS) {
 			try {
 				$this->lockingProvider->acquireLock($lock, ILockingProvider::LOCK_EXCLUSIVE);
 				return;
 			} catch (LockedException $e) {
-				if ($waited >= $this->lockWaitMs) {
+				if ($waited >= $waitMs) {
 					throw new SavesBeingMovedException('The saves are still being moved to the new layout', 0, $e);
 				}
 				usleep(self::LOCK_POLL_MS * 1000);
@@ -247,46 +294,130 @@ class SavesLayoutConverter {
 	 * @return array<string, array{0: Folder, 1: string, 2: string, 3: list<string>}>
 	 */
 	private function oldFolders(string $userId, Folder $userFolder, Folder $root): array {
+		$entries = $this->gameMapper->entriesOf($userId);
+		$current = [];
+		foreach (array_keys($entries) as $key) {
+			$current[$key] = $this->currentPath($userFolder, (string)$key);
+		}
+
 		$folders = [];
-		foreach ($this->gameMapper->entriesOf($userId) as $key => $entry) {
-			$current = $this->currentPath($userFolder, (string)$key);
-			$romPath = $current ?? $entry['path'];
-			if ($romPath === '') {
+		// Every game's folder of its name now first, and only then a folder
+		// it was followed to: as those versions, which only went looking for
+		// a game's old folder once the one of its name now was not there. A
+		// game renamed away from Mario.nes does not get the folder of the new
+		// Mario.nes for having been looked at first.
+		$served = [];
+		foreach ($entries as $key => $entry) {
+			$path = $current[$key];
+			if ($path === null) {
 				continue;
 			}
-			foreach (array_unique(array_filter([$current, $entry['path']])) as $path) {
-				$relative = self::oldFolderOf($path);
-				// A game of no system named like a folder of the new layout
-				// -- saves.zip -- is not to have that folder taken for its own.
-				if (isset($folders[$relative]) || in_array($relative, self::OURS, true)) {
-					break;
-				}
-				$folder = Folders::folderAt($root, $relative);
-				if ($folder === null || !$this->holdsSaves($folder)) {
-					continue;
-				}
-				$folders[$relative] = [
-					$folder,
-					CoreMap::CORE_NAMES[$entry['core']] ?? CoreMap::coreNameForPath($romPath),
-					$entry['name'] !== '' ? $entry['name'] : StateService::stemOf($romPath),
-					array_values(array_unique([StateService::stemOf($romPath) . '.srm', $folder->getName() . '.srm'])),
-				];
-				break;
+			$relative = self::oldFolderOf($path);
+			// A game of no system named like a folder of the new layout --
+			// saves.zip -- is not to have that folder taken for its own.
+			if (in_array($relative, self::OURS, true)) {
+				continue;
+			}
+			$folder = Folders::folderAt($root, $relative);
+			if ($folder === null) {
+				continue;
+			}
+			// There, so loaded: not followed anywhere else, even when it is
+			// another game's of the same name too, or holds nothing.
+			$served[$key] = true;
+			if (!$this->holdsSaves($folder)) {
+				continue;
+			}
+			if (isset($folders[$relative])) {
+				// Shared with a game of the same name and system, as those
+				// versions shared it: a zip among them is told so too.
+				$this->noteZip($userId, (string)$key, $entry, $path);
+			} else {
+				$folders[$relative] = $this->claim($userId, (string)$key, $entry, $path, $folder);
 			}
 		}
-		foreach ($root->getDirectoryListing() as $system) {
-			if (!$system instanceof Folder || !$this->isSystemFolder($system->getName())) {
+		foreach ($entries as $key => $entry) {
+			$was = $entry['path'];
+			if (isset($served[$key]) || $was === '' || $was === $current[$key]) {
 				continue;
 			}
-			foreach ($system->getDirectoryListing() as $game) {
-				$relative = "{$system->getName()}/{$game->getName()}";
+			$relative = self::oldFolderOf($was);
+			if (in_array($relative, self::OURS, true)) {
+				continue;
+			}
+			$folder = Folders::folderAt($root, $relative);
+			if ($folder === null || !$this->holdsSaves($folder)) {
+				continue;
+			}
+			if (isset($folders[$relative])) {
+				$this->noteZip($userId, (string)$key, $entry, $current[$key] ?? $was);
+			} else {
+				$folders[$relative] = $this->claim($userId, (string)$key, $entry, $current[$key] ?? $was, $folder);
+			}
+		}
+
+		foreach ($root->getDirectoryListing() as $node) {
+			$name = $node->getName();
+			if (!$node instanceof Folder || in_array($name, self::OURS, true) || str_starts_with($name, '.')) {
+				continue;
+			}
+			if (!$this->isSystemFolder($name)) {
+				if (!isset($folders[$name]) && $this->holdsSaves($node)) {
+					$this->logger->warning('Saves of an earlier version were left where they are: no game had them at the top of the saves folder', [
+						'user' => $userId,
+						'from' => $name,
+					]);
+				}
+				continue;
+			}
+			foreach ($node->getDirectoryListing() as $game) {
+				$relative = "$name/{$game->getName()}";
 				if (!$game instanceof Folder || isset($folders[$relative]) || !$this->holdsSaves($game)) {
 					continue;
 				}
-				$folders[$relative] = [$game, $this->coreOfSystemFolder($system->getName()), $game->getName(), [$game->getName() . '.srm']];
+				$folders[$relative] = [$game, $this->coreOfSystemFolder($name), $game->getName(), [$game->getName() . '.srm']];
 			}
 		}
 		return $folders;
+	}
+
+	/**
+	 * The name a game's saves go by, as noted with it. A zip whose game inside
+	 * is not noted yet goes by the zip's own name, which its saves are moved
+	 * under -- and that is noted with it, so StateService knows they are this
+	 * zip's to rename once the player says which game is inside.
+	 *
+	 * @param array{path: string, md5: string, core: string, name: string} $entry
+	 */
+	private function noteZip(string $userId, string $key, array $entry, string $romPath): string {
+		if ($entry['name'] !== '' || strtolower(pathinfo($romPath, PATHINFO_EXTENSION)) !== 'zip') {
+			return $entry['name'];
+		}
+		$stem = StateService::stemOf($romPath);
+		$this->gameMapper->set($userId, $key, ctype_digit($key) ? (int)$key : 0, $romPath, $entry['md5'], '', $stem);
+		return $stem;
+	}
+
+	/**
+	 * A game's folder, with the core and the name its saves go by now and
+	 * the names its battery save may have.
+	 *
+	 * A zip whose game inside is not noted yet has its saves go by the zip's
+	 * own name -- and that is noted with it, so StateService knows they are
+	 * this zip's to rename once the player says which game is inside.
+	 *
+	 * @param array{path: string, md5: string, core: string, name: string} $entry
+	 * @return array{0: Folder, 1: string, 2: string, 3: list<string>}
+	 */
+	private function claim(string $userId, string $key, array $entry, string $romPath, Folder $folder): array {
+		$stem = StateService::stemOf($romPath);
+		$name = $this->noteZip($userId, $key, $entry, $romPath);
+		return [
+			$folder,
+			CoreMap::CORE_NAMES[$entry['core']] ?? CoreMap::coreNameForPath($romPath),
+			$name !== '' ? $name : $stem,
+			array_values(array_unique([$stem . '.srm', $folder->getName() . '.srm'])),
+		];
 	}
 
 	/**

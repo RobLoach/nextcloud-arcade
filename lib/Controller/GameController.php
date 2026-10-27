@@ -113,7 +113,9 @@ class GameController extends ArcadeController {
 			// the retro databases key on, so it goes out whole.
 			'crc32' => $known['crc32'],
 			'playtime' => $stats,
-			'states' => $this->stateService->list($userId, $file),
+			// Shown, not loaded from: not worth waiting for saves of an
+			// earlier version being moved just then.
+			'states' => $this->stateService->list($userId, $file, false),
 			'emulator' => CoreMap::CORE_NAMES[$core] ?? '',
 			'thumbnails' => $this->thumbnailsOf($userId, $file, $system, $known['title']),
 			'bios' => $system === '' ? [] : $this->biosOf($userId, $system),

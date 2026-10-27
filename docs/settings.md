@@ -70,11 +70,14 @@ out of the game once a minute, and every write would be a new version of
 the file.
 
 Saves from earlier versions, in `Saves/<System>/<Game>/` (`Auto.state`,
-`Slot 1.state`, `Mario.srm`), are moved to this layout on the upgrade:
+`Slot 1.state`, `Mario.srm`), are moved to this layout:
 `Saves/states/FCEUmm/Mario.state.auto`, `Mario.state1`,
 `Saves/saves/FCEUmm/Mario.srm`, recorded in the Cloud Sync manifest. Each
-user's are moved the first time Arcade asks after them — before a game can
-start without them — and a background job moves the rest. A game's saves
+user's are moved the first time they open Arcade after the upgrade —
+before a game can start without them. Only their own visit moves them:
+neither cron, `occ` nor an administrator does, as the versions and trash
+of a file are only kept right in its owner's request. Until a user next
+opens Arcade, RetroArch finds none of their saves of earlier versions. A game's saves
 are found the way those versions found them: by the game's name now, or
 else by the name it had when it was last saved. A zip's saves keep the
 zip's name until the game is next played, and then take the name of the
