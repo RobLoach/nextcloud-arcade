@@ -160,9 +160,10 @@ anew when the menu opens on a slot that RetroArch, or another tab, wrote
 since — and a save is
 held at once and sent to the server in the background; should that fail,
 the player says so, and tries again when the game closes. Closing the
-game waits for every save to arrive, and the browser asks before a tab
-with one still on its way is closed — for a save made by hand, or an
-automatic one that has been on its way for more than a few seconds.
+game shows a closing screen while it waits for every save to arrive, and
+the browser asks before a tab with one still on its way is closed — for a
+save made by hand, or an automatic one that has been on its way for more
+than a few seconds.
 
 A state the emulator cannot load — one RetroArch made with another
 version of the core, or one made for another copy of the game — is said
@@ -170,8 +171,9 @@ to be so, and the game carries on as it was.
 
 Above the slots sits the Auto slot, which the player writes itself, at an
 interval while playing if one is set. When a game has save states, the
-player offers to continue from the most recent one at launch — or loads it
-straight away, if that is turned on. A slot made from a different dump of
+player offers to continue from the most recent one at launch, at the
+bottom of the screen, for 7 seconds — or loads it straight away, if that
+is turned on. A slot made from a different dump of
 the same game is marked stale, and the player warns before loading it.
 
 States are per user and per game, so every Nextcloud user has their own

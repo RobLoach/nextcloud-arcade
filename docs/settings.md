@@ -197,6 +197,10 @@ while a page waits:
   rescanned.
 - Fetching missing box art, when the button in the personal settings asks
   for it.
+- Scanning every user's library, when the Scan button of the
+  administration settings asks for it.
+- Reading ROMs again after an upgrade that reads them better — the
+  titles of Super Nintendo games, say — for the games read before.
 - A weekly cleanup sweep, the same work as `occ arcade:cleanup` below,
   and putting every Cloud Sync manifest right, as `occ arcade:cloudsync`
   does.

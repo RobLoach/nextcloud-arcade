@@ -143,9 +143,9 @@ the listing and the folder suggestion.
 Save states and battery saves are removed by event listeners along with
 the game they belong to, and with the user they belong to; what the trash
 and the weekly sweep do with the rest is in
-[Troubleshooting](settings.md#troubleshooting). States written by versions
-before 0.14 live in one flat folder instead of one per user; they are
-still read, and are cleaned up when their game is deleted.
+[Troubleshooting](settings.md#troubleshooting). What versions before
+0.48.8 kept in the app data is not read any more; it is only counted, and
+removed when asked to or when its game or user goes.
 
 ### Capabilities
 
@@ -180,11 +180,11 @@ Outside of the files of a user, the app writes:
 
 | Where | What |
 | --- | --- |
-| `oc_preferences` | Personal settings, and how a box art run went |
-| `oc_appconfig` | Core options, thumbnail types, and the folder defaults of the instance |
+| `oc_preferences` | Personal settings, how a box art run went, and whether the user's saves were moved to the current layout (and how often that was tried) |
+| `oc_appconfig` | Core options, thumbnail types, the folder defaults of the instance, and a counter that makes every cached library rescan |
 | `oc_arcade_plays` | When and how long each game was played, per user and file id |
-| `oc_arcade_games` | The games that have save states, and the core the player ran each on |
-| `oc_jobs` | A queued box art lookup while one is running, and the weekly save state cleanup sweep |
+| `oc_arcade_games` | The games that have save states: the path, checksum and name each was last saved under, and the core the player ran it on |
+| `oc_jobs` | Queued work while it waits — a box art lookup, reading the games of a rescanned library, scanning every library, reading ROMs again after an upgrade — and the weekly cleanup sweep |
 | `oc_mimetypes`, `oc_filecache` | The ROM mimetypes, and the files given them |
 | `oc_files_metadata` | The system, title, region, MD5 and CRC32 of each ROM, by file id |
 | `appdata_*/arcade/` | Save states and battery saves of versions before 0.48.8, only ever removed now; the BIOS store of the instance |

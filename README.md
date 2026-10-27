@@ -21,7 +21,9 @@ compiled to WebAssembly. ROMs are streamed from your files, and run in the brows
 - Seventeen systems, from the ColecoVision to the PlayStation
 - Emulation in the browser, nothing leaves the server
 - Games library with box art, play statistics, and tags
-- Save states and battery saves, per user
+- Save states and battery saves, in your own files
+- RetroArch Cloud Sync: carry on a game between Arcade and RetroArch
+- An Arcade tab in the Files sidebar, and on the games library
 - Gamepad, touch, and keyboard controls
 - Plays ROMs straight from your Files
 - Personal Arcade settings for each user
@@ -53,7 +55,7 @@ compiled to WebAssembly. ROMs are streamed from your files, and run in the brows
     occ maintenance:mimetype:update-db
     ```
 
-5. Open Administration → Arcade, and set the default Games folder.
+4. Open Administration → Arcade, and set the default Games folder.
 
 ## Updating
 
@@ -62,6 +64,8 @@ To update the application, use:
 cd /path/to/nextcloud/apps/arcade
 git pull
 ```
+
+Nextcloud runs the app's upgrade on the next visit, or with `occ upgrade`.
 
 ## Documentation
 
