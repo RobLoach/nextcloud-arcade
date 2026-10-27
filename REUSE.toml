@@ -3,22 +3,20 @@ SPDX-PackageName = "nextcloud-arcade"
 SPDX-PackageSupplier = "Rob Loach <robloach@gmail.com>"
 SPDX-PackageDownloadLocation = "https://github.com/RobLoach/nextcloud-arcade"
 
-# The app itself. Everything not covered by a later entry is the app's own
-# code, under the licence the App Store requires of a published app.
+# Nextcloud Arcade
 [[annotations]]
 path = "**"
 precedence = "aggregate"
 SPDX-FileCopyrightText = "Rob Loach"
 SPDX-License-Identifier = "AGPL-3.0-or-later"
 
-# The emulator cores are separate works by their own authors, shipped
-# unmodified and each under its own terms -- not under the app's. The full
-# texts are in img/cores/LICENSES/ and the mapping is in img/cores/README.md,
-# which is the authority if this file and that one ever disagree.
-#
-# Two of these may not be sold or put in a commercial product or activity,
-# which is why they are called out separately rather than lumped in with the
-# rest. See https://github.com/RobLoach/nextcloud-arcade/issues/52.
+# App icon from SVG Repo:
+# https://www.svgrepo.com/svg/255536/game-controller-gamepad.
+[[annotations]]
+path = ["img/app.svg", "img/app-dark.svg"]
+precedence = "override"
+SPDX-FileCopyrightText = "SVG Repo"
+SPDX-License-Identifier = "CC0-1.0"
 
 [[annotations]]
 path = [
@@ -56,7 +54,7 @@ precedence = "override"
 SPDX-FileCopyrightText = "Keith Wilkins and the Handy contributors"
 SPDX-License-Identifier = "Zlib"
 
-# Freeware for personal use only; commercial users are told to seek the
+# Freeware for personal use only, commercial users are told to seek the
 # copyright holders' permission first.
 [[annotations]]
 path = "img/cores/snes9x_libretro.*"

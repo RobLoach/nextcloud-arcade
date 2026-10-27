@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to NextCloud Arcade. The format follows
+All notable changes to Nextcloud Arcade. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the app uses
 [semantic versioning](https://semver.org/spec/v2.0.0.html).
 

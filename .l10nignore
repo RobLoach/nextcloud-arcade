@@ -1,6 +1,5 @@
 # Paths the translation tool must not scan: compiled bundles and code
 # that is not this app's own. Entries are path prefixes.
-3rdparty
 build
 img
 js

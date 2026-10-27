@@ -192,9 +192,9 @@ msgstr ""
 
 #: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/specialAppInfoFakeDummyForL10nScript.php:4
 msgid ""
-"Play retro console games straight from NextCloud.\n"
+"Play retro console games straight from Nextcloud.\n"
 "\n"
-"NextCloud Arcade runs RetroArch libretro cores in the browser. Seventeen "
+"Nextcloud Arcade runs RetroArch libretro cores in the browser. Seventeen "
 "systems are covered, from ColecoVision to the PlayStation, with a games "
 "library you can browse by keyboard, mouse, touch or gamepad."
 msgstr ""

@@ -10,7 +10,7 @@ The rest of `docs/` is for people who use the app; which page is which is
 npm install
 npm run build     # production bundles into js/
 npm run watch     # rebuild on change
-npm run cores     # extract the cores from the submodule
+npm run cores     # fetch and extract the cores
 npm run l10n:extract  # collect the strings to translate
 
 composer install

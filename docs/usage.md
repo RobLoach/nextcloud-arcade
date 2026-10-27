@@ -174,7 +174,7 @@ player offers to continue from the most recent one at launch — or loads it
 straight away, if that is turned on. A slot made from a different dump of
 the same game is marked stale, and the player warns before loading it.
 
-States are per user and per game, so every NextCloud user has their own
+States are per user and per game, so every Nextcloud user has their own
 saves, even for a shared ROM. A game is known by the id Nextcloud gave the
 file, so renaming a ROM or moving it keeps its saves, its battery save and
 how long it was played — its files in the saves folder are renamed

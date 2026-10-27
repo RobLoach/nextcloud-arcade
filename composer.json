@@ -1,6 +1,6 @@
 {
     "name": "robloach/nextcloud-arcade",
-    "description": "Run emulators directly from NextCloud.",
+    "description": "Play retro console games directly in Nextcloud.",
     "license": "AGPL-3.0-or-later",
     "authors": [
         {

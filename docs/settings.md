@@ -5,7 +5,7 @@ the settings change in play is in [the usage guide](usage.md).
 
 There is no Save button anywhere: every setting, personal or
 administrative, is saved the moment it is changed. Folder settings have a
-browse button that opens the NextCloud file picker.
+browse button that opens the Nextcloud file picker.
 
 ## Personal settings
 
@@ -230,7 +230,7 @@ an `.htaccess` in `img/cores/` that sets the `application/wasm` mimetype
 (streaming compilation), a week-long immutable `Cache-Control`, and
 compression — no configuration needed.
 
-On nginx, add the equivalent to the NextCloud server block:
+On nginx, add the equivalent to the Nextcloud server block:
 
 ```nginx
 location ~ ^/apps/arcade/img/cores/ {
@@ -262,7 +262,7 @@ frames, connections, images and media. They go on every page a user who
 may use the app could see, since the player also runs inside the Files
 app, and on a public share page only when that share really holds a game;
 every other page of the instance keeps its default policy. No changes to
-the NextCloud server are required.
+the Nextcloud server are required.
 
 ## Troubleshooting
 

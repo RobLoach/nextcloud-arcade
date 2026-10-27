@@ -1,10 +1,10 @@
-# NextCloud Arcade
+# Nextcloud Arcade
 
-Play retro console games directly in [NextCloud](https://nextcloud.com/), through
+Play retro console games directly in [Nextcloud](https://nextcloud.com/), through
 [Nostalgist.js](https://nostalgist.js.org/) and the RetroArch libretro cores
 compiled to WebAssembly. ROMs are streamed from your files, and run in the browser.
 
-[![NextCloud Arcade](img/screenshot-thumbnail.jpg)](img/screenshot.png)
+[![Nextcloud Arcade](img/screenshot.png)](img/screenshot.png)
 
 ![A game running](screenshots/game.png)
 
@@ -18,18 +18,18 @@ compiled to WebAssembly. ROMs are streamed from your files, and run in the brows
 
 ## Features
 
-- Seventeen systems, from the ColecoVision to the PlayStation.
-- Emulation in the browser; nothing leaves the server.
-- A games library with box art, play statistics and tags.
-- Save states and battery saves, per user.
-- Gamepad, touch and keyboard controls.
-- Plays ROMs straight from the Files app.
-- Personal settings for every player, down to the keys.
+- Seventeen systems, from the ColecoVision to the PlayStation
+- Emulation in the browser, nothing leaves the server
+- Games library with box art, play statistics, and tags
+- Save states and battery saves, per user
+- Gamepad, touch, and keyboard controls
+- Plays ROMs straight from your Files
+- Personal Arcade settings for each user
 
 ## Dependencies
 
-- Nextcloud 34.0.4 or newer, up to 35
-- PHP 8.3 or newer
+- Nextcloud 34.0.4+
+- PHP 8.3+
 - Background jobs on cron (recommended)
 
 ## Installation
@@ -41,7 +41,7 @@ compiled to WebAssembly. ROMs are streamed from your files, and run in the brows
 	git clone https://github.com/robloach/nextcloud-arcade.git arcade
 	```
 
-2. Enable it:
+2. Enable it, either through the UI or:
 
 	```sh
 	occ app:enable arcade
@@ -65,14 +65,14 @@ git pull
 
 ## Documentation
 
-| Page | Who it is for |
+| Page | Purpose |
 | --- | --- |
 | [Using Arcade](docs/usage.md) | Playing a game, and everything inside the player |
-| [The games library](docs/library.md) | Browsing the library, and what Arcade adds to Files |
+| [Games Library](docs/library.md) | Browsing the library, and what Arcade adds to Files |
 | [Settings](docs/settings.md) | Administrators, and anyone wondering what a setting does |
 | [Systems](docs/systems.md) | Which ROMs play, on which core, with which BIOS |
 | [Development](docs/development.md) | Changing the code |
 
 ## License
 
-*NextCloud Arcade* is licensed under [AGPLv3](LICENSE). Supporting library licenses captured in [AUTHORS](AUTHORS.md).
+*Nextcloud Arcade* is licensed under [AGPLv3](LICENSE). Supporting library licenses covered in [AUTHORS](AUTHORS.md).
