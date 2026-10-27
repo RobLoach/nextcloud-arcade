@@ -41,17 +41,25 @@ use Psr\Log\LoggerInterface;
  * on a blank cartridge -- and a background job converts the rest.
  *
  * Which game a folder holds is read off the games table where it can be:
- * the path noted there names the system, the core, and for a zip the game
- * inside, which is what its saves go by now. A folder the table knows
- * nothing of goes by its own names.
+ * the path noted there names the system and the core. A zip's saves go by
+ * the name of the game inside where it is noted, and by the zip's own
+ * name where it is not -- StateService renames them the first time the
+ * player says which game is inside, so no zip is opened here, in the
+ * middle of somebody's request. A folder the table knows nothing of goes
+ * by its own names.
  *
  * Nothing is overwritten and nothing is lost: a file that would land on
  * one already there, or cannot be moved, stays where it is, and is
- * logged. Each user is converted once.
+ * logged. A user is converted once -- once nothing failed that might go
+ * through on another try.
  */
 class SavesLayoutConverter {
 	/** In the user config: the user's saves are in the layout RetroArch keeps. */
 	private const DONE = 'saves_layout_converted';
+
+	/** How long a request waits for another process moving the same saves. */
+	private const LOCK_WAIT_MS = 30000;
+	private const LOCK_POLL_MS = 250;
 
 	/** What the player keeps in a saves folder now: not a game's folder. */
 	private const OURS = [StateService::SAVES, StateService::STATES, 'config', 'thumbnails', 'manifest.server'];
@@ -67,31 +75,33 @@ class SavesLayoutConverter {
 		private CloudSyncManifest $manifest,
 		private ILockingProvider $lockingProvider,
 		private LoggerInterface $logger,
+		private int $lockWaitMs = self::LOCK_WAIT_MS,
 	) {
 	}
 
 	/**
 	 * Convert a user's saves unless that was done already. Says how many
 	 * files were moved and how many left where they were; null when there
-	 * was nothing to do, or another process is at it right now.
+	 * was nothing to do.
+	 *
+	 * Another process moving the same saves is waited for: answering from
+	 * the new place before it is through would start a game on a blank
+	 * cartridge.
 	 *
 	 * @return ?array{0: int, 1: int}
+	 * @throws SavesBeingMovedException when the other process takes too long
 	 */
 	public function convertIfNeeded(string $userId): ?array {
 		if (isset($this->seen[$userId])) {
 			return null;
 		}
-		$this->seen[$userId] = true;
 		if ($this->userConfig->getValueBool($userId, Application::APP_ID, self::DONE)) {
+			$this->seen[$userId] = true;
 			return null;
 		}
 		$lock = 'arcade/saves-layout/' . $userId;
-		try {
-			$this->lockingProvider->acquireLock($lock, ILockingProvider::LOCK_EXCLUSIVE);
-		} catch (LockedException) {
-			// Converted this very moment by another request or the job.
-			return null;
-		}
+		$this->acquire($lock);
+		$this->seen[$userId] = true;
 		try {
 			// Asked again inside the lock: the one that held it may have
 			// just finished.
@@ -100,18 +110,41 @@ class SavesLayoutConverter {
 				return null;
 			}
 			$counts = $this->convert($userId);
-			if ($counts !== null) {
+			if ($counts === null) {
+				return null;
+			}
+			[$moved, $taken, $failed] = $counts;
+			// A file that could not be moved this time may be moved the
+			// next; one whose new place is taken never will be.
+			if ($failed === 0) {
 				$this->userConfig->setValueBool($userId, Application::APP_ID, self::DONE, true);
 			}
-			return $counts;
+			return [$moved, $taken + $failed];
 		} finally {
 			$this->lockingProvider->releaseLock($lock, ILockingProvider::LOCK_EXCLUSIVE);
 		}
 	}
 
+	/** @throws SavesBeingMovedException */
+	private function acquire(string $lock): void {
+		for ($waited = 0; ; $waited += self::LOCK_POLL_MS) {
+			try {
+				$this->lockingProvider->acquireLock($lock, ILockingProvider::LOCK_EXCLUSIVE);
+				return;
+			} catch (LockedException $e) {
+				if ($waited >= $this->lockWaitMs) {
+					throw new SavesBeingMovedException('The saves are still being moved to the new layout', 0, $e);
+				}
+				usleep(self::LOCK_POLL_MS * 1000);
+			}
+		}
+	}
+
 	/**
-	 * @return ?array{0: int, 1: int} files moved, and files left where they
-	 *                                were; null without a saves folder
+	 * @return ?array{0: int, 1: int, 2: int} files moved, files left because
+	 *                                        their new place is taken, and
+	 *                                        files that could not be moved;
+	 *                                        null without a saves folder
 	 */
 	private function convert(string $userId): ?array {
 		// Without a saves folder there is nothing to convert yet -- and the
@@ -126,25 +159,26 @@ class SavesLayoutConverter {
 			return null;
 		}
 
-		// The folder each known game's saves were in, by its path under the
-		// saves folder -- the way those versions worked it out.
-		$known = [];
-		foreach ($this->gameMapper->entriesOf($userId) as $key => $entry) {
-			$path = $entry['path'];
-			$system = CoreMap::shortNameForPath($path);
-			$stem = StateService::stemOf($path);
-			$known[$system === '' ? $stem : "$system/$stem"] = ['key' => (string)$key, 'path' => $path, 'core' => $entry['core'], 'md5' => $entry['md5']];
-		}
+		$games = $this->knownGames($userId);
 
 		$moved = 0;
-		$kept = 0;
+		$taken = 0;
+		$failed = 0;
 		$changes = [];
 		foreach ($this->gameFolders($root) as $relative => $folder) {
-			$game = $known[$relative] ?? null;
+			$game = $this->gameOf($games, $relative);
 			[$core, $stem] = $game === null
 				? $this->guessed($relative, $folder)
-				: $this->fromTheTable($userId, $userFolder, $game);
-			foreach ($this->plan($folder, $stem) as [$file, $kind, $name]) {
+				: $this->fromTheTable($game);
+			[$plan, $extra] = $this->plan($folder, $stem);
+			foreach ($extra as $file) {
+				$this->logger->warning('A battery save of an earlier version was left where it is: the game has another', [
+					'user' => $userId,
+					'from' => "$relative/{$file->getName()}",
+				]);
+				$taken++;
+			}
+			foreach ($plan as [$file, $kind, $name]) {
 				$dir = $core === '' ? $kind : "$kind/$core";
 				$target = "$dir/$name";
 				try {
@@ -155,7 +189,7 @@ class SavesLayoutConverter {
 							'from' => "$relative/{$file->getName()}",
 							'to' => $target,
 						]);
-						$kept++;
+						$taken++;
 						continue;
 					}
 					$hash = Folders::md5Of($file);
@@ -169,7 +203,7 @@ class SavesLayoutConverter {
 						'to' => $target,
 						'exception' => $e,
 					]);
-					$kept++;
+					$failed++;
 				}
 			}
 			$this->removeIfEmpty($folder);
@@ -188,7 +222,43 @@ class SavesLayoutConverter {
 				$this->removeIfEmpty($node);
 			}
 		}
-		return [$moved, $kept];
+		return [$moved, $taken, $failed];
+	}
+
+	/**
+	 * The games the table knows, by the folder those versions kept their
+	 * saves in: exactly, as they wrote it, and without regard to case, as
+	 * they also found it -- and by the game's name alone, for a folder from
+	 * before the system was part of the path.
+	 *
+	 * @return array{exact: array<string, array>, folded: array<string, array>, byName: array<string, list<array>>}
+	 */
+	private function knownGames(string $userId): array {
+		$games = ['exact' => [], 'folded' => [], 'byName' => []];
+		foreach ($this->gameMapper->entriesOf($userId) as $entry) {
+			$path = $entry['path'];
+			$system = CoreMap::shortNameForPath($path);
+			$stem = StateService::stemOf($path);
+			$relative = $system === '' ? $stem : "$system/$stem";
+			$games['exact'][$relative] = $entry;
+			$games['folded'][mb_strtolower($relative)] ??= $entry;
+			$games['byName'][mb_strtolower($stem)][] = $entry;
+		}
+		return $games;
+	}
+
+	/**
+	 * The game a folder of saves belongs to, or null when the table knows
+	 * none -- or more than one by that name, which is no answer either.
+	 *
+	 * @param array{exact: array<string, array>, folded: array<string, array>, byName: array<string, list<array>>} $games
+	 * @return ?array{path: string, md5: string, core: string, name: string}
+	 */
+	private function gameOf(array $games, string $relative): ?array {
+		$byName = $games['byName'][mb_strtolower(basename($relative))] ?? [];
+		return $games['exact'][$relative]
+			?? $games['folded'][mb_strtolower($relative)]
+			?? (count($byName) === 1 ? $byName[0] : null);
 	}
 
 	/**
@@ -237,28 +307,18 @@ class SavesLayoutConverter {
 	}
 
 	/**
-	 * The core and the name of a game the table knows: from its path, the
-	 * core the player noted, and for a zip the game inside it.
+	 * The core and the name of a game the table knows: the core the player
+	 * noted, or the one its path names; the name its saves go by, or the
+	 * file's own.
 	 *
-	 * @param array{key: string, path: string, core: string, md5: string} $game
+	 * @param array{path: string, md5: string, core: string, name: string} $game
 	 * @return array{0: string, 1: string}
 	 */
-	private function fromTheTable(string $userId, Folder $userFolder, array $game): array {
-		$core = CoreMap::CORE_NAMES[$game['core']] ?? CoreMap::coreNameForPath($game['path']);
-		$stem = StateService::stemOf($game['path']);
-		if (strtolower(pathinfo($game['path'], PATHINFO_EXTENSION)) === 'zip') {
-			$inside = $this->gameInside($userFolder, $game['path']);
-			if ($inside !== null) {
-				$stem = $inside;
-				// Noted, so the saves are found under it from the start,
-				// before the player has opened the zip to say so itself.
-				$fileId = ctype_digit($game['key']) ? (int)$game['key'] : 0;
-				// The checksum goes back as it was: it is what tells a state
-				// made from another dump of the game.
-				$this->gameMapper->set($userId, $game['key'], $fileId, $game['path'], $game['md5'], '', $inside);
-			}
-		}
-		return [$core, $stem];
+	private function fromTheTable(array $game): array {
+		return [
+			CoreMap::CORE_NAMES[$game['core']] ?? CoreMap::coreNameForPath($game['path']),
+			$game['name'] !== '' ? $game['name'] : StateService::stemOf($game['path']),
+		];
 	}
 
 	/**
@@ -283,11 +343,12 @@ class SavesLayoutConverter {
 	}
 
 	/**
-	 * Where each file of a game's folder goes, as [file, kind, new name].
-	 * Only one battery save: the one named after the game, or else the
-	 * one there is, as those versions read it.
+	 * Where each file of a game's folder goes, as [file, kind, new name],
+	 * and the battery saves that go nowhere. A game has only one: the one
+	 * named after it, or else the first there is, as those versions read
+	 * it; the others are left where they are.
 	 *
-	 * @return list<array{0: File, 1: string, 2: string}>
+	 * @return array{0: list<array{0: File, 1: string, 2: string}>, 1: list<File>}
 	 */
 	private function plan(Folder $folder, string $stem): array {
 		$plan = [];
@@ -309,9 +370,9 @@ class SavesLayoutConverter {
 		}
 		usort($batteries, fn (File $a, File $b): int => (int)($b->getName() === "{$folder->getName()}.srm") - (int)($a->getName() === "{$folder->getName()}.srm"));
 		if ($batteries !== []) {
-			$plan[] = [$batteries[0], StateService::SAVES, "$stem.srm"];
+			$plan[] = [array_shift($batteries), StateService::SAVES, "$stem.srm"];
 		}
-		return $plan;
+		return [$plan, $batteries];
 	}
 
 	/**
@@ -329,53 +390,6 @@ class SavesLayoutConverter {
 			return [StateService::SAVES, 0, false];
 		}
 		return null;
-	}
-
-	/**
-	 * The name of the game in a zip, the way the player picks it: the first
-	 * file whose extension names a system, or else the largest. Null when
-	 * the zip cannot be read here.
-	 */
-	private function gameInside(Folder $userFolder, string $path): ?string {
-		if (!class_exists(\ZipArchive::class)) {
-			return null;
-		}
-		try {
-			$zip = $userFolder->get($path);
-			if (!$zip instanceof File) {
-				return null;
-			}
-			$local = $zip->getStorage()->getLocalFile($zip->getInternalPath());
-		} catch (\Throwable $e) {
-			$this->logger->debug('Could not open a zip to name its saves', ['exception' => $e]);
-			return null;
-		}
-		$archive = new \ZipArchive();
-		if (!is_string($local) || $archive->open($local, \ZipArchive::RDONLY) !== true) {
-			return null;
-		}
-		$extensions = CoreMap::extensionSystemMap();
-		$largest = null;
-		$largestSize = -1;
-		try {
-			for ($i = 0; $i < $archive->numFiles; $i++) {
-				$entry = $archive->statIndex($i);
-				$name = is_array($entry) ? (string)$entry['name'] : '';
-				if ($name === '' || str_ends_with($name, '/')) {
-					continue;
-				}
-				if (isset($extensions[strtolower(pathinfo($name, PATHINFO_EXTENSION))])) {
-					return pathinfo(basename($name), PATHINFO_FILENAME);
-				}
-				if ((int)$entry['size'] > $largestSize) {
-					$largestSize = (int)$entry['size'];
-					$largest = $name;
-				}
-			}
-		} finally {
-			$archive->close();
-		}
-		return $largest === null ? null : pathinfo(basename($largest), PATHINFO_FILENAME);
 	}
 
 	private function removeIfEmpty(Folder $folder): void {

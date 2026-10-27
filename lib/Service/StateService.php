@@ -63,13 +63,6 @@ class StateService {
 	/** Where save states and their screenshots live under the saves folder. */
 	public const STATES = 'states';
 
-	/** The highest slot of the app data of earlier versions. */
-
-	/**
-	 * The folders of the app data, found once per request. A null means
-	 * not looked for yet; the user folder may be looked for and not be
-	 * there.
-	 */
 	/**
 	 * The saves folder of each user, once resolved this request. A false
 	 * means looked for and not there.
@@ -556,6 +549,10 @@ class StateService {
 		// saved over would lose what the player had.
 		try {
 			$this->layoutConverter->convertIfNeeded($userId);
+		} catch (SavesBeingMovedException $e) {
+			// Not answered from the new place while the old is still on its
+			// way over: the request fails, and the next one finds it moved.
+			throw $e;
 		} catch (\Throwable $e) {
 			$this->logger->warning('Could not move the saves of an earlier version', ['user' => $userId, 'exception' => $e]);
 		}
@@ -771,18 +768,48 @@ class StateService {
 			return;
 		}
 		$this->followed[$userId][$romPath] = true;
+		$moved = [];
 		$id = $this->fileIdOf($userId, $romPath);
 		$entry = $id === null ? null : $this->gameMapper->entryOf($userId, (string)$id);
 		$was = $entry['path'] ?? '';
-		if ($was === '' || $was === $romPath) {
-			return;
+		if ($was !== '' && $was !== $romPath) {
+			// The same file, so the same core noted with it, if any. A zip
+			// renamed still holds the game it did, and its saves go by that
+			// name: nothing to move then.
+			$moved += $this->moveSaves(
+				$userId,
+				$romPath,
+				$root,
+				self::coreName($entry['core'] ?? '', $was),
+				($entry['name'] ?? '') !== '' ? $entry['name'] : self::stemOf($was),
+				$this->stemFor($userId, $romPath),
+			);
 		}
-		// The same file, so the same core noted with it, if any.
-		$oldCore = self::coreName($entry['core'] ?? '', $was);
-		// A zip renamed still holds the game it did, and its saves go by
-		// that name: nothing to move then.
-		$oldStem = ($entry['name'] ?? '') !== '' ? $entry['name'] : self::stemOf($was);
-		$newStem = $this->stemFor($userId, $romPath);
+		// A zip's saves filed under the zip's own name -- by versions that
+		// named them so, or moved over before the player had looked inside
+		// -- go by the game inside once the player says which it is.
+		$said = $this->names[$userId][$romPath] ?? null;
+		$zipStem = self::stemOf($romPath);
+		if ($said !== null && $said !== $zipStem && strtolower(pathinfo($romPath, PATHINFO_EXTENSION)) === 'zip') {
+			$moved += $this->moveSaves($userId, $romPath, $root, $this->coreNameOf($userId, $romPath), $zipStem, $said);
+		}
+		if ($moved !== []) {
+			$this->record($root, $moved);
+		}
+		if ($was !== '' && $was !== $romPath) {
+			$this->remember($userId, $romPath);
+		}
+	}
+
+	/**
+	 * Move the saves of a game from one name, and the folders of one core,
+	 * to the name and the folders the game has now. Nothing is overwritten:
+	 * a save whose new place is taken stays where it is.
+	 *
+	 * @return array<string, string> the manifest changes: each old path
+	 *                               deleted, each new one with its hash
+	 */
+	private function moveSaves(string $userId, string $romPath, Folder $root, string $oldCore, string $oldStem, string $newStem): array {
 		$moved = [];
 		foreach ([self::STATES, self::SAVES] as $kind) {
 			$targets = $this->dirs($userId, $romPath, $kind);
@@ -820,8 +847,7 @@ class StateService {
 				}
 			}
 		}
-		$this->record($root, $moved);
-		$this->remember($userId, $romPath);
+		return $moved;
 	}
 
 	/**

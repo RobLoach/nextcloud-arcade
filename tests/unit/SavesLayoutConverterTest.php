@@ -6,6 +6,7 @@ namespace OCA\Arcade\Tests\Unit;
 
 use OCA\Arcade\Db\GameMapper;
 use OCA\Arcade\Service\CloudSyncManifest;
+use OCA\Arcade\Service\SavesBeingMovedException;
 use OCA\Arcade\Service\SavesLayoutConverter;
 use OCA\Arcade\Service\SettingsService;
 use OCP\Config\IUserConfig;
@@ -34,7 +35,10 @@ class SavesLayoutConverterTest extends TestCase {
 	/** What the games table was told. */
 	private array $noted = [];
 	private bool $done = false;
-	private bool $locked = false;
+	/** How many more times the lock is found taken. */
+	private int $lockedFor = 0;
+	/** Paths whose move fails, as a storage having a bad moment would. */
+	private array $failing = [];
 
 	private function converter(string $savesFolder = '/Saves'): SavesLayoutConverter {
 		$settings = $this->createStub(SettingsService::class);
@@ -58,11 +62,12 @@ class SavesLayoutConverterTest extends TestCase {
 		});
 		$locks = $this->createStub(ILockingProvider::class);
 		$locks->method('acquireLock')->willReturnCallback(function (): void {
-			if ($this->locked) {
+			if ($this->lockedFor > 0) {
+				$this->lockedFor--;
 				throw new LockedException('arcade/saves-layout/alice');
 			}
 		});
-		return new SavesLayoutConverter($root, $config, $settings, $games, $manifest, $locks, $this->createStub(LoggerInterface::class));
+		return new SavesLayoutConverter($root, $config, $settings, $games, $manifest, $locks, $this->createStub(LoggerInterface::class), 500);
 	}
 
 	// A file tree as small as the converter needs it.
@@ -104,6 +109,9 @@ class SavesLayoutConverterTest extends TestCase {
 		$file->method('hash')->willReturnCallback(fn (): string => md5((string)$this->files[$path]));
 		$file->method('getContent')->willReturnCallback(fn (): string => (string)$this->files[$path]);
 		$file->method('move')->willReturnCallback(function (string $target) use ($path): File {
+			if (in_array($path, $this->failing, true)) {
+				throw new \OCP\Lock\LockedException($path);
+			}
 			$to = substr($target, strlen('/' . self::USER . '/files/'));
 			$this->files[$to] = $this->files[$path];
 			unset($this->files[$path]);
@@ -204,14 +212,8 @@ class SavesLayoutConverterTest extends TestCase {
 		$this->assertSame('already new', $this->files['Saves/states/Zelda.state']);
 	}
 
-	public function testItIsDoneOnceAndNotWhileAnotherIsAtIt(): void {
+	public function testItIsDoneOnce(): void {
 		$this->given(['Saves/Nintendo/Mario/Slot 1.state' => 'one']);
-
-		$this->locked = true;
-		$this->assertNull($this->converter()->convertIfNeeded(self::USER));
-		$this->assertFalse($this->done, 'another process holds the lock');
-
-		$this->locked = false;
 		$this->assertSame([1, 0], $this->converter()->convertIfNeeded(self::USER));
 		$this->assertTrue($this->done);
 
@@ -220,20 +222,89 @@ class SavesLayoutConverterTest extends TestCase {
 		$this->assertArrayHasKey('Saves/Nintendo/Luigi/Slot 1.state', $this->files);
 	}
 
+	public function testAnotherProcessAtItIsWaitedFor(): void {
+		// The job is moving them as the player asks: the request waits, and
+		// answers once they are moved -- never from the empty new place.
+		$this->given(['Saves/Nintendo/Mario/Slot 1.state' => 'one']);
+		$this->lockedFor = 2;
+
+		$this->assertSame([1, 0], $this->converter()->convertIfNeeded(self::USER));
+		$this->assertArrayHasKey('Saves/states/FCEUmm/Mario.state1', $this->files);
+	}
+
+	public function testAnotherProcessThatTakesTooLongFailsTheRequest(): void {
+		$this->given(['Saves/Nintendo/Mario/Slot 1.state' => 'one']);
+		$this->lockedFor = 1000;
+		$converter = $this->converter();
+
+		$this->expectException(SavesBeingMovedException::class);
+		$converter->convertIfNeeded(self::USER);
+	}
+
+	public function testAMoveThatFailedIsTriedAgainNextTime(): void {
+		$this->given(['Saves/Nintendo/Mario/Slot 1.state' => 'one', 'Saves/Nintendo/Mario/Slot 2.state' => 'two']);
+		$this->failing = ['Saves/Nintendo/Mario/Slot 2.state'];
+
+		$this->assertSame([1, 1], $this->converter()->convertIfNeeded(self::USER));
+		$this->assertFalse($this->done, 'not done while a file could still go');
+
+		$this->failing = [];
+		$this->assertSame([1, 0], $this->converter()->convertIfNeeded(self::USER));
+		$this->assertTrue($this->done);
+		$this->assertArrayHasKey('Saves/states/FCEUmm/Mario.state2', $this->files);
+	}
+
+	public function testFoldersAreMatchedTheWayThoseVersionsFoundThem(): void {
+		// Another case than the ROM's, and a folder from before the system
+		// was part of the path: both the same game, so the core and the
+		// name come from the table, not from the folders.
+		$this->given([
+			'Saves/Nintendo/mario/Slot 1.state' => 'one',
+			'Saves/Zelda/Slot 2.state' => 'two',
+		]);
+		$this->games = [
+			'1' => ['path' => '/Games/NES/Mario.nes', 'md5' => '', 'core' => '', 'name' => ''],
+			'2' => ['path' => '/Games/NES/Zelda.nes', 'md5' => '', 'core' => '', 'name' => ''],
+		];
+
+		$this->converter()->convertIfNeeded(self::USER);
+
+		$this->assertSame([
+			'Saves/states/FCEUmm/Mario.state1' => 'one',
+			'Saves/states/FCEUmm/Zelda.state2' => 'two',
+		], $this->onlyFiles());
+	}
+
+	public function testABatteryBesideTheOneMovedIsLeftAndSaid(): void {
+		$this->given([
+			'Saves/Nintendo/Mario/Mario.srm' => 'the one',
+			'Saves/Nintendo/Mario/Mario (USA).srm' => 'from before a rename',
+		]);
+		$this->games = ['1' => ['path' => '/Games/NES/Mario.nes', 'md5' => '', 'core' => '', 'name' => '']];
+
+		$this->assertSame([1, 1], $this->converter()->convertIfNeeded(self::USER));
+		$this->assertSame('the one', $this->files['Saves/saves/FCEUmm/Mario.srm']);
+		$this->assertSame('from before a rename', $this->files['Saves/Nintendo/Mario/Mario (USA).srm']);
+	}
+
 	public function testWithoutASavesFolderItIsAskedAgainLater(): void {
 		$this->assertNull($this->converter('')->convertIfNeeded(self::USER));
 		$this->assertFalse($this->done);
 	}
 
-	public function testAZipsSavesGoByTheGameInsideWithItsChecksumKept(): void {
-		// The zip cannot be opened here, so they go by the zip's own name:
-		// what the table knows is kept as it was.
-		$this->given(['Saves/Super Nintendo/Pack/Slot 2.state' => 'two']);
-		$this->games = ['7' => ['path' => '/Games/SNES/Pack.zip', 'md5' => 'abc', 'core' => '', 'name' => '']];
+	public function testAZipsSavesGoByTheNameNotedForIt(): void {
+		$this->given(['Saves/Super Nintendo/Pack/Slot 2.state' => 'two', 'Saves/Super Nintendo/Other/Slot 1.state' => 'one']);
+		$this->games = [
+			'7' => ['path' => '/Games/SNES/Pack.zip', 'md5' => 'abc', 'core' => '', 'name' => 'Chrono Trigger (USA)'],
+			'8' => ['path' => '/Games/SNES/Other.zip', 'md5' => '', 'core' => '', 'name' => ''],
+		];
 
 		$this->converter()->convertIfNeeded(self::USER);
 
-		$this->assertArrayHasKey('Saves/states/Snes9x/Pack.state2', $this->files);
-		$this->assertSame([], $this->noted, 'nothing noted without a name read from the zip');
+		// The one whose game inside is noted goes by it; the other by the
+		// zip's own name, until the player says what is inside.
+		$this->assertArrayHasKey('Saves/states/Snes9x/Chrono Trigger (USA).state2', $this->files);
+		$this->assertArrayHasKey('Saves/states/Snes9x/Other.state1', $this->files);
+		$this->assertSame([], $this->noted, 'and the table is left as it was');
 	}
 }

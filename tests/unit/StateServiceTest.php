@@ -949,6 +949,37 @@ class StateServiceTest extends TestCase {
 		$this->assertSame('from retroarch', $service->loadSram(self::USER, '/Games/Super Street Fighter II.zip')?->getContent());
 	}
 
+	public function testAZipsSavesUnderItsOwnNameFollowTheGameInsideOnceThePlayerSaysIt(): void {
+		// Saved under the zip's name -- by an earlier version, or moved over
+		// before the player had looked inside.
+		$this->files['Games/SNES/Pack.zip'] = 'zip';
+		$this->ids['Games/SNES/Pack.zip'] = 5;
+		$this->files['Saves/states/Snes9x/Pack.state2'] = 'state';
+		$this->files['Saves/saves/Snes9x/Pack.srm'] = 'battery';
+		$service = $this->service();
+		$service->useCore(self::USER, '/Games/SNES/Pack.zip', 'snes9x');
+		$service->useName(self::USER, '/Games/SNES/Pack.zip', 'Chrono Trigger (USA)');
+
+		$this->assertSame('battery', $service->loadSram(self::USER, '/Games/SNES/Pack.zip')?->getContent());
+		$this->assertSame('state', $service->load(self::USER, '/Games/SNES/Pack.zip', 2)?->getContent());
+		$this->assertSame('state', $this->files['Saves/states/Snes9x/Chrono Trigger (USA).state2']);
+		$this->assertArrayNotHasKey('Saves/states/Snes9x/Pack.state2', $this->files);
+		$this->assertSame(md5('state'), $this->manifest()['states/Snes9x/Chrono Trigger (USA).state2'] ?? null, 'and RetroArch is told');
+	}
+
+	public function testAZipsSaveUnderTheGameInsideIsNotOverwrittenByOneUnderItsOwnName(): void {
+		$this->files['Games/SNES/Pack.zip'] = 'zip';
+		$this->ids['Games/SNES/Pack.zip'] = 5;
+		$this->files['Saves/saves/Snes9x/Pack.srm'] = 'older';
+		$this->files['Saves/saves/Snes9x/Chrono Trigger (USA).srm'] = 'newer';
+		$service = $this->service();
+		$service->useCore(self::USER, '/Games/SNES/Pack.zip', 'snes9x');
+		$service->useName(self::USER, '/Games/SNES/Pack.zip', 'Chrono Trigger (USA)');
+
+		$this->assertSame('newer', $service->loadSram(self::USER, '/Games/SNES/Pack.zip')?->getContent());
+		$this->assertSame('older', $this->files['Saves/saves/Snes9x/Pack.srm']);
+	}
+
 	public function testTheNotedNameIsUsedWhenThePlayerDoesNotSay(): void {
 		$this->files['Games/Mystery.zip'] = 'zip';
 		$this->ids['Games/Mystery.zip'] = 9;

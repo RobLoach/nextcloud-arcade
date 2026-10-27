@@ -19,7 +19,7 @@ vi.mock('../../src/api.js', () => ({
 	useCore: vi.fn(),
 }))
 
-const { startSramSync } = await import('../../src/player.js')
+const { fetchSram, startSramSync } = await import('../../src/player.js')
 
 /**
  * A core whose battery save is whatever the test says it has written
@@ -113,6 +113,37 @@ describe('the battery save of a game', () => {
 		await vi.advanceTimersByTimeAsync(5000)
 		await stopping
 		expect(game.instance.saveSRAM).toHaveBeenCalled()
+		expect(uploads()).toHaveLength(1)
+	})
+})
+
+describe('a battery save that could not be read as the game started', () => {
+	test('is never written over with the blank cartridge the game started on', async () => {
+		api.mockImplementationOnce(async () => {
+			throw Object.assign(new Error('503'), { status: 503 })
+		})
+		expect(await fetchSram('/Games/Pokemon.gb')).toBeNull()
+
+		const game = core()
+		game.saved = new Uint8Array([0, 0, 0])
+		const stop = startSramSync(game, '/Games/Pokemon.gb')
+		await vi.advanceTimersByTimeAsync(3 * 60 * 1000)
+		await stop()
+		expect(uploads()).toHaveLength(0)
+	})
+
+	test('a game that simply has none yet is saved as usual', async () => {
+		api.mockImplementationOnce(async () => {
+			throw Object.assign(new Error('404'), { status: 404 })
+		})
+		expect(await fetchSram('/Games/Kirby.gb')).toBeNull()
+
+		const game = core()
+		game.saved = new Uint8Array([1, 2, 3])
+		const stop = startSramSync(game, '/Games/Kirby.gb')
+		const stopping = stop()
+		await vi.advanceTimersByTimeAsync(5000)
+		await stopping
 		expect(uploads()).toHaveLength(1)
 	})
 })

@@ -53,6 +53,11 @@ const sramSyncStopped = new Set()
 // read out of the core once a minute whether the game wrote to it or not,
 // and one that has not changed is not sent again.
 const sramOnServer = new Map()
+// The games whose battery save could not be read as they started -- not
+// "there is none", which the server says plainly, but a request that
+// failed. The game runs from a blank cartridge then, and syncing it would
+// write that blank over the save the server still has.
+const sramUnread = new Set()
 
 /**
  * @param {Uint8Array} a some bytes
@@ -261,6 +266,9 @@ export async function launchRom({ element, romUrl, romName, settings = {}, syste
 		useCore(romPath, coreForSystem(system.id), rom.name.replace(/\.[^.]+$/, ''))
 	}
 	const sram = canSave ? await fetchSram(romPath, signal) : null
+	if (sramUnread.has(romPath) && typeof onMessage === 'function') {
+		onMessage(t('arcade', 'Could not read the in-game save of this game. It starts without it, and what is played will not be saved over it this time.'), 'warning')
+	}
 	const bios = await fetchBios(system.id, signal)
 	if (bios.length === 0 && biosForSystem(system.id).length > 0 && typeof onMessage === 'function') {
 		// The game starts anyway, just poorer for it -- most cores run
@@ -534,10 +542,11 @@ function report(romPath, seconds) {
  * @param {?AbortSignal} [signal] abandons the request when it fires
  * @return {Promise<?Blob>} the SRAM, or null
  */
-async function fetchSram(romPath, signal = null) {
+export async function fetchSram(romPath, signal = null) {
 	if (!romPath || getCurrentUser() === null) {
 		return null
 	}
+	sramUnread.delete(romPath)
 	try {
 		// A game with no battery save yet answers 404, which api() throws
 		// on and the catch below reads as the same "nothing stored".
@@ -551,8 +560,9 @@ async function fetchSram(romPath, signal = null) {
 	} catch (error) {
 		// A game that has never written one answers 404, which is an
 		// answer rather than a fault: it starts with a fresh cartridge.
-		if (error?.status !== 404) {
+		if (error?.status !== 404 && signal?.aborted !== true) {
 			console.error('Could not fetch the SRAM', error)
+			sramUnread.add(romPath)
 		}
 		return null
 	}
@@ -623,7 +633,7 @@ async function readSram(instance) {
  *                    upload is through or has been given up on
  */
 export function startSramSync(instance, romPath, canSave = true) {
-	if (!romPath || !canSave || getCurrentUser() === null) {
+	if (!romPath || !canSave || getCurrentUser() === null || sramUnread.has(romPath)) {
 		return async () => {}
 	}
 	// A fresh launch starts from what the server holds, so it syncs again

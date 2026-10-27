@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Nextcloud 3.14159\n"
 "Report-Msgid-Bugs-To: translations\\@example.com\n"
-"POT-Creation-Date: 2026-10-27 01:27-0400\n"
+"POT-Creation-Date: 2026-10-27 13:03-0400\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -595,7 +595,7 @@ msgid "Only the first {count} games of the folder are listed."
 msgstr ""
 
 #: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/main.js:39
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/player.js:254
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/player.js:259
 #: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/viewer.js:93
 msgid "Unsupported ROM type: {file}"
 msgstr ""
@@ -794,11 +794,17 @@ msgstr ""
 msgid "Delete slot {slot}"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/player.js:204
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/player.js:209
 msgid "No supported ROM found in the archive"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/player.js:269
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/player.js:270
+msgid ""
+"Could not read the in-game save of this game. It starts without it, and what "
+"is played will not be saved over it this time."
+msgstr ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/player.js:277
 msgid "No BIOS files found for {system}. Games may run worse without them."
 msgstr ""
 

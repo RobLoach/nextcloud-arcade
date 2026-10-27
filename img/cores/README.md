@@ -5,9 +5,10 @@ The files beside this one are libretro cores built for WebAssembly. They are
 AGPL-3.0-or-later licence. Each is a separate work by its own authors, shipped
 here unmodified, and each carries its own terms.
 
-The full text of every licence below is in the top-level `LICENSES/`. Two of these cores
-require that their notice accompany any redistribution, which is why those
-texts travel with the binaries rather than being linked from elsewhere.
+The full text of every licence below is in the app's top-level `LICENSES/`,
+which ships with the app. Two of these cores require that their notice
+accompany any redistribution: passing this folder on by itself means passing
+`LicenseRef-Snes9x.txt` and `LicenseRef-GenesisPlusGX.txt` on with it.
 
 | Core | Systems | Licence | Text | Upstream |
 | --- | --- | --- | --- | --- |

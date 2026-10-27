@@ -10,11 +10,13 @@ All notable changes to Nextcloud Arcade. The format follows
 - The saves of earlier versions are moved to the new layout: each game's
   folder of `Auto.state`, `Slot N.state` and its battery save becomes
   `states/<core>/<game>.state.auto`, `.stateN` and
-  `saves/<core>/<game>.srm`, recorded for RetroArch Cloud Sync. A zip's
-  saves go by the game inside it. Nothing is overwritten: a save whose
-  new place is taken stays where it was, and is logged. A user's saves are
-  moved the first time Arcade asks after them -- before a game can start
-  without them -- and a background job moves the rest.
+  `saves/<core>/<game>.srm`, recorded for RetroArch Cloud Sync. Nothing
+  is overwritten: a save whose new place is taken stays where it was, and
+  is logged. A user's saves are moved the first time Arcade asks after
+  them -- waiting for the background job if it is moving them just then,
+  so a game never starts without them -- and the job moves the rest.
+- A zip's saves kept under the zip's own name, as earlier versions kept
+  them, are renamed after the game inside the first time it is played.
 - RetroArch Cloud Sync. The saves folder is laid out the way RetroArch
   keeps its own -- `saves/` and `states/`, filed under the name of the
   core, with RetroArch's file names -- and every save and delete is
@@ -165,6 +167,10 @@ All notable changes to Nextcloud Arcade. The format follows
   what each limit is currently set to.
 
 ### Fixed
+- A battery save that could not be read when a game started -- the
+  server having a bad moment -- left the game running from a blank
+  cartridge, and the next sync wrote that blank over the real save. The
+  game now says so, and its battery save is left alone for that session.
 - On the narrowest phones, the offer to continue from the last save
   stretched into a tall box: a rule from when it sat mid-screen was left
   pulling its top up while the new one held its bottom down.
@@ -270,8 +276,8 @@ All notable changes to Nextcloud Arcade. The format follows
   single GPL-3.0 file that named no core and was not the licence of
   several of them; snes9x and genesis_plus_gx each require their notice to
   accompany any redistribution, and neither notice was anywhere in the
-  tree. Every core's licence text now sits in `img/cores/LICENSES/` with
-  `img/cores/README.md` saying which applies to which, and `npm run cores`
+  tree. Every core's licence text now sits in the top-level `LICENSES/`,
+  with `img/cores/README.md` saying which applies to which, and `npm run cores`
   refuses to finish if a core is shipped that nothing accounts for.
 - The background reading of ROM headers could stop for a whole library
   and stay stopped. Working out which games had never been looked at
