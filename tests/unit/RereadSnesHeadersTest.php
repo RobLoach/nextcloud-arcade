@@ -7,6 +7,7 @@ namespace OCA\Arcade\Tests\Unit;
 use OCA\Arcade\BackgroundJob\RereadRoms;
 use OCA\Arcade\Listener\MetadataListener;
 use OCA\Arcade\Migration\RereadSnesHeaders;
+use OCA\Arcade\Service\LibraryService;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\BackgroundJob\IJobList;
 use OCP\Files\File;
@@ -116,14 +117,22 @@ class RereadSnesHeadersTest extends TestCase {
 			$file->method('getId')->willReturn($id);
 			return $id === 5 ? null : $file;
 		});
-		$job = new RereadRoms($this->createStub(ITimeFactory::class), $root, $metadata, $this->createStub(LoggerInterface::class));
+		$cleared = 0;
+		$library = $this->createStub(LibraryService::class);
+		$library->method('forgetEveryScan')->willReturnCallback(function () use (&$cleared): void {
+			$cleared++;
+		});
+		$job = new RereadRoms($this->createStub(ITimeFactory::class), $root, $metadata, $library, $this->createStub(LoggerInterface::class));
 
 		$run = new \ReflectionMethod($job, 'run');
 		$run->invoke($job, null);
 		$this->assertSame([], $read, 'nothing without an argument');
+		$this->assertSame(0, $cleared, 'and no library is thrown away for it');
 
 		$run->invoke($job, ['fileIds' => [1, 2, 3, 4, 5]]);
 
 		$this->assertSame([1, 3], $read);
+		// The libraries are scanned afresh, to take the titles in.
+		$this->assertSame(1, $cleared);
 	}
 }

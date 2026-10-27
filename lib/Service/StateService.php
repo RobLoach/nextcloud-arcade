@@ -8,6 +8,7 @@ use OCA\Arcade\AppInfo\Application;
 use OCA\Arcade\CoreMap;
 use OCA\Arcade\Db\GameMapper;
 use OCA\Arcade\Listener\MetadataListener;
+use OCP\Config\IUserConfig;
 use OCP\Files\AppData\IAppDataFactory;
 use OCP\Files\File;
 use OCP\Files\Folder;
@@ -41,6 +42,9 @@ use Psr\Log\LoggerInterface;
  * its game or its user.
  */
 class StateService {
+	/** When the user's last reconcile of the manifest began, in the user config. */
+	private const RECONCILED = 'cloudsync_reconciled';
+
 	/**
 	 * How many numbered slots the player offers to save into: 0 and on, as
 	 * RetroArch numbers them -- slot 0 is its default, Game.state, and the
@@ -122,6 +126,7 @@ class StateService {
 		private IFilesMetadataManager $metadataManager,
 		private GameMapper $gameMapper,
 		private CloudSyncManifest $manifest,
+		private IUserConfig $userConfig,
 		private LoggerInterface $logger,
 	) {
 	}
@@ -339,7 +344,18 @@ class StateService {
 	 */
 	public function reconcile(string $userId, bool $full = false): ?array {
 		$root = $this->root($userId, false);
-		return $root === null ? null : $this->manifest->reconcile($root, $full);
+		if ($root === null) {
+			return null;
+		}
+		// Only what arrived since the last reconcile began is hashed. Not
+		// since the manifest was last written: every save made in the
+		// player writes it, and a save the desktop client brought in just
+		// before one would have been passed over for good.
+		$began = time();
+		$last = $this->userConfig->getValueInt($userId, Application::APP_ID, self::RECONCILED);
+		$counts = $this->manifest->reconcile($root, $full || $last === 0 ? null : $last);
+		$this->userConfig->setValueInt($userId, Application::APP_ID, self::RECONCILED, $began);
+		return $counts;
 	}
 
 	/**
@@ -618,15 +634,13 @@ class StateService {
 			if ($folder === null) {
 				throw new NotFoundException("$dir is not a folder");
 			}
-			$folder->newFile($name, $data);
+			$file = $folder->newFile($name, $data);
 			$path = "$dir/$name";
 		}
 		$this->record($root, [$path => md5($data)]);
-		try {
-			return $root->get($path)->getMTime();
-		} catch (NotFoundException) {
-			return 0;
-		}
+		// The file in hand says when it was written: a write drops what the
+		// node knew of itself, so this is the new time, not the old one.
+		return $file->getMTime();
 	}
 
 	/** Remove a file of a game from every folder it may be in. */

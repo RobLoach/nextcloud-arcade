@@ -17,6 +17,7 @@ use OCP\Files\Search\ISearchBinaryOperator;
 use OCP\Files\Search\ISearchComparison;
 use OCP\Files\Search\ISearchQuery;
 use OCP\FilesMetadata\IFilesMetadataManager;
+use OCP\IAppConfig;
 use OCP\ICache;
 use OCP\ICacheFactory;
 use OCP\SystemTag\ISystemTagManager;
@@ -50,6 +51,8 @@ class LibraryService {
 	public const SUGGEST_TOP = 3;
 	/** Bumped when the shape of a cached entry changes. */
 	private const CACHE_VERSION = 7;
+	/** In the app config: goes up each time every scan is to be taken afresh. */
+	private const GENERATION = 'library_generation';
 	/** Bumped when the shape of a cached fallbacks entry changes. */
 	private const FALLBACKS_CACHE_VERSION = 1;
 	/**
@@ -94,7 +97,26 @@ class LibraryService {
 		private ISystemTagObjectMapper $tagObjectMapper,
 		private LoggerInterface $logger,
 		private ?IAppDataFactory $appDataFactory = null,
+		private ?IAppConfig $appConfig = null,
 	) {
+	}
+
+	/**
+	 * Every user's scan is taken afresh: what the scans hold was read out
+	 * of the files -- a title, the box art the title finds -- and reading
+	 * them again changes nothing a scan is keyed on.
+	 *
+	 * Through the app config rather than by clearing the cache: on a server
+	 * whose cache is APCu, each process has a cache of its own, and a
+	 * background job clearing its copy leaves the web server's as it was.
+	 * The app config is the same for every process.
+	 */
+	public function forgetEveryScan(): void {
+		$this->appConfig?->setValueInt(Application::APP_ID, self::GENERATION, $this->generation() + 1);
+	}
+
+	private function generation(): int {
+		return $this->appConfig?->getValueInt(Application::APP_ID, self::GENERATION) ?? 0;
 	}
 
 	/**
@@ -298,6 +320,7 @@ class LibraryService {
 		// etag changes whenever anything inside it does.
 		$key = implode('|', [
 			self::CACHE_VERSION,
+			$this->generation(),
 			$userId,
 			$folderPath,
 			$folder->getEtag(),

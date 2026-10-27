@@ -11,6 +11,7 @@ use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\AppFramework\Http\Response;
 use OCP\AppFramework\Middleware;
+use OCP\DB\Exception as DbException;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -19,8 +20,10 @@ use Psr\Log\LoggerInterface;
  * table or a column out -- rather than answering with a bare 500 that
  * the player can only call a failed save.
  *
- * Only asked once a request has already failed, so a request that works
- * costs nothing more.
+ * Only asked once a request has already failed, and only when it failed
+ * in the database: a request that works costs nothing more, and neither
+ * does one that failed for any other reason -- a saves folder that cannot
+ * be made, an external storage having a bad day -- however often.
  */
 class DatabaseMiddleware extends Middleware {
 	public function __construct(
@@ -34,7 +37,7 @@ class DatabaseMiddleware extends Middleware {
 	 * @throws \Exception the exception, when the tables are not to blame
 	 */
 	public function afterException(Controller $controller, string $methodName, \Exception $exception): Response {
-		if (!$controller instanceof ArcadeController) {
+		if (!$controller instanceof ArcadeController || !self::fromTheDatabase($exception)) {
 			throw $exception;
 		}
 		try {
@@ -51,5 +54,19 @@ class DatabaseMiddleware extends Middleware {
 			'exception' => $exception,
 		]);
 		return new JSONResponse(['error' => 'database', 'problems' => $problems], Http::STATUS_SERVICE_UNAVAILABLE);
+	}
+
+	/**
+	 * Whether the failure came from the database, here or anywhere down the
+	 * chain of what caused it: Nextcloud's own exception, or the Doctrine
+	 * one beneath it that some paths let through as it is.
+	 */
+	private static function fromTheDatabase(\Throwable $exception): bool {
+		for ($cause = $exception; $cause !== null; $cause = $cause->getPrevious()) {
+			if ($cause instanceof DbException || str_starts_with($cause::class, 'Doctrine\\DBAL\\')) {
+				return true;
+			}
+		}
+		return false;
 	}
 }

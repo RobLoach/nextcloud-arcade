@@ -258,6 +258,38 @@ describe('the save states held for a session', () => {
 		expect(await (await loading).text()).toBe('state')
 	})
 
+	test('sends a save whose upload the delete stood in front of, when the delete fails', async () => {
+		const cache = createStateCache({ romPath: '/Games/Mario.nes' })
+		cache.put(1, new Blob(['state']))
+		const removed = cache.remove(1)
+		await settle()
+		// The upload saw the slot deleted and sent nothing; the delete is
+		// the one request made, and it is turned down.
+		expect(requests.map((request) => request.method)).toEqual(['DELETE'])
+		refuse(Object.assign(new Error('500'), { status: 500 }))
+		await expect(removed).rejects.toThrow('500')
+
+		await answerAll()
+		expect(requests.map((request) => `${request.method} ${request.url}`))
+			.toEqual(['DELETE /state?slot=1', 'POST /state?slot=1'])
+		expect(cache.pending()).toBe(0)
+	})
+
+	test('stops fetching ahead once the session is over, though nobody gave it a signal', async () => {
+		const cache = createStateCache({ romPath: '/Games/Mario.nes' })
+		await listed(cache, [{ slot: 1, size: 5, mtime: 9 }, { slot: 2, size: 5, mtime: 8 }])
+		const fetching = cache.prefetch()
+		await settle()
+		expect(requests.filter((request) => request.method === 'GET')).toHaveLength(2)
+
+		cache.dispose()
+		requests.at(-1).answered = true
+		requests.at(-1).resolve(ok())
+		await fetching
+		// The first was on its way; the second is never asked for.
+		expect(requests.filter((request) => request.method === 'GET')).toHaveLength(2)
+	})
+
 	test('asks the server again before loading from an old listing', async () => {
 		vi.useFakeTimers({ toFake: ['Date'] })
 		try {

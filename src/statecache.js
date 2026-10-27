@@ -64,6 +64,10 @@ export function createStateCache({ romPath, onUploadFailed = () => {} }) {
 	// since when they have been waiting.
 	const writing = new Set()
 	let prefetched = false
+	// Ends with the session: whatever is fetched ahead stops then, however
+	// it was asked for -- the Save states panel asks with no signal of its
+	// own, and a game closed meanwhile has no use for the bytes.
+	const lifetime = new AbortController()
 
 	const enqueue = (work, quiet = false) => {
 		const write = { quiet, since: Date.now() }
@@ -246,6 +250,9 @@ export function createStateCache({ romPath, onUploadFailed = () => {} }) {
 				return
 			}
 			prefetched = true
+			signal = signal === null || typeof AbortSignal.any !== 'function'
+				? lifetime.signal
+				: AbortSignal.any([signal, lifetime.signal])
 			let budget = PREFETCH_BUDGET
 			const newestFirst = [...listing.states].sort((a, b) => b.mtime - a.mtime)
 			for (const state of newestFirst) {
@@ -356,6 +363,12 @@ export function createStateCache({ romPath, onUploadFailed = () => {} }) {
 						held.delete(slot)
 					} else {
 						held.set(slot, was)
+						// A save made here whose upload found the slot
+						// deleted, and so sent nothing, is still only here:
+						// it goes now, as it would have.
+						if (was.local && !was.synced && !was.failed) {
+							enqueue(() => upload(slot, was), was.quiet)
+						}
 					}
 				}
 				throw error
@@ -404,6 +417,7 @@ export function createStateCache({ romPath, onUploadFailed = () => {} }) {
 		 * page goes on asking before it is left until they are through.
 		 */
 		dispose() {
+			lifetime.abort()
 			queue.then(() => {
 				window.removeEventListener('beforeunload', onBeforeUnload)
 			})

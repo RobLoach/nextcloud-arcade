@@ -169,6 +169,20 @@ class GameControllerTest extends TestCase {
 		$this->assertSame([['name' => 'gba_bios.bin', 'present' => true, 'source' => 'folder']], $data['bios']);
 	}
 
+	public function testAGameReadAlreadyIsNotReadAgainForSayingNothing(): void {
+		$metadataManager = $this->createMock(IFilesMetadataManager::class);
+		$filed = $this->createStub(IFilesMetadata::class);
+		$values = [MetadataListener::SYSTEM => 'gb', MetadataListener::READ => '1'];
+		$filed->method('hasKey')->willReturnCallback(static fn (string $key): bool => isset($values[$key]));
+		$filed->method('getString')->willReturnCallback(static fn (string $key): string => $values[$key] ?? '');
+		$metadataManager->method('getMetadata')->willReturn($filed);
+		$metadataManager->expects($this->never())->method('refreshMetadata');
+
+		$response = $this->controllerWith($metadataManager, $this->rom('/alice/files/Games/Homebrew.gb'))->game('/Games/Homebrew.gb');
+
+		$this->assertSame(Http::STATUS_OK, $response->getStatus());
+	}
+
 	public function testAZipNothingNamesIsStillAGameKnownByWhatThePlayerRan(): void {
 		$metadataManager = $this->createMock(IFilesMetadataManager::class);
 		$metadataManager->method('getMetadata')->willThrowException(new \Exception('nothing filed'));

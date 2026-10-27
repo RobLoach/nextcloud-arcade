@@ -233,9 +233,11 @@ class GameController extends ArcadeController {
 					$known[$field] = $metadata->getString($key);
 				}
 			}
-			// Only reading the file gives a title, a mapper or a CRC32; the
-			// system and the MD5 can come from the name and the upload.
-			$known['read'] = $known['title'] !== '' || $known['mapper'] !== '' || $known['crc32'] !== '';
+			// Read, as the background pass now says it has. Before it said
+			// so, only reading the file gave a title, a mapper or a CRC32;
+			// the system and the MD5 can come from the name and the upload.
+			$known['read'] = $metadata->hasKey(MetadataListener::READ)
+				|| $known['title'] !== '' || $known['mapper'] !== '' || $known['crc32'] !== '';
 		} catch (\Throwable $e) {
 			// Nothing has been filed for this file yet, which is ordinary
 			// for a game the background job has not reached. Anything else

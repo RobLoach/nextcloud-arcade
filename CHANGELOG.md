@@ -155,6 +155,25 @@ All notable changes to NextCloud Arcade. The format follows
   what each limit is currently set to.
 
 ### Fixed
+- A save brought into the saves folder some other way -- the desktop
+  client, Files -- could be passed over by the Cloud Sync check for good,
+  whenever a save in the player had written the manifest since. The check
+  now goes by when it last ran.
+- A save made just before its slot was deleted, when the delete then
+  failed, stayed only in the browser and was lost with the session. It is
+  sent after all.
+- The in-game save could stop being kept for the rest of a session after
+  two looks found none -- a game paused or out of view is not a game
+  without one -- and was not sent on closing either. The look on closing
+  is now always taken.
+- The Arcade tab read a ROM that has no title to give again every time it
+  was opened.
+- States fetched ahead from the Save states panel kept downloading after
+  the game was closed.
+- The emulator core was downloaded twice where the browser would not keep
+  it: once for the progress bar, once more to start it.
+- Titles read in the background reach the library at once, rather than
+  when its scan next runs -- also on servers whose cache is APCu.
 - The Sharing tab of the sidebar opened from the library stayed blank on
   Nextcloud 35: away from the Files app the sidebar has no folder or view
   to hand its tabs, and the Sharing tab cannot draw without them. The

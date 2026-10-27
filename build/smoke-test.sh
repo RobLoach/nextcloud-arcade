@@ -169,6 +169,10 @@ for line in sys.stdin:
     # enough: core logs the whole list of installed apps in some of its
     # own failures -- an app store fetch that cannot reach the internet
     # does, and used to fail this run for no reason at all.
+    # Asked for: the run drops a table on purpose to see the player told,
+    # and saying so in the log is part of the answer.
+    if str(entry.get("message", "")).startswith("Arcade cannot use its database tables"):
+        continue
     if entry.get("app") == "arcade" or "apps/arcade/" in line.replace(chr(92) + "/", "/"):
         bad.append(line.rstrip())
 if bad:
@@ -698,6 +702,16 @@ elif grep -q 'arcade_games is missing' "$BODY"; then
 	echo 'ok: arcade:status says the table is missing'
 else
 	fail "occ arcade:status failed without saying why: $(head -c 300 "$BODY")"
+fi
+# And a request of the player says so too, rather than failing bare: the
+# failure comes up from the database, which is what has the tables looked
+# at -- and only that does, so it has to be a real one to be seen here.
+if expect_status 'a request over the missing table answers' 503 "$BASE/index.php/apps/arcade/arcade/states?file=/Games/Super%20Nintendo/Chrono.sfc"; then
+	if grep -q '"error":"database"' "$BODY"; then
+		echo 'ok: the player is told the database is to blame'
+	else
+		fail "a request over the missing table did not say why: $(head -c 300 "$BODY")"
+	fi
 fi
 if occ arcade:repair > "$BODY" 2>&1 && occ arcade:status > /dev/null 2>&1; then
 	echo 'ok: arcade:repair made the table again'

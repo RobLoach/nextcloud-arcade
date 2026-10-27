@@ -142,6 +142,13 @@ class MetadataListenerTest extends TestCase {
 		$this->assertSame(md5($rom), $this->written[MetadataListener::CHECKSUM]['value'] ?? null);
 	}
 
+	public function testAFileOpenedIsSaidToHaveBeenReadEvenWhenItSaysNothing(): void {
+		$this->read($this->rom(str_repeat("\0", 64)), hashRoms: false);
+
+		$this->assertSame('1', $this->written[MetadataListener::READ]['value'] ?? null);
+		$this->assertArrayNotHasKey(MetadataListener::TITLE, $this->written);
+	}
+
 	public function testNothingIsHashedUnlessTheAdministratorAsked(): void {
 		$this->read($this->rom(self::VECTOR), hashRoms: false);
 

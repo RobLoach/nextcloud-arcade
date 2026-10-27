@@ -34,6 +34,12 @@ class MetadataListener implements IEventListener {
 	public const CHECKSUM = 'arcade-md5';
 	public const CRC32 = 'arcade-crc32';
 	public const MAPPER = 'arcade-mapper';
+	/**
+	 * That the file was opened and read, whatever it turned out to say: a
+	 * cartridge with no title to give is told apart from one nobody has
+	 * looked at yet, and is not read again for nothing.
+	 */
+	public const READ = 'arcade-read';
 
 	/**
 	 * Hashing a file that big would cost more than the name it might win.
@@ -110,6 +116,7 @@ class MetadataListener implements IEventListener {
 			if ($handle === false) {
 				return;
 			}
+			$metadata->setString(self::READ, '1');
 			// The file is read once: the front of it is the header, and the
 			// rest of the same stream is what is hashed. Systems whose
 			// cartridges carry no name the app reads skip the first part.

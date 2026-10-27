@@ -9,6 +9,7 @@ use OCA\Arcade\Middleware\DatabaseMiddleware;
 use OCA\Arcade\Service\Maintenance;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
+use OCP\DB\Exception as DbException;
 use OCP\IRequest;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
@@ -31,7 +32,7 @@ class DatabaseMiddlewareTest extends TestCase {
 
 	public function testAFailureOverAMissingTableSaysSo(): void {
 		$response = $this->middleware(['The table oc_arcade_games is missing'])
-			->afterException($this->arcadeController(), 'save', new \RuntimeException('no such table'));
+			->afterException($this->arcadeController(), 'save', new DbException('no such table'));
 
 		$this->assertSame(Http::STATUS_SERVICE_UNAVAILABLE, $response->getStatus());
 		$this->assertSame(
@@ -40,10 +41,26 @@ class DatabaseMiddlewareTest extends TestCase {
 		);
 	}
 
+	public function testADatabaseFailureFurtherDownTheChainCountsToo(): void {
+		$response = $this->middleware(['The table oc_arcade_games is missing'])
+			->afterException($this->arcadeController(), 'save', new \RuntimeException('could not save', 0, new DbException('no such table')));
+
+		$this->assertSame(Http::STATUS_SERVICE_UNAVAILABLE, $response->getStatus());
+	}
+
 	public function testAnyOtherFailureGoesOnAsItWas(): void {
 		$failure = new \RuntimeException('something else');
 		$this->expectExceptionObject($failure);
 		$this->middleware([])->afterException($this->arcadeController(), 'save', $failure);
+	}
+
+	public function testAFailureThatIsNotTheDatabasesDoesNotHaveTheTablesLookedAt(): void {
+		$maintenance = $this->createMock(Maintenance::class);
+		$maintenance->expects($this->never())->method('databaseProblems');
+		$failure = new \RuntimeException('The saves folder cannot be made');
+		$this->expectExceptionObject($failure);
+		(new DatabaseMiddleware($maintenance, $this->createStub(LoggerInterface::class)))
+			->afterException($this->arcadeController(), 'save', $failure);
 	}
 
 	public function testTheControllersOfOtherAppsAreLeftAlone(): void {

@@ -230,10 +230,10 @@ export async function launchRom({ element, romUrl, romName, settings = {}, syste
 	// The game and the core come in side by side, and the bar follows
 	// them both: the core alone is a few megabytes, as big as most games.
 	const progress = createProgressTracker((snapshot) => tell({ phase: 'download', ...snapshot }))
-	// Warming the core in the browser cache now means it is there when
-	// Nostalgist asks, instead of being fetched after the ROM.
+	// Fetched now, alongside the ROM, and handed to Nostalgist as it is
+	// rather than fetched by it a second time after the ROM.
 	const core = coreForSystem(systemForFile(romName)?.id ?? systemHint?.id ?? '')
-	const coreFetched = core === null ? Promise.resolve() : prefetchCore(core, signal, progress)
+	const coreFetched = core === null ? Promise.resolve({}) : prefetchCore(core, signal, progress)
 
 	// Fetch the ROM here so the request carries the Nextcloud session.
 	// Every fetch of the launch takes the signal: a game closed while it
@@ -273,7 +273,7 @@ export async function launchRom({ element, romUrl, romName, settings = {}, syste
 	// The core has to be in before it can start, and on a slow line it
 	// takes longer than the game: the bar keeps counting until it is,
 	// rather than saying the emulator is starting while it is not.
-	await coreFetched
+	const coreFiles = await coreFetched
 	if (signal?.aborted === true) {
 		// Closed while the files were still coming in: no core is started
 		// for a game nobody is waiting for any more.
@@ -315,10 +315,10 @@ export async function launchRom({ element, romUrl, romName, settings = {}, syste
 		},
 		retroarchCoreConfig: settings.core_options?.[coreForSystem(system.id)] ?? {},
 		resolveCoreJs(coreName) {
-			return coreUrl(`${coreName}_libretro.js`)
+			return coreFile(coreFiles, `${coreName}_libretro.js`)
 		},
 		resolveCoreWasm(coreName) {
-			return coreUrl(`${coreName}_libretro.wasm`)
+			return coreFile(coreFiles, `${coreName}_libretro.wasm`)
 		},
 		emscriptenModule: coreOutput(onMessage),
 	})
@@ -423,32 +423,48 @@ async function fetchBios(systemId, signal = null) {
 }
 
 /**
- * Ask for the files of a core without waiting for them.
- *
- * They are read through to the end, which is what puts them in the
- * cache anyway, so the progress bar can count them on the way.
+ * Fetch the files of a core, counting them into the progress bar on the
+ * way, and keep what came: Nostalgist is handed these very bytes, where
+ * it used to fetch the core again -- twice over the line wherever the
+ * browser would not keep the first.
  *
  * @param {string} core name of the libretro core
  * @param {?AbortSignal} [signal] abandons the requests when it fires
  * @param {?object} [progress] the tracker to count the bytes into
- * @return {Promise<void>} answers once both are in, or have failed
+ * @return {Promise<Object<string, Blob>>} what came, by file name; a file
+ *   that could not be had is left out, for Nostalgist to fetch itself
  */
-function prefetchCore(core, signal = null, progress = null) {
-	return Promise.all([`${core}_libretro.js`, `${core}_libretro.wasm`].map((file) =>
+async function prefetchCore(core, signal = null, progress = null) {
+	const files = {}
+	await Promise.all([`${core}_libretro.js`, `${core}_libretro.wasm`].map((file) =>
 		// Not through api(): a static file under the app's own img/, not a
-		// route, and nothing depends on it arriving -- only a warm cache is
-		// at stake, so there is no caller for a deadline to release.
+		// route, and a failure here only means Nostalgist asks again.
 		fetch(coreUrl(file), { credentials: 'same-origin', priority: 'high', signal })
 			.then(async (response) => {
-				if (!response.ok || progress === null) {
+				if (!response.ok) {
 					return
 				}
-				progress.track(file, lengthOf(response))
-				await readWithProgress(response, (bytes) => progress.advance(file, bytes))
+				progress?.track(file, lengthOf(response))
+				files[file] = await readWithProgress(response, (bytes) => progress?.advance(file, bytes))
 			})
 			.catch(() => {
-				// Only a warm cache was at stake.
+				// Nostalgist fetches it itself.
 			})))
+	return files
+}
+
+/**
+ * A file of the core as Nostalgist takes it: the bytes already fetched,
+ * or where to fetch them.
+ *
+ * @param {Object<string, Blob>} fetched what prefetchCore brought in
+ * @param {string} file name of the core file
+ * @return {object|string} the file, or its URL
+ */
+function coreFile(fetched, file) {
+	return fetched[file] !== undefined
+		? { fileName: file, fileContent: fetched[file] }
+		: coreUrl(file)
 }
 
 /**
@@ -566,12 +582,19 @@ async function readSram(instance) {
 	} catch {
 		return await instance.saveSRAM()
 	}
+	// Without the command that has RetroArch write its save files, there is
+	// nothing to wait for here: the file would never come, and a game with
+	// a battery save would look like one without. Nostalgist's own way
+	// round is slower, but it gets there.
+	if (typeof module?._cmd_savefiles !== 'function') {
+		return await instance.saveSRAM()
+	}
 	try {
 		FS.unlink(path)
 	} catch {
 		// Not written yet, which is what is wanted.
 	}
-	module._cmd_savefiles?.()
+	module._cmd_savefiles()
 	let lastSize = -1
 	for (let waited = 0; waited < SRAM_APPEAR_WAIT; waited += SRAM_POLL) {
 		await new Promise((resolve) => setTimeout(resolve, SRAM_POLL))
@@ -608,15 +631,21 @@ export function startSramSync(instance, romPath, canSave = true) {
 	sramSyncStopped.delete(romPath)
 	// Whether the game keeps a battery save at all: it does if the server
 	// had one for it, and otherwise until it is seen not to.
+	//
+	// Only a look taken while the game is in view counts: hidden, the core
+	// is paused or throttled and may not get round to writing at all,
+	// which says nothing about whether the game keeps a save. And the
+	// look taken on the way out is taken whatever came before -- it is the
+	// last chance for what was played since.
 	let misses = 0
-	const upload = async () => {
-		if (sramSyncStopped.has(romPath) || misses >= SRAM_MISSES_TO_STOP) {
+	const upload = async ({ final = false } = {}) => {
+		if (sramSyncStopped.has(romPath) || (!final && misses >= SRAM_MISSES_TO_STOP)) {
 			return
 		}
 		try {
 			const sram = await instance.exclusive(readSram)
 			if (sram === null || sram === undefined || sram.size === 0) {
-				if (!sramOnServer.has(romPath)) {
+				if (!sramOnServer.has(romPath) && !document.hidden) {
 					misses++
 				}
 				return
@@ -653,7 +682,7 @@ export function startSramSync(instance, romPath, canSave = true) {
 	// tick wins. Coordinating them is not attempted here.
 	const timer = setInterval(upload, SRAM_SYNC_INTERVAL)
 	const onPageHide = () => {
-		upload()
+		upload({ final: true })
 	}
 	window.addEventListener('pagehide', onPageHide)
 	return async () => {
@@ -662,6 +691,6 @@ export function startSramSync(instance, romPath, canSave = true) {
 		// Everything played since the last tick lives only in this upload,
 		// so the caller waits for it before tearing the emulator down --
 		// an exit takes the core, and with it the save, away mid-read.
-		await waitAtMost(upload(), SRAM_FINAL_WAIT, undefined)
+		await waitAtMost(upload({ final: true }), SRAM_FINAL_WAIT, undefined)
 	}
 }

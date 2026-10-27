@@ -8,6 +8,7 @@ use OCA\Arcade\Db\GameMapper;
 use OCA\Arcade\Service\CloudSyncManifest;
 use OCA\Arcade\Service\SettingsService;
 use OCA\Arcade\Service\StateService;
+use OCP\Config\IUserConfig;
 use OCP\Files\AppData\IAppDataFactory;
 use OCP\Files\File;
 use OCP\Files\Folder;
@@ -61,8 +62,26 @@ class StateServiceTest extends TestCase {
 				$this->createStub(ILockingProvider::class),
 				$this->createStub(LoggerInterface::class),
 			),
+			$this->userConfig(),
 			$this->createStub(LoggerInterface::class),
 		);
+	}
+
+	/** When each user last reconciled, as the user config holds it. */
+	private array $reconciled = [];
+
+	private function userConfig(): IUserConfig {
+		$config = $this->createStub(IUserConfig::class);
+		$config->method('getValueInt')->willReturnCallback(
+			fn (string $userId, string $app, string $key): int => $this->reconciled[$userId] ?? 0,
+		);
+		$config->method('setValueInt')->willReturnCallback(
+			function (string $userId, string $app, string $key, int $value): bool {
+				$this->reconciled[$userId] = $value;
+				return true;
+			},
+		);
+		return $config;
 	}
 
 	/** The games table, as the mapper presents it. */
@@ -829,14 +848,30 @@ class StateServiceTest extends TestCase {
 		], $this->manifest());
 	}
 
-	public function testAFileUntouchedSinceTheManifestIsTakenAtItsWordUnlessAskedToBeThorough(): void {
+	public function testAFileUntouchedSinceTheLastReconcileIsTakenAtItsWordUnlessAskedToBeThorough(): void {
 		$this->files[self::SAVES . '/Mario.srm'] = 'changed behind its back';
 		$this->files['Saves/manifest.server'] = CloudSyncManifest::render(['saves/FCEUmm/Mario.srm' => md5('before')]);
-		$this->mtimes['Saves/manifest.server'] = 3000;
+		$this->reconciled[self::USER] = 3000;
 
 		$this->assertSame(['recorded' => 0, 'removed' => 0], $this->service()->reconcile(self::USER));
 		$this->assertSame(['recorded' => 1, 'removed' => 0], $this->service()->reconcile(self::USER, true));
 		$this->assertSame(md5('changed behind its back'), $this->manifest()['saves/FCEUmm/Mario.srm']);
+	}
+
+	public function testASaveBroughtInBeforeTheManifestWasWrittenAgainIsStillRecorded(): void {
+		// Reconciled at 1000; the desktop client brings a new Zelda.srm in
+		// at 2000; a save in the player writes the manifest at 3000. The
+		// manifest is newer than the save, and that is no reason to pass
+		// the save over.
+		$this->reconciled[self::USER] = 1000;
+		$this->files[self::SAVES . '/Zelda.srm'] = 'from the desktop client';
+		$this->mtimes[self::SAVES . '/Zelda.srm'] = 2000;
+		$this->files['Saves/manifest.server'] = CloudSyncManifest::render(['saves/FCEUmm/Zelda.srm' => md5('the old one')]);
+		$this->mtimes['Saves/manifest.server'] = 3000;
+
+		$this->assertSame(['recorded' => 1, 'removed' => 0], $this->service()->reconcile(self::USER));
+		$this->assertSame(md5('from the desktop client'), $this->manifest()['saves/FCEUmm/Zelda.srm']);
+		$this->assertGreaterThan(1000, $this->reconciled[self::USER], 'and the time of this one is kept for the next');
 	}
 
 	public function testThereIsNothingToPutRightWithoutASavesFolder(): void {

@@ -86,16 +86,17 @@ class CloudSyncManifest {
 	 * as it is.
 	 *
 	 * @param Folder $root the folder RetroArch syncs with
-	 * @param bool $full whether to hash every file
+	 * @param ?int $since when the last reconcile began; a file recorded
+	 *                    already and not arrived since is taken at its
+	 *                    word. Null hashes every file.
 	 * @return array{recorded: int, removed: int} how many files were
 	 *                                             recorded, and how many
 	 *                                             recorded as deleted
 	 * @throws \RuntimeException when the manifest cannot be read
 	 */
-	public function reconcile(Folder $root, bool $full = false): array {
+	public function reconcile(Folder $root, ?int $since = null): array {
 		$counts = ['recorded' => 0, 'removed' => 0];
-		$this->update($root, function (array $entries, ?File $manifest) use ($root, $full, &$counts): array {
-			$since = $full || $manifest === null ? null : $manifest->getMTime();
+		$this->update($root, function (array $entries, ?File $manifest) use ($root, $since, &$counts): array {
 			$seen = [];
 			foreach (self::SCOPE as $kind) {
 				foreach ($this->filesUnder($root, $kind) as $path => $file) {
