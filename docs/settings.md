@@ -69,9 +69,28 @@ A battery save the game did not change is not written again — it is read
 out of the game once a minute, and every write would be a new version of
 the file.
 
-Saves from versions before 0.48.8, in `Saves/<System>/<Game>/` or the
-app's internal storage, are not read any more. Changing the saves folder
-does not move existing saves.
+Saves from earlier versions, in `Saves/<System>/<Game>/` (`Auto.state`,
+`Slot 1.state`, `Mario.srm`), are moved to this layout on the upgrade:
+`Saves/states/FCEUmm/Mario.state.auto`, `Mario.state1`,
+`Saves/saves/FCEUmm/Mario.srm`, recorded in the Cloud Sync manifest. Each
+user's are moved the first time Arcade asks after them — before a game can
+start without them — and a background job moves the rest. A game's saves
+are found the way those versions found them: by the game's name now, or
+else by the name it had when it was last saved. A zip's saves keep the
+zip's name until the game is next played, and then take the name of the
+game inside.
+
+Nothing is overwritten, and anything not moved stays where it was and is
+named in the log:
+
+- a save whose new place is already taken;
+- a second battery save in one game's folder;
+- a folder at the top of the saves folder that no game claims, which
+  earlier versions never loaded either.
+
+The saves versions before 0.48.8 kept in the app's internal storage are not
+read any more; the Maintenance section of the administration settings
+removes them. Changing the saves folder does not move existing saves.
 
 ### RetroArch Cloud Sync
 

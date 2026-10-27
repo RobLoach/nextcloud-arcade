@@ -87,6 +87,15 @@ class LibraryScanner {
 				]);
 			}
 		});
+		// The scans just made are kept in the cache of this process. On a
+		// server whose cache is APCu that is the background job's own, and
+		// the web server would go on answering from what it had before --
+		// a library whose folder did not change, but whose games now read
+		// differently, would not show it for a day. Every scan is taken
+		// afresh on its next visit instead, wherever its cache is.
+		if ($scanned > 0) {
+			$this->libraryService->forgetEveryScan();
+		}
 		return $scanned;
 	}
 

@@ -167,6 +167,11 @@ All notable changes to Nextcloud Arcade. The format follows
   what each limit is currently set to.
 
 ### Fixed
+- Scanning every library from the administration settings did not reach
+  the libraries the web server had kept, on a server whose cache is APCu:
+  the scans were kept by the background job, and a library whose folder had
+  not changed went on showing what it showed before. Every library is now
+  scanned afresh on its next visit.
 - A battery save that could not be read when a game started -- the
   server having a bad moment -- left the game running from a blank
   cartridge, and the next sync wrote that blank over the real save. The

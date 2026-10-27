@@ -38,6 +38,8 @@ class LibraryScannerTest extends TestCase {
 	private array $filesScanned = [];
 	/** How often the files of everybody were let go of. */
 	private int $tornDown = 0;
+	/** How often every scan was to be taken afresh. */
+	private int $forgotten = 0;
 
 	private function scanner(): LibraryScanner {
 		$settings = $this->createStub(SettingsService::class);
@@ -53,6 +55,9 @@ class LibraryScannerTest extends TestCase {
 				return [['name' => 'Mario.nes'], ['name' => 'Zelda.nes']];
 			},
 		);
+		$library->method('forgetEveryScan')->willReturnCallback(function (): void {
+			$this->forgotten++;
+		});
 
 		$root = $this->createStub(IRootFolder::class);
 		$root->method('getUserFolder')->willReturnCallback(function (string $userId): Folder {
@@ -133,8 +138,16 @@ class LibraryScannerTest extends TestCase {
 		$this->libraries = ['alice' => true, 'bob' => false, 'carol' => true, 'dave' => true];
 		$this->assertSame(2, $this->scanner()->scanAll());
 		$this->assertSame(['alice (afresh)', 'dave (afresh)'], $this->scanned);
+		// Once, after all of them: the web server's cache may not be this
+		// process's, and is told to build every library anew.
+		$this->assertSame(1, $this->forgotten);
 		// Every user let go of, the ones that failed too.
 		$this->assertSame(4, $this->tornDown);
+	}
+
+	public function testScanningOneLibraryLeavesTheOthersCached(): void {
+		$this->scanner()->scan('alice');
+		$this->assertSame(0, $this->forgotten);
 	}
 
 	public function testGamesCopiedOntoTheDiskAreLookedForFirst(): void {
