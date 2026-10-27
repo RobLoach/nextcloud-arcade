@@ -144,13 +144,14 @@ class GameController extends ArcadeController {
 	 * The pictures of the game in the user's thumbnails folder, by kind,
 	 * in the order the kinds are shown: the box first.
 	 *
-	 * @return array<string, int> kind => file id
+	 * @return array<string, array{fileId: int, path: string}> kind => picture
 	 */
 	private function thumbnailsOf(string $userId, string $file, string $system, string $title): array {
 		try {
+			$userFolder = $this->rootFolder->getUserFolder($userId);
 			$found = $this->libraryService->thumbnailsOf(
 				$userId,
-				$this->rootFolder->getUserFolder($userId),
+				$userFolder,
 				$this->settingsService->getUserSettings($userId),
 				$file,
 				$system,
@@ -160,11 +161,15 @@ class GameController extends ArcadeController {
 			$this->logger->debug('Could not look for the pictures of a game', ['exception' => $e]);
 			return [];
 		}
+		// With its path too: the Viewer opens a file by path.
 		$ordered = [];
 		foreach (['boxart', 'title', 'snap', 'logo'] as $kind) {
-			if (isset($found[$kind])) {
-				$ordered[$kind] = $found[$kind];
+			if (!isset($found[$kind])) {
+				continue;
 			}
+			$node = $userFolder->getFirstNodeById($found[$kind]);
+			$path = $node === null ? null : $userFolder->getRelativePath($node->getPath());
+			$ordered[$kind] = ['fileId' => $found[$kind], 'path' => $path ?? ''];
 		}
 		return $ordered;
 	}

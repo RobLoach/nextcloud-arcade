@@ -171,7 +171,8 @@ const THUMBNAIL_KINDS = {
  * The pictures of the game the thumbnails folder holds -- Named_Boxarts,
  * Named_Titles, Named_Snaps and Named_Logos -- each under what it is.
  *
- * @param {Object<string, number>} thumbnails file ids, by kind
+ * @param {Object<string, {fileId: number, path: string}>} thumbnails the
+ *   pictures, by kind
  * @return {HTMLElement} the section
  */
 function renderThumbnails(thumbnails) {
@@ -180,10 +181,19 @@ function renderThumbnails(thumbnails) {
 	section.appendChild(heading(t('arcade', 'Thumbnails')))
 	const list = document.createElement('ul')
 	list.className = 'arcade-sidebar-thumbnail-list'
-	for (const [kind, fileId] of Object.entries(thumbnails)) {
+	for (const [kind, { fileId, path }] of Object.entries(thumbnails)) {
 		const item = document.createElement('li')
 		const link = document.createElement('a')
 		link.href = generateUrl('/f/{fileId}', { fileId })
+		// In the Viewer where there is one, so the picture opens over the
+		// page rather than taking it away.
+		link.addEventListener('click', (event) => {
+			if (window.OCA?.Viewer?.open === undefined || !path) {
+				return
+			}
+			event.preventDefault()
+			window.OCA.Viewer.open({ path })
+		})
 		const picture = document.createElement('img')
 		picture.alt = THUMBNAIL_KINDS[kind]?.() ?? kind
 		picture.loading = 'lazy'

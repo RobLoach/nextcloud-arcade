@@ -78,6 +78,8 @@ All notable changes to NextCloud Arcade. The format follows
 - The Arcade tab shows the game's pictures from the thumbnails folder --
   box art, title screen, snap and logo -- under Thumbnails, below the
   screenshots. The BIOS files come last.
+- Screenshots and thumbnails picked in the sidebar on the library page
+  open in the Viewer, over the library.
 - A Details button on every game of the library -- in the corner of a
   card, at the end of a row of the list and the table -- opening the
   Files sidebar on it, with its tags, shares, versions and Arcade tab,
@@ -159,7 +161,8 @@ All notable changes to NextCloud Arcade. The format follows
   sidebar is now given the game's folder and a view of its own.
 - Super Nintendo games never got their title or region: the header sits
   32 KiB into the file, and the read stopped at the 8 KiB a Nextcloud
-  file stream hands over at a time.
+  file stream hands over at a time. The upgrade has every SNES game
+  without a title read again, once, in the background.
 - "Play with Arcade" now appears in the file menu of the Files app. It was
   added where @nextcloud/files 3 keeps actions, and the Files app of
   Nextcloud 34 and 35 reads them where version 4 does, so it never showed.

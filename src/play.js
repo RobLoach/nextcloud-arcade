@@ -33,7 +33,10 @@ export function playGame(path, mime, fileId, slot = null) {
 	if (slot !== null) {
 		startInSlot(path, slot)
 	}
-	if (window.OCA?.Viewer !== undefined && romMimes().includes(mime)) {
+	// The app page plays a game on a page of its own, as its library
+	// does, even with the Viewer there for pictures.
+	const onAppPage = /\/apps\/arcade(\/|$)/.test(window.location.pathname)
+	if (!onAppPage && window.OCA?.Viewer !== undefined && romMimes().includes(mime)) {
 		window.OCA.Viewer.open({ path })
 		return
 	}

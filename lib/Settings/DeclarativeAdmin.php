@@ -69,7 +69,7 @@ class DeclarativeAdmin implements IDeclarativeSettingsFormWithHandlers {
 					'id' => 'hash_roms',
 					'title' => $this->l->t('ROM checksums'),
 					'label' => $this->l->t('Work out the checksum of a ROM the server was not given one for'),
-					'description' => $this->l->t('Checksums that arrive with an upload are always kept. Working one out means reading the whole file, in the background, once per game — on object storage that is a download of each ROM.'),
+					'description' => $this->l->t('A checksum, with its CRC32, is what the Checksum and CRC32 lines of the Arcade tab in the sidebar show, and what tells whether a save state was made from the same copy of a game. Checksums that arrive with an upload are always kept. Working one out means reading the whole file, in the background, once per game — on object storage that is a download of each ROM.'),
 					'type' => DeclarativeSettingsTypes::CHECKBOX,
 					'default' => false,
 				],

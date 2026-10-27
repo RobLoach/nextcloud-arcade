@@ -219,7 +219,8 @@ class GameControllerTest extends TestCase {
 		$data = $this->controllerWith($metadataManager, $this->rom(), library: $library)->game('/Games/Mario.nes')->getData();
 
 		// Only the four kinds of the thumbnail packs, in the order shown.
-		$this->assertSame(['boxart' => 1, 'snap' => 3, 'logo' => 4], $data['thumbnails']);
+		$this->assertSame(['boxart', 'snap', 'logo'], array_keys($data['thumbnails']));
+		$this->assertSame(['fileId' => 1, 'path' => '/Thumbnails/1.png'], $data['thumbnails']['boxart']);
 	}
 
 	private function nothingNoted(): StateService {
@@ -231,6 +232,15 @@ class GameControllerTest extends TestCase {
 	private function controllerWith(IFilesMetadataManager $metadataManager, File $node, ?BiosService $bios = null, ?StateService $states = null, ?LibraryService $library = null): GameController {
 		$userFolder = $this->createStub(Folder::class);
 		$userFolder->method('get')->willReturn($node);
+		// Pictures found by id are where their id says.
+		$userFolder->method('getFirstNodeById')->willReturnCallback(function (int $id) {
+			$picture = $this->createStub(File::class);
+			$picture->method('getPath')->willReturn("/alice/files/Thumbnails/$id.png");
+			return $picture;
+		});
+		$userFolder->method('getRelativePath')->willReturnCallback(
+			static fn (string $path): ?string => str_starts_with($path, '/alice/files') ? substr($path, strlen('/alice/files')) : null,
+		);
 		$rootFolder = $this->createStub(IRootFolder::class);
 		$rootFolder->method('getUserFolder')->willReturn($userFolder);
 		return new GameController(
