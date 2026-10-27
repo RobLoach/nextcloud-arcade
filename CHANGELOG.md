@@ -163,9 +163,8 @@ All notable changes to NextCloud Arcade. The format follows
   failed, stayed only in the browser and was lost with the session. It is
   sent after all.
 - The in-game save could stop being kept for the rest of a session after
-  two looks found none -- a game paused or out of view is not a game
-  without one -- and was not sent on closing either. The look on closing
-  is now always taken.
+  two looks found none, though a game paused or out of view is not a game
+  without one. Only looks taken while the game is in view count now.
 - The Arcade tab read a ROM that has no title to give again every time it
   was opened.
 - States fetched ahead from the Save states panel kept downloading after

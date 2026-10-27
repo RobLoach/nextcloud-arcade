@@ -41,3 +41,17 @@ describe('which files the Arcade tab is for', () => {
 		expect(isGame({ path: '/Games/README.md', mime: 'text/markdown' })).toBe(false)
 	})
 })
+
+describe('a click on a picture', () => {
+	test('opens in the Viewer when plain', async () => {
+		const { opensElsewhere } = await import('../../src/files.js')
+		expect(opensElsewhere(new MouseEvent('click', { button: 0 }))).toBe(false)
+	})
+
+	test('is left to the browser when it asks for a new tab or window', async () => {
+		const { opensElsewhere } = await import('../../src/files.js')
+		for (const init of [{ ctrlKey: true }, { metaKey: true }, { shiftKey: true }, { altKey: true }, { button: 1 }]) {
+			expect(opensElsewhere(new MouseEvent('click', { button: 0, ...init }))).toBe(true)
+		}
+	})
+})

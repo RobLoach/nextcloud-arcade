@@ -167,8 +167,16 @@ class GameController extends ArcadeController {
 			if (!isset($found[$kind])) {
 				continue;
 			}
-			$node = $userFolder->getFirstNodeById($found[$kind]);
-			$path = $node === null ? null : $userFolder->getRelativePath($node->getPath());
+			// A storage that is down for the path still has the picture
+			// shown: it opens through its id instead, rather than the whole
+			// tab going without the game.
+			try {
+				$node = $userFolder->getFirstNodeById($found[$kind]);
+				$path = $node === null ? null : $userFolder->getRelativePath($node->getPath());
+			} catch (\Throwable $e) {
+				$this->logger->debug('Could not find where a picture of a game is', ['exception' => $e]);
+				$path = null;
+			}
 			$ordered[$kind] = ['fileId' => $found[$kind], 'path' => $path ?? ''];
 		}
 		return $ordered;

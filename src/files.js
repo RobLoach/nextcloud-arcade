@@ -159,6 +159,18 @@ function heading(text) {
 	return element
 }
 
+/**
+ * Whether a click on a link asks for it somewhere else -- a new tab, a new
+ * window -- which the browser does by itself, and the Viewer must not
+ * take over.
+ *
+ * @param {MouseEvent} event the click
+ * @return {boolean}
+ */
+export function opensElsewhere(event) {
+	return event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey
+}
+
 // What each kind of picture of the thumbnail packs is called.
 const THUMBNAIL_KINDS = {
 	boxart: () => t('arcade', 'Box art'),
@@ -188,7 +200,7 @@ function renderThumbnails(thumbnails) {
 		// In the Viewer where there is one, so the picture opens over the
 		// page rather than taking it away.
 		link.addEventListener('click', (event) => {
-			if (window.OCA?.Viewer?.open === undefined || !path) {
+			if (opensElsewhere(event) || window.OCA?.Viewer?.open === undefined || !path) {
 				return
 			}
 			event.preventDefault()
@@ -343,7 +355,7 @@ async function fillScreenshots(section, file) {
 		// In the Viewer where there is one, so the picture opens over the
 		// page rather than taking it away.
 		link.addEventListener('click', (event) => {
-			if (window.OCA?.Viewer?.open === undefined || folder === '') {
+			if (opensElsewhere(event) || window.OCA?.Viewer?.open === undefined || folder === '') {
 				return
 			}
 			event.preventDefault()

@@ -634,12 +634,13 @@ export function startSramSync(instance, romPath, canSave = true) {
 	//
 	// Only a look taken while the game is in view counts: hidden, the core
 	// is paused or throttled and may not get round to writing at all,
-	// which says nothing about whether the game keeps a save. And the
-	// look taken on the way out is taken whatever came before -- it is the
-	// last chance for what was played since.
+	// which says nothing about whether the game keeps a save. A game with
+	// one writes it every time it is asked, so looks in view that found
+	// none settle it -- for the look on the way out too, which would only
+	// hold the close up for a file that never comes.
 	let misses = 0
-	const upload = async ({ final = false } = {}) => {
-		if (sramSyncStopped.has(romPath) || (!final && misses >= SRAM_MISSES_TO_STOP)) {
+	const upload = async () => {
+		if (sramSyncStopped.has(romPath) || misses >= SRAM_MISSES_TO_STOP) {
 			return
 		}
 		try {
@@ -682,7 +683,7 @@ export function startSramSync(instance, romPath, canSave = true) {
 	// tick wins. Coordinating them is not attempted here.
 	const timer = setInterval(upload, SRAM_SYNC_INTERVAL)
 	const onPageHide = () => {
-		upload({ final: true })
+		upload()
 	}
 	window.addEventListener('pagehide', onPageHide)
 	return async () => {
@@ -691,6 +692,6 @@ export function startSramSync(instance, romPath, canSave = true) {
 		// Everything played since the last tick lives only in this upload,
 		// so the caller waits for it before tearing the emulator down --
 		// an exit takes the core, and with it the save, away mid-read.
-		await waitAtMost(upload({ final: true }), SRAM_FINAL_WAIT, undefined)
+		await waitAtMost(upload(), SRAM_FINAL_WAIT, undefined)
 	}
 }

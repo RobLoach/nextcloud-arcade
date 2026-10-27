@@ -351,7 +351,10 @@ class StateService {
 		// since the manifest was last written: every save made in the
 		// player writes it, and a save the desktop client brought in just
 		// before one would have been passed over for good.
-		$began = time();
+		// A second early: a file changed in the very second this began, after
+		// the walk had passed it, says that second, and the next walk takes
+		// only what arrived after the time kept -- so it would be skipped.
+		$began = time() - 1;
 		$last = $this->userConfig->getValueInt($userId, Application::APP_ID, self::RECONCILED);
 		$counts = $this->manifest->reconcile($root, $full || $last === 0 ? null : $last);
 		$this->userConfig->setValueInt($userId, Application::APP_ID, self::RECONCILED, $began);

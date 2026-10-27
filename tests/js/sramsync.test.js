@@ -66,12 +66,27 @@ afterEach(() => {
 })
 
 describe('the battery save of a game', () => {
-	test('is still sent on the way out after two looks found none', async () => {
+	test('is not waited for on the way out of a game seen to keep none', async () => {
+		const game = core()
+		const look = vi.spyOn(game.instance, 'getEmscriptenFS')
+		const stop = startSramSync(game, '/Games/Tetris.gb')
+		// Two looks in view a minute apart, and nothing written either time.
+		await vi.advanceTimersByTimeAsync(2 * 60 * 1000 + 5000)
+		const looks = look.mock.calls.length
+
+		const stopping = stop()
+		await vi.advanceTimersByTimeAsync(0)
+		await stopping
+		// Closed at once: no third look, so no wait for a file never written.
+		expect(look.mock.calls.length).toBe(looks)
+		expect(uploads()).toHaveLength(0)
+	})
+
+	test('is sent on the way out when the game was only ever hidden', async () => {
+		Object.defineProperty(document, 'hidden', { value: true, configurable: true })
 		const game = core()
 		const stop = startSramSync(game, '/Games/Zelda.gb')
-		// Two looks a minute apart, with nothing written yet.
-		await vi.advanceTimersByTimeAsync(2 * 60 * 1000 + 5000)
-		// The game writes its first save, and is closed.
+		await vi.advanceTimersByTimeAsync(3 * 60 * 1000 + 5000)
 		game.saved = new Uint8Array([1, 2, 3])
 		const stopping = stop()
 		await vi.advanceTimersByTimeAsync(5000)

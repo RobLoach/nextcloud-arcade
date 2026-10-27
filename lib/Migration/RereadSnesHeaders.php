@@ -7,11 +7,9 @@ namespace OCA\Arcade\Migration;
 use OCA\Arcade\AppInfo\Application;
 use OCA\Arcade\BackgroundJob\RereadRoms;
 use OCA\Arcade\CoreMap;
-use OCA\Arcade\Listener\MetadataListener;
 use OCP\BackgroundJob\IJobList;
 use OCP\DB\QueryBuilder\IQueryBuilder;
 use OCP\Files\IMimeTypeLoader;
-use OCP\FilesMetadata\IFilesMetadataManager;
 use OCP\IAppConfig;
 use OCP\IDBConnection;
 use OCP\Migration\IOutput;
@@ -40,7 +38,6 @@ class RereadSnesHeaders implements IRepairStep {
 	public function __construct(
 		private IDBConnection $connection,
 		private IMimeTypeLoader $mimeTypeLoader,
-		private IFilesMetadataManager $metadataManager,
 		private IJobList $jobList,
 		private IAppConfig $appConfig,
 	) {
@@ -54,15 +51,15 @@ class RereadSnesHeaders implements IRepairStep {
 		if ($this->appConfig->getValueBool(Application::APP_ID, self::DONE)) {
 			return;
 		}
-		$untitled = array_values(array_filter(
-			$this->snesFileIds(),
-			fn (int $id): bool => !$this->hasTitle($id),
-		));
-		foreach (array_chunk($untitled, self::BATCH) as $batch) {
+		// Every one of them, unread: which have a title already is for the
+		// jobs to ask, a batch at a time, rather than this a file at a
+		// time in the middle of an upgrade.
+		$ids = $this->snesFileIds();
+		foreach (array_chunk($ids, self::BATCH) as $batch) {
 			$this->jobList->add(RereadRoms::class, ['fileIds' => $batch]);
 		}
-		if ($untitled !== []) {
-			$output->info('Queued ' . count($untitled) . ' Super Nintendo games to be read again for their titles');
+		if ($ids !== []) {
+			$output->info('Queued ' . count($ids) . ' Super Nintendo games to be read again for their titles, where they have none');
 		}
 		$this->appConfig->setValueBool(Application::APP_ID, self::DONE, true);
 	}
@@ -95,15 +92,5 @@ class RereadSnesHeaders implements IRepairStep {
 		}
 		$result->closeCursor();
 		return $ids;
-	}
-
-	private function hasTitle(int $fileId): bool {
-		try {
-			$metadata = $this->metadataManager->getMetadata($fileId);
-			return $metadata->hasKey(MetadataListener::TITLE) && $metadata->getString(MetadataListener::TITLE) !== '';
-		} catch (\Throwable) {
-			// Nothing filed at all: read it.
-			return false;
-		}
 	}
 }

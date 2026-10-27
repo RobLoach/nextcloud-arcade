@@ -874,6 +874,19 @@ class StateServiceTest extends TestCase {
 		$this->assertGreaterThan(1000, $this->reconciled[self::USER], 'and the time of this one is kept for the next');
 	}
 
+	public function testAFileChangedInTheSecondAReconcileBeganIsLookedAtAgain(): void {
+		$this->files[self::SAVES . '/Zelda.srm'] = 'first';
+		$second = time();
+		$this->service()->reconcile(self::USER);
+
+		// Changed in the second the walk began, after it had gone by.
+		$this->files[self::SAVES . '/Zelda.srm'] = 'second';
+		$this->mtimes[self::SAVES . '/Zelda.srm'] = $second;
+		$this->service()->reconcile(self::USER);
+
+		$this->assertSame(md5('second'), $this->manifest()['saves/FCEUmm/Zelda.srm']);
+	}
+
 	public function testThereIsNothingToPutRightWithoutASavesFolder(): void {
 		$this->assertNull($this->service('')->reconcile(self::USER));
 	}

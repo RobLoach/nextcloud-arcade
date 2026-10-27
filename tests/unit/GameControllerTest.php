@@ -237,6 +237,36 @@ class GameControllerTest extends TestCase {
 		$this->assertSame(['fileId' => 1, 'path' => '/Thumbnails/1.png'], $data['thumbnails']['boxart']);
 	}
 
+	public function testAPictureWhosePathCannotBeFoundIsStillShownAndTheGameStillDescribed(): void {
+		$library = $this->createStub(LibraryService::class);
+		$library->method('thumbnailsOf')->willReturn(['boxart' => 1]);
+		$metadataManager = $this->createStub(IFilesMetadataManager::class);
+		$metadataManager->method('getMetadata')->willThrowException(new \Exception('nothing filed'));
+		$userFolder = $this->createStub(Folder::class);
+		$userFolder->method('get')->willReturn($this->rom());
+		$userFolder->method('getFirstNodeById')->willThrowException(new \RuntimeException('the storage is down'));
+		$rootFolder = $this->createStub(IRootFolder::class);
+		$rootFolder->method('getUserFolder')->willReturn($userFolder);
+		$controller = new GameController(
+			'arcade',
+			$this->createStub(IRequest::class),
+			$rootFolder,
+			$metadataManager,
+			$this->createStub(RecentService::class),
+			$this->nothingNoted(),
+			$this->createStub(BiosService::class),
+			$library,
+			$this->createStub(SettingsService::class),
+			$this->createStub(LoggerInterface::class),
+			'alice',
+		);
+
+		$response = $controller->game('/Games/Mario.nes');
+
+		$this->assertSame(Http::STATUS_OK, $response->getStatus());
+		$this->assertSame(['boxart' => ['fileId' => 1, 'path' => '']], $response->getData()['thumbnails']);
+	}
+
 	private function nothingNoted(): StateService {
 		$states = $this->createStub(StateService::class);
 		$states->method('noted')->willReturn(['core' => '', 'name' => '']);
