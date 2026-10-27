@@ -122,11 +122,6 @@ function render(game, file, mime, fileId) {
 	addRow(list, t('arcade', 'Played'), playedLine(game.playtime))
 	container.appendChild(list)
 
-	const bios = Array.isArray(game.bios) ? game.bios : []
-	if (bios.length > 0) {
-		container.appendChild(renderBios(bios))
-	}
-
 	const states = Array.isArray(game.states) ? game.states : []
 	if (states.length > 0) {
 		container.appendChild(heading(t('arcade', 'Save states')))
@@ -140,6 +135,17 @@ function render(game, file, mime, fileId) {
 	container.appendChild(screenshots)
 	fillScreenshots(screenshots, file)
 
+	const thumbnails = game.thumbnails && typeof game.thumbnails === 'object' ? game.thumbnails : {}
+	if (Object.keys(thumbnails).length > 0) {
+		container.appendChild(renderThumbnails(thumbnails))
+	}
+
+	// Last: something to see to once, not every time the game is looked at.
+	const bios = Array.isArray(game.bios) ? game.bios : []
+	if (bios.length > 0) {
+		container.appendChild(renderBios(bios))
+	}
+
 	return container
 }
 
@@ -151,6 +157,45 @@ function heading(text) {
 	const element = document.createElement('h3')
 	element.textContent = text
 	return element
+}
+
+// What each kind of picture of the thumbnail packs is called.
+const THUMBNAIL_KINDS = {
+	boxart: () => t('arcade', 'Box art'),
+	title: () => t('arcade', 'Title screen'),
+	snap: () => t('arcade', 'Snap'),
+	logo: () => t('arcade', 'Logo'),
+}
+
+/**
+ * The pictures of the game the thumbnails folder holds -- Named_Boxarts,
+ * Named_Titles, Named_Snaps and Named_Logos -- each under what it is.
+ *
+ * @param {Object<string, number>} thumbnails file ids, by kind
+ * @return {HTMLElement} the section
+ */
+function renderThumbnails(thumbnails) {
+	const section = document.createElement('div')
+	section.className = 'arcade-sidebar-thumbnails'
+	section.appendChild(heading(t('arcade', 'Thumbnails')))
+	const list = document.createElement('ul')
+	list.className = 'arcade-sidebar-thumbnail-list'
+	for (const [kind, fileId] of Object.entries(thumbnails)) {
+		const item = document.createElement('li')
+		const link = document.createElement('a')
+		link.href = generateUrl('/f/{fileId}', { fileId })
+		const picture = document.createElement('img')
+		picture.alt = THUMBNAIL_KINDS[kind]?.() ?? kind
+		picture.loading = 'lazy'
+		picture.src = previewUrl(fileId, 256, 256)
+		const caption = document.createElement('span')
+		caption.textContent = THUMBNAIL_KINDS[kind]?.() ?? kind
+		link.append(picture, caption)
+		item.appendChild(link)
+		list.appendChild(item)
+	}
+	section.appendChild(list)
+	return section
 }
 
 /**

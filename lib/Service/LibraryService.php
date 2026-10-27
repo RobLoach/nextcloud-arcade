@@ -505,6 +505,38 @@ class LibraryService {
 	}
 
 	/**
+	 * The pictures of one game in the thumbnails folder, by kind -- box art,
+	 * title screen, snap, logo -- matched the way the library matches them.
+	 * The index of the folder is kept until anything in it changes, so the
+	 * sidebar of the next game does not walk the folder again.
+	 *
+	 * @param array<string, mixed> $settings
+	 * @return array<string, int> kind => file id
+	 */
+	public function thumbnailsOf(string $userId, Folder $userFolder, array $settings, string $path, string $system, string $title = ''): array {
+		$thumbnailsPath = (string)($settings['thumbnails_folder'] ?? '');
+		$folder = $thumbnailsPath === '' ? null : Folders::folderAt($userFolder, $thumbnailsPath);
+		if ($folder === null) {
+			return [];
+		}
+		$cache = $this->cache();
+		$key = implode('|', ['thumbnail-index', self::CACHE_VERSION, $userId, $thumbnailsPath, $folder->getEtag()]);
+		$index = CachePacker::unpack($cache->get($key));
+		if ($index === null) {
+			$index = $this->thumbnailService->buildIndex($folder);
+			$cache->set($key, CachePacker::pack($index), (int)($settings['cache_ttl'] ?? self::CACHE_TTL));
+		}
+		/** @psalm-suppress MixedArgumentTypeCoercion the index is what buildIndex made */
+		return $this->thumbnailService->forGameNamed(
+			$index,
+			$system,
+			$this->thumbnailService->subfolderOf($path, (string)($settings['library_folder'] ?? '')),
+			basename($path),
+			$title,
+		);
+	}
+
+	/**
 	 * Attach what was read of each ROM: the name the cartridge gives
 	 * itself, the region it was sold in, and -- for a .bin, whose name says
 	 * nothing -- which machine it turned out to be for.

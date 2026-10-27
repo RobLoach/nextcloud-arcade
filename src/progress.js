@@ -195,3 +195,49 @@ export function showLoading(container, name) {
 		},
 	}
 }
+
+/**
+ * The same box as the loading one, while a game is being closed: the
+ * battery save is kept, the save states still on their way are sent, and
+ * only then is the emulator stopped -- which can take a moment, during
+ * which the player sees the game they asked to leave standing still.
+ *
+ * @param {HTMLElement} container the element the player is drawn in
+ * @param {string} name the file name of the game
+ * @return {{say: Function, remove: Function}} says which step it is on,
+ *   and takes the box away
+ */
+export function showClosing(container, name) {
+	const element = document.createElement('div')
+	element.className = 'arcade-loading arcade-closing'
+
+	const label = document.createElement('span')
+	label.className = 'arcade-loading-label'
+	label.setAttribute('role', 'status')
+	label.id = `arcade-loading-label-${++bars}`
+	label.textContent = t('arcade', 'Closing {name} …', { name })
+
+	// Nothing here can be counted, so the bar only says that something
+	// is going on.
+	const bar = document.createElement('progress')
+	bar.className = 'arcade-loading-bar'
+	bar.setAttribute('aria-labelledby', label.id)
+
+	const detail = document.createElement('span')
+	detail.className = 'arcade-loading-detail'
+
+	element.append(label, bar, detail)
+	container.appendChild(element)
+
+	return {
+		/**
+		 * @param {string} text the step under way
+		 */
+		say(text) {
+			detail.textContent = text
+		},
+		remove() {
+			element.remove()
+		},
+	}
+}

@@ -1,6 +1,9 @@
 import { translate as t } from '@nextcloud/l10n'
 import { AUTO_SLOT } from '../api.js'
 
+// How long the offer to resume stays up when left alone.
+export const OFFER_SHOWN = 7 * 1000
+
 /**
  * Pick up a game where it was left: either by offering to, or by doing it
  * as soon as the game starts.
@@ -60,12 +63,29 @@ export async function offerResume({ container, load, list, automatic = false, st
 		: t('arcade', 'Continue from slot {slot} ({date})?', { slot: latest.slot, date })
 	prompt.appendChild(text)
 
-	// It stays until it is answered: it already has a Dismiss button, and
-	// taking the offer away on a timer loses the game the player had, for
-	// nothing more than the seconds they took to read the date.
+	// It goes by itself after a few seconds, the way a notice does: the
+	// slot is still a press away in the Save states panel. While the
+	// pointer or the focus is on it, it waits, so it is never taken away
+	// from somebody in the middle of reading it or reaching for a button.
+	let timer = null
 	const dismiss = () => {
+		clearTimeout(timer)
 		prompt.remove()
 	}
+	const wait = () => {
+		clearTimeout(timer)
+		timer = null
+	}
+	const resume = () => {
+		if (timer === null && !prompt.matches(':hover, :focus-within')) {
+			timer = setTimeout(dismiss, OFFER_SHOWN)
+		}
+	}
+	prompt.addEventListener('pointerenter', wait)
+	prompt.addEventListener('focusin', wait)
+	prompt.addEventListener('pointerleave', resume)
+	prompt.addEventListener('focusout', () => setTimeout(resume))
+	signal?.addEventListener('abort', dismiss, { once: true })
 
 	const resumeButton = document.createElement('button')
 	resumeButton.type = 'button'
@@ -84,4 +104,5 @@ export async function offerResume({ container, load, list, automatic = false, st
 	prompt.appendChild(dismissButton)
 
 	container.appendChild(prompt)
+	resume()
 }

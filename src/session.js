@@ -1,10 +1,11 @@
 import { getCurrentUser } from '@nextcloud/auth'
 import { loadState } from '@nextcloud/initial-state'
+import { translate as t } from '@nextcloud/l10n'
 import { generateUrl } from '@nextcloud/router'
 import { api } from './api.js'
 import { uploadFailed } from './panels/states.js'
 import { davUrl, launchRom, recordRecent, startSramSync } from './player.js'
-import { showLoading } from './progress.js'
+import { showClosing, showLoading } from './progress.js'
 import { createStateCache } from './statecache.js'
 import { systemForFolderPath } from './systems.js'
 import { createFlash } from './toast.js'
@@ -118,21 +119,27 @@ export async function startSession({ canvas, container, filename, basename, sour
 	// the last upload reads the save out of it.
 	let detachToolbar = null
 	let stopped = false
-	const stop = async () => {
+	// leaving: the page is about to go somewhere else, and the closing
+	// box stays up until it does rather than uncover a stopped game.
+	const stop = async ({ leaving = false } = {}) => {
 		if (stopped) {
 			return
 		}
 		stopped = true
+		const closing = showClosing(container, basename)
 		stopPlayTime()
+		closing.say(t('arcade', 'Keeping the in-game save …'))
 		await stopSramSync()
 		detachToolbar?.()
 		// The states saved last went to the server in the background, and
 		// a close that leaves the page would cut them off. The core is not
 		// needed for that, but the page is.
 		if (stateCache !== null) {
+			closing.say(t('arcade', 'Sending the save states to the server …'))
 			await waitAtMost(stateCache.flush(), STATES_FINAL_WAIT, undefined)
 			stateCache.dispose()
 		}
+		closing.say(t('arcade', 'Stopping the emulator …'))
 		// Nothing left to say it to, and a core on its way out is often
 		// at its most talkative.
 		stopMessages()
@@ -140,6 +147,9 @@ export async function startSession({ canvas, container, filename, basename, sour
 			instance.exit()
 		} catch (error) {
 			console.error('Arcade failed to exit', error)
+		}
+		if (!leaving) {
+			closing.remove()
 		}
 	}
 

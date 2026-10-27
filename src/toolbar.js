@@ -564,7 +564,7 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 			element.disabled = true
 			// Closing is the session's to do, not the toolbar's: it waits
 			// for the battery save before it takes the core away.
-			await onClose?.()
+			await onClose?.({ leaving: true })
 			window.location.href = closeUrl
 		}, topbar)
 	}

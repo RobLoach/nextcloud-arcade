@@ -7,6 +7,8 @@ namespace OCA\Arcade\Tests\Unit;
 use OCA\Arcade\Controller\GameController;
 use OCA\Arcade\Listener\MetadataListener;
 use OCA\Arcade\Service\BiosService;
+use OCA\Arcade\Service\LibraryService;
+use OCA\Arcade\Service\SettingsService;
 use OCA\Arcade\Service\RecentService;
 use OCA\Arcade\Service\StateService;
 use OCP\AppFramework\Http;
@@ -73,6 +75,8 @@ class GameControllerTest extends TestCase {
 			$recentService,
 			$stateService,
 			$this->createStub(BiosService::class),
+			$this->createStub(LibraryService::class),
+			$this->createStub(SettingsService::class),
 			$this->createStub(LoggerInterface::class),
 			$userId,
 		);
@@ -117,6 +121,7 @@ class GameControllerTest extends TestCase {
 			'playtime' => ['plays' => 3, 'seconds' => 5400, 'time' => 1700000100],
 			'states' => $states,
 			'emulator' => 'FCEUmm',
+			'thumbnails' => [],
 			'bios' => [],
 		], $response->getData());
 	}
@@ -205,13 +210,25 @@ class GameControllerTest extends TestCase {
 		$this->assertSame(Http::STATUS_NOT_FOUND, $response->getStatus());
 	}
 
+	public function testThePicturesOfTheGameComeBoxFirst(): void {
+		$library = $this->createStub(LibraryService::class);
+		$library->method('thumbnailsOf')->willReturn(['logo' => 4, 'snap' => 3, 'boxart' => 1, 'plain' => 9]);
+		$metadataManager = $this->createStub(IFilesMetadataManager::class);
+		$metadataManager->method('getMetadata')->willThrowException(new \Exception('nothing filed'));
+
+		$data = $this->controllerWith($metadataManager, $this->rom(), library: $library)->game('/Games/Mario.nes')->getData();
+
+		// Only the four kinds of the thumbnail packs, in the order shown.
+		$this->assertSame(['boxart' => 1, 'snap' => 3, 'logo' => 4], $data['thumbnails']);
+	}
+
 	private function nothingNoted(): StateService {
 		$states = $this->createStub(StateService::class);
 		$states->method('noted')->willReturn(['core' => '', 'name' => '']);
 		return $states;
 	}
 
-	private function controllerWith(IFilesMetadataManager $metadataManager, File $node, ?BiosService $bios = null, ?StateService $states = null): GameController {
+	private function controllerWith(IFilesMetadataManager $metadataManager, File $node, ?BiosService $bios = null, ?StateService $states = null, ?LibraryService $library = null): GameController {
 		$userFolder = $this->createStub(Folder::class);
 		$userFolder->method('get')->willReturn($node);
 		$rootFolder = $this->createStub(IRootFolder::class);
@@ -224,6 +241,8 @@ class GameControllerTest extends TestCase {
 			$this->createStub(RecentService::class),
 			$states ?? $this->nothingNoted(),
 			$bios ?? $this->createStub(BiosService::class),
+			$library ?? $this->createStub(LibraryService::class),
+			$this->createStub(SettingsService::class),
 			$this->createStub(LoggerInterface::class),
 			'alice',
 		);
@@ -275,6 +294,8 @@ class GameControllerTest extends TestCase {
 			$this->createStub(RecentService::class),
 			$this->createStub(StateService::class),
 			$this->createStub(BiosService::class),
+			$this->createStub(LibraryService::class),
+			$this->createStub(SettingsService::class),
 			$this->createStub(LoggerInterface::class),
 			'alice',
 		);

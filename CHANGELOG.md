@@ -71,6 +71,13 @@ All notable changes to NextCloud Arcade. The format follows
   library, or in a folder that names a system. A zip played before says
   its system and emulator from the core that ran it, and which game in
   it the saves are named after.
+- Closing a game shows a box like the loading one, saying what it is
+  doing -- keeping the in-game save, sending the last save states,
+  stopping the emulator -- rather than a frozen game until the library
+  appears.
+- The Arcade tab shows the game's pictures from the thumbnails folder --
+  box art, title screen, snap and logo -- under Thumbnails, below the
+  screenshots. The BIOS files come last.
 - A Details button on every game of the library -- in the corner of a
   card, at the end of a row of the list and the table -- opening the
   Files sidebar on it, with its tags, shares, versions and Arcade tab,
@@ -78,6 +85,9 @@ All notable changes to NextCloud Arcade. The format follows
   the Files app, so there the button opens the game's details in Files.
 
 ### Changed
+- The offer to continue from the last save sits along the bottom of the
+  game and goes by itself after seven seconds, waiting while the pointer
+  or the focus is on it.
 - Nextcloud 34.0.4 or newer is required.
 - Save states, battery saves, their pictures and BIOS files are streamed
   to the player straight from storage, rather than read whole into the

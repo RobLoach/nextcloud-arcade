@@ -193,16 +193,16 @@
 }
 .arcade-states-slot button.arcade-states-confirm { background-color: var(--color-error, #d91812); }
 .arcade-states-slot button.arcade-states-confirm:hover:not(:disabled) { background-color: var(--color-error-hover, #ea3c34); }
-/* The offer used to sit at the top, opposite a bar along the bottom.
-   With the chrome all at the top it would be under the bar and across
-   the panels, and it stays until it is answered rather than timing out,
-   so it takes the middle instead: the one band of the screen that the
-   chrome above and the gamepad below both leave alone. */
+/* The offer sits along the bottom, out of the way of the game, and goes
+   by itself after a few seconds. The chrome has the top. */
 .arcade-resume {
 	position: absolute;
-	top: 50%;
+	bottom: calc(var(--default-grid-baseline, 4px) * 6);
 	left: 50%;
-	transform: translate(-50%, -50%);
+	transform: translateX(-50%);
+	max-width: calc(100% - var(--default-grid-baseline, 4px) * 8);
+	flex-wrap: wrap;
+	justify-content: center;
 	display: flex;
 	gap: calc(var(--default-grid-baseline, 4px) * 2);
 	align-items: center;
@@ -385,4 +385,11 @@
 	color: var(--color-warning, #e9a13b);
 	font-size: 11px;
 	margin-inline-start: 6px;
+}
+
+/* With the touch pad up, the bottom of the screen is the pad's: Start and
+   Select in the middle, the clusters and their shoulders either side up
+   to 256px. The offer goes above all of it. */
+.arcade-player-container:has(> .arcade-touch:not(.hidden)) .arcade-resume {
+	bottom: 268px;
 }

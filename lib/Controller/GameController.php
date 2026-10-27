@@ -7,6 +7,8 @@ namespace OCA\Arcade\Controller;
 use OCA\Arcade\CoreMap;
 use OCA\Arcade\Listener\MetadataListener;
 use OCA\Arcade\Service\BiosService;
+use OCA\Arcade\Service\LibraryService;
+use OCA\Arcade\Service\SettingsService;
 use OCA\Arcade\Service\RecentService;
 use OCA\Arcade\Service\StateService;
 use OCP\AppFramework\Http;
@@ -40,6 +42,8 @@ class GameController extends ArcadeController {
 		private RecentService $recentService,
 		private StateService $stateService,
 		private BiosService $biosService,
+		private LibraryService $libraryService,
+		private SettingsService $settingsService,
 		private LoggerInterface $logger,
 		protected ?string $userId,
 	) {
@@ -111,6 +115,7 @@ class GameController extends ArcadeController {
 			'playtime' => $stats,
 			'states' => $this->stateService->list($userId, $file),
 			'emulator' => CoreMap::CORE_NAMES[$core] ?? '',
+			'thumbnails' => $this->thumbnailsOf($userId, $file, $system, $known['title']),
 			'bios' => $system === '' ? [] : $this->biosOf($userId, $system),
 		]);
 	}
@@ -133,6 +138,35 @@ class GameController extends ArcadeController {
 			return null;
 		}
 		return $this->metadataOf($node->getId());
+	}
+
+	/**
+	 * The pictures of the game in the user's thumbnails folder, by kind,
+	 * in the order the kinds are shown: the box first.
+	 *
+	 * @return array<string, int> kind => file id
+	 */
+	private function thumbnailsOf(string $userId, string $file, string $system, string $title): array {
+		try {
+			$found = $this->libraryService->thumbnailsOf(
+				$userId,
+				$this->rootFolder->getUserFolder($userId),
+				$this->settingsService->getUserSettings($userId),
+				$file,
+				$system,
+				$title,
+			);
+		} catch (\Throwable $e) {
+			$this->logger->debug('Could not look for the pictures of a game', ['exception' => $e]);
+			return [];
+		}
+		$ordered = [];
+		foreach (['boxart', 'title', 'snap', 'logo'] as $kind) {
+			if (isset($found[$kind])) {
+				$ordered[$kind] = $found[$kind];
+			}
+		}
+		return $ordered;
 	}
 
 	/**
