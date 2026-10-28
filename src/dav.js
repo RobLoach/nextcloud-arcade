@@ -1,29 +1,8 @@
-import { getCurrentUser } from '@nextcloud/auth'
-import { generateRemoteUrl } from '@nextcloud/router'
-import { getSharingToken, isPublicShare } from '@nextcloud/sharing/public'
+import { defaultRemoteURL, defaultRootPath } from '@nextcloud/files/dav'
 import { api, dav } from './api.js'
 
-// The files over WebDAV, worked out here rather than taken from
-// @nextcloud/files/dav: importing the two strings from there brings the
-// whole WebDAV client along, on every page, for a library that never uses
-// it. The same answers: on a public share page, its share token under the
-// public endpoint; anywhere else, the user's own files.
-
-/**
- * @return {string} the address of the DAV endpoint of this page
- */
-export function davEndpoint() {
-	const url = generateRemoteUrl('dav')
-	return isPublicShare() ? url.replace('remote.php', 'public.php') : url
-}
-
-/**
- * @return {string} the root of the files of this page under the endpoint,
- *                  such as /files/alice
- */
-export function davRoot() {
-	return isPublicShare() ? `/files/${getSharingToken()}` : `/files/${getCurrentUser()?.uid}`
-}
+// The files over WebDAV, apart from the player so that what only needs
+// these -- the library, the sidebar -- does not bring the emulator along.
 
 /**
  * @param {string} path path of the file, relative to the user folder or,
@@ -31,8 +10,11 @@ export function davRoot() {
  * @return {string} the WebDAV URL of the file
  */
 export function davUrl(path) {
+	// defaultRemoteURL and defaultRootPath resolve to the public share
+	// endpoint and share token on public pages, and to the regular files
+	// endpoint and user id otherwise.
 	const encoded = path.replace(/^\/+/, '').split('/').map(encodeURIComponent).join('/')
-	return `${davEndpoint()}${davRoot()}/${encoded}`
+	return `${defaultRemoteURL}${defaultRootPath}/${encoded}`
 }
 
 /**

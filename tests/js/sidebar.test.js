@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, test, vi } from 'vitest'
 
-vi.mock('@nextcloud/auth', () => ({ getCurrentUser: () => ({ uid: 'alice' }) }))
+vi.mock('@nextcloud/files/dav', () => ({ defaultRootPath: '/files/alice' }))
 vi.mock('@nextcloud/l10n', () => ({ translate: (app, text) => text }))
 vi.mock('@nextcloud/router', () => ({ generateUrl: (path) => path }))
 vi.mock('@nextcloud/initial-state', () => ({ loadState: (app, key, fallback) => fallback }))
