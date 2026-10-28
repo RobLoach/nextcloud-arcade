@@ -1,4 +1,4 @@
-import { translate as t } from '@nextcloud/l10n'
+import { t } from '../l10n.js'
 import { generateUrl } from '@nextcloud/router'
 import { api, encodePath } from '../api.js'
 import { ICONS, icon } from '../icons.js'

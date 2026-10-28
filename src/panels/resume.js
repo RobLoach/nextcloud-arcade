@@ -1,4 +1,4 @@
-import { translate as t } from '@nextcloud/l10n'
+import { t } from '../l10n.js'
 import { AUTO_SLOT } from '../api.js'
 
 // How long the offer to resume stays up when left alone.

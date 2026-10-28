@@ -1,5 +1,5 @@
 import { loadState } from '@nextcloud/initial-state'
-import { translate as t } from '@nextcloud/l10n'
+import { t } from './l10n.js'
 import { generateUrl } from '@nextcloud/router'
 import { renderLibrary } from './library.js'
 import { isPlayable } from './systems.js'

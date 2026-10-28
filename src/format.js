@@ -1,4 +1,4 @@
-import { translate as t } from '@nextcloud/l10n'
+import { t } from './l10n.js'
 
 /**
  * The shared shape of the play time texts: nothing under a minute, and
