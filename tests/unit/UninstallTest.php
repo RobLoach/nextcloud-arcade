@@ -35,6 +35,8 @@ class UninstallTest extends TestCase {
 	private array $forgottenApps = [];
 	/** The tables of the app that were dropped. */
 	private array $droppedTables = [];
+	/** The apps whose record of migrations run was forgotten. */
+	private array $forgottenMigrations = [];
 	/** Set when the app data has never been written to. */
 	private bool $withoutAppData = false;
 
@@ -104,6 +106,14 @@ class UninstallTest extends TestCase {
 				$this->droppedTables[] = $table;
 			},
 		);
+		$connection->method('executeStatement')->willReturnCallback(
+			function (string $sql, array $params = []): int {
+				if (str_contains($sql, '*PREFIX*migrations')) {
+					$this->forgottenMigrations[] = $params[0];
+				}
+				return 3;
+			},
+		);
 
 		return new CommandTester(new Uninstall(
 			$config,
@@ -136,6 +146,7 @@ class UninstallTest extends TestCase {
 			'reverted' => $this->reverted,
 			'deleted' => $this->deleted,
 			'tables' => $this->droppedTables,
+			'migrations' => $this->forgottenMigrations,
 			'jobs' => $this->removedJobs,
 			'caches' => $this->clearedCaches,
 			'forgotten' => $this->forgottenApps,
@@ -148,7 +159,7 @@ class UninstallTest extends TestCase {
 
 		$this->assertStringContainsString('--force', $tester->getDisplay());
 		$this->assertSame(
-			['reverted' => [], 'deleted' => [], 'tables' => [], 'jobs' => [], 'caches' => [], 'forgotten' => []],
+			['reverted' => [], 'deleted' => [], 'tables' => [], 'migrations' => [], 'jobs' => [], 'caches' => [], 'forgotten' => []],
 			$this->touched(),
 			'being run by a script is not an answer',
 		);
@@ -163,7 +174,7 @@ class UninstallTest extends TestCase {
 		$this->assertStringContainsString('Would remove', $display);
 		$this->assertStringContainsString('Would drop the tables', $display);
 		$this->assertSame(
-			['reverted' => [], 'deleted' => [], 'tables' => [], 'jobs' => [], 'caches' => [], 'forgotten' => []],
+			['reverted' => [], 'deleted' => [], 'tables' => [], 'migrations' => [], 'jobs' => [], 'caches' => [], 'forgotten' => []],
 			$this->touched(),
 		);
 	}
@@ -184,6 +195,7 @@ class UninstallTest extends TestCase {
 			$this->droppedTables,
 			'the play records and the registry of games with saves',
 		);
+		$this->assertSame(['arcade'], $this->forgottenMigrations, 'so installing it again makes them anew');
 		$this->assertSame(Application::JOBS, $this->removedJobs, 'every job the app queues');
 		$this->assertSame(Application::CACHES, $this->clearedCaches, 'every cache the app fills');
 		$this->assertSame(

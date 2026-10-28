@@ -149,6 +149,15 @@ class Uninstall extends Command {
 			}
 			$dropped[] = $table;
 		}
+		// Nextcloud runs a migration only once, and keeps the record of it
+		// past the app's removal: with the record left, installing the app
+		// again would find its migrations done and make no tables at all.
+		if (!$dryRun) {
+			$this->connection->executeStatement(
+				'DELETE FROM `*PREFIX*migrations` WHERE `app` = ?',
+				[Application::APP_ID],
+			);
+		}
 		$verb = $dryRun ? 'Would drop' : 'Dropped';
 		$output->writeln(
 			$dropped === []
