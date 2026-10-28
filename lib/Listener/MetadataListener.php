@@ -67,7 +67,13 @@ class MetadataListener implements IEventListener {
 			return;
 		}
 		$path = $node->getPath();
-		$system = CoreMap::systemForPath($path);
+		// What a file says is filed once, for everyone it is shared with,
+		// so only its owner's folders may name its system. Seen through
+		// somebody else's share it goes by its extension alone: their
+		// folder names are theirs, not the file's.
+		$owner = $node->getOwner()?->getUID();
+		$ownView = $owner !== null && str_starts_with($path, '/' . $owner . '/files/');
+		$system = CoreMap::systemForPath($ownView ? $path : basename($path));
 		// A .bin is a ROM of some sort, but of whose is a question for its
 		// first bytes rather than for its name. The folder it sits in is a
 		// guess; the mark inside the file is not, so the file has the last

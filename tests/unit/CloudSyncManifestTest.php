@@ -16,6 +16,8 @@ use Psr\Log\LoggerInterface;
 class CloudSyncManifestTest extends TestCase {
 	/** What manifest.server holds, or null when there is none. */
 	private ?string $content = null;
+	/** How big manifest.server says it is, when not its content's length. */
+	private ?int $size = null;
 
 	private function root(): Folder {
 		$root = $this->createStub(Folder::class);
@@ -25,7 +27,13 @@ class CloudSyncManifestTest extends TestCase {
 				throw new NotFoundException($name);
 			}
 			$file = $this->createStub(File::class);
-			$file->method('getContent')->willReturnCallback(fn (): string => $this->content);
+			$file->method('getSize')->willReturnCallback(fn (): int => $this->size ?? strlen((string)$this->content));
+			$file->method('getContent')->willReturnCallback(function (): string {
+				if ($this->size !== null) {
+					$this->fail('a manifest too big to hold is not read');
+				}
+				return $this->content;
+			});
 			$file->method('putContent')->willReturnCallback(function ($content): void {
 				$this->content = (string)$content;
 			});
@@ -84,6 +92,13 @@ class CloudSyncManifestTest extends TestCase {
 		$this->content = CloudSyncManifest::render(['saves/y.srm' => 'b']);
 		$this->manifest()->record($this->root(), ['saves/y.srm' => '', 'states/never.state' => '']);
 		$this->assertSame(['saves/y.srm' => ''], CloudSyncManifest::parse($this->content));
+	}
+
+	public function testAManifestTooBigToHoldIsLeftAlone(): void {
+		$this->content = '[]';
+		$this->size = 200 * 1024 * 1024;
+		$this->manifest()->record($this->root(), ['saves/y.srm' => 'c']);
+		$this->assertSame('[]', $this->content, 'neither read nor written over');
 	}
 
 	public function testTheWriteHoldsTheLockAndLetsGo(): void {

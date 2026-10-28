@@ -352,6 +352,20 @@ All notable changes to Nextcloud Arcade. The format follows
   or the clock in the settings, and Close just closes. The game's own
   battery save is still flushed on the way out.
 
+### Security
+- A link to the picture of a save state, opened by someone signed in,
+  could rename the saves of one of their games: the picture is fetched
+  without a CSRF token, and fetching it brought a renamed game's saves
+  along under the name the link gave. It only reads now; the listing
+  the player asks for first moves them.
+- A ROM shared with somebody else took its system from the folder they
+  filed it in, for its owner too, so a recipient could have the owner's
+  game shown as another system and started on the wrong core. Only the
+  owner's own folders say what a file is now.
+- A Cloud Sync manifest of hundreds of megabytes, put in a saves folder,
+  was read whole and ran the weekly cleanup out of memory, for every user
+  after its owner as well. One over 8 MB is left alone.
+
 ## [0.43.2] - 2026-10-01
 
 ### Added

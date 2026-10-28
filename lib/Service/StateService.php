@@ -170,8 +170,14 @@ class StateService {
 		return $this->find($userId, $romPath, self::STATES, self::stateName($this->stemFor($userId, $romPath), $slot));
 	}
 
+	/**
+	 * Only looks: the picture is asked for by a plain <img>, with no CSRF
+	 * token, so it must not move anything -- the name and core it carries
+	 * could come from a link on another site. The listing the player asks
+	 * for first, which has the token, brings a renamed game's saves along.
+	 */
 	public function loadThumbnail(string $userId, string $romPath, int $slot): ?File {
-		return $this->find($userId, $romPath, self::STATES, self::stateName($this->stemFor($userId, $romPath), $slot) . '.png');
+		return $this->find($userId, $romPath, self::STATES, self::stateName($this->stemFor($userId, $romPath), $slot) . '.png', false);
 	}
 
 	/**
@@ -586,12 +592,14 @@ class StateService {
 	 *
 	 * @return ?File
 	 */
-	private function find(string $userId, string $romPath, string $kind, string $name): ?File {
+	private function find(string $userId, string $romPath, string $kind, string $name, bool $follow = true): ?File {
 		$root = $this->root($userId, false);
 		if ($root === null) {
 			return null;
 		}
-		$this->follow($userId, $romPath, $root);
+		if ($follow) {
+			$this->follow($userId, $romPath, $root);
+		}
 		return $this->locate($root, $this->dirs($userId, $romPath, $kind), $name)[0] ?? null;
 	}
 

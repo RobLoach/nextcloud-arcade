@@ -8,6 +8,7 @@ use OCA\Arcade\Listener\MetadataListener;
 use OCA\Arcade\Service\SettingsService;
 use OCP\Files\File;
 use OCP\FilesMetadata\Event\MetadataBackgroundEvent;
+use OCP\IUser;
 use OCP\FilesMetadata\Model\IFilesMetadata;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
@@ -80,12 +81,15 @@ class MetadataListenerTest extends TestCase {
 		return new MetadataListener($settingsService, $this->createStub(LoggerInterface::class));
 	}
 
-	private function rom(string $content, string $checksum = ''): File {
+	private function rom(string $content, string $checksum = '', string $path = '/alice/files/Games/Mario.nes'): File {
 		$handle = fopen('php://memory', 'r+b');
 		fwrite($handle, $content);
 		rewind($handle);
+		$owner = $this->createStub(IUser::class);
+		$owner->method('getUID')->willReturn('alice');
 		$node = $this->createStub(File::class);
-		$node->method('getPath')->willReturn('/alice/files/Games/Mario.nes');
+		$node->method('getOwner')->willReturn($owner);
+		$node->method('getPath')->willReturn($path);
 		$node->method('getSize')->willReturn(strlen($content));
 		$node->method('getChecksum')->willReturn($checksum);
 		$node->method('fopen')->willReturn($handle);
@@ -105,6 +109,20 @@ class MetadataListenerTest extends TestCase {
 
 	private function read(File $node, bool $hashRoms = true): void {
 		$this->listener($hashRoms)->handle(new MetadataBackgroundEvent($node, $this->metadata()));
+	}
+
+	public function testTheOwnersFolderNamesTheSystem(): void {
+		$this->read($this->rom('not a header', '', '/alice/files/Games/PSX/Game.bin'));
+
+		$this->assertSame('psx', $this->written[MetadataListener::SYSTEM]['value'] ?? null);
+	}
+
+	public function testAFolderOfSomebodyItIsSharedWithDoesNot(): void {
+		// Bob filed Alice's game under a folder of his own: what is filed
+		// for the file is Alice's too, so his folder says nothing.
+		$this->read($this->rom('not a header', '', '/bob/files/PSX/Game.bin'));
+
+		$this->assertArrayNotHasKey(MetadataListener::SYSTEM, $this->written);
 	}
 
 	public function testOneReadOfTheFileYieldsBothChecksums(): void {

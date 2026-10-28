@@ -641,6 +641,24 @@ class StateServiceTest extends TestCase {
 		$this->assertSame('/Games/NES/Super Mario.nes', $this->games[self::USER]['42']['path']);
 	}
 
+	public function testASlotsPictureMovesNothing(): void {
+		// Asked for without a CSRF token, so a link from anywhere can ask:
+		// neither a renamed game nor a name it is handed moves any save.
+		$this->files['Games/SNES/Pack.zip'] = 'zip';
+		$this->ids['Games/SNES/Pack.zip'] = 5;
+		$this->files['Saves/states/Snes9x/Pack.state2'] = 'state';
+		$this->files['Saves/states/Snes9x/Pack.state2.png'] = 'picture';
+		$this->games[self::USER]['5'] = ['path' => '/Games/SNES/Old.zip', 'md5' => '', 'core' => '', 'name' => 'Pack'];
+		$service = $this->service();
+		$service->useCore(self::USER, '/Games/SNES/Pack.zip', 'snes9x');
+		$service->useName(self::USER, '/Games/SNES/Pack.zip', 'x');
+
+		$this->assertNull($service->loadThumbnail(self::USER, '/Games/SNES/Pack.zip', 2));
+		$this->assertSame('state', $this->files['Saves/states/Snes9x/Pack.state2']);
+		$this->assertArrayNotHasKey('Saves/states/Snes9x/x.state2', $this->files);
+		$this->assertSame('/Games/SNES/Old.zip', $this->games[self::USER]['5']['path'], 'and nothing is noted');
+	}
+
 	public function testARenameDoesNotOverwriteWhatTheNewNameAlreadyHas(): void {
 		$this->files['Games/NES/Mario.nes'] = 'rom';
 		$this->ids['Games/NES/Mario.nes'] = 42;
