@@ -41,6 +41,11 @@ class CloudSyncManifest {
 	// the content directory RetroArch can sort by as well.
 	private const MAX_DEPTH = 3;
 
+	// The most of a manifest that is read: some fifty thousand saves.
+	// Anyone can put a file of any size there, and one read whole would
+	// run the process out of memory -- the weekly job of every user with it.
+	private const MAX_BYTES = 8 * 1024 * 1024;
+
 	public function __construct(
 		private ILockingProvider $lockingProvider,
 		private LoggerInterface $logger,
@@ -184,7 +189,9 @@ class CloudSyncManifest {
 		$locked = $this->lock($lock);
 		try {
 			$file = $this->manifestOf($root);
-			$entries = self::parse($file?->getContent() ?? '');
+			$entries = $file !== null && $file->getSize() > self::MAX_BYTES
+				? null
+				: self::parse($file?->getContent() ?? '');
 			if ($entries === null) {
 				if ($strict) {
 					throw new \RuntimeException('The Cloud Sync manifest cannot be read');

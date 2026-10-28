@@ -126,7 +126,8 @@ class StateController extends ArcadeController {
 	}
 
 	// Thumbnails load through plain <img> tags, which cannot send the CSRF
-	// token header. The route is read-only and still requires a session.
+	// token header. The route still requires a session, and only reads:
+	// loadThumbnail() moves nothing, whatever name and core it is given.
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
 	#[FrontpageRoute(verb: 'GET', url: '/arcade/state/thumbnail')]
