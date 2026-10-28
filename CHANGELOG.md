@@ -169,6 +169,11 @@ All notable changes to Nextcloud Arcade. The format follows
   what each limit is currently set to.
 
 ### Fixed
+- `occ arcade:uninstall` dropped the tables of the app but not the record
+  of the migrations that made them, so installing the app again made no
+  tables, and every page that counts plays or keeps saves failed.
+- What was played of a deleted game was kept forever. The weekly cleanup,
+  and `occ arcade:cleanup`, now forget it once the game is gone for good.
 - Scanning every library from the administration settings did not reach
   the libraries the web server had kept, on a server whose cache is APCu:
   the scans were kept by the background job, and a library whose folder had

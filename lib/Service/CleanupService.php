@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace OCA\Arcade\Service;
 
 use OCA\Arcade\Db\GameMapper;
+use OCA\Arcade\Db\PlayMapper;
 use OCP\Files\IRootFolder;
 use OCP\Files\NotFoundException;
 use OCP\IUserManager;
@@ -24,6 +25,7 @@ class CleanupService {
 	public function __construct(
 		private StateService $stateService,
 		private GameMapper $gameMapper,
+		private PlayMapper $playMapper,
 		private IUserManager $userManager,
 		private IRootFolder $rootFolder,
 		private UserFilesystems $userFilesystems,
@@ -40,7 +42,7 @@ class CleanupService {
 	 * too, all of it: nothing reads it any more.
 	 *
 	 * @param ?\Closure(string): void $report told about each removal
-	 * @return array{users: int, games: int, appData: array{files: int, bytes: int}, appDataRemoved: int}
+	 * @return array{users: int, games: int, plays: int, appData: array{files: int, bytes: int}, appDataRemoved: int}
 	 *         appData is what is left there afterwards
 	 */
 	public function sweep(bool $dryRun = false, ?\Closure $report = null, bool $legacy = false): array {
@@ -87,10 +89,29 @@ class CleanupService {
 				if (!$dryRun) {
 					$this->stateService->deleteAllForUser($userId);
 				}
+				$cleaned[$userId] = true;
 				$users++;
 				continue;
 			}
 			$games += $this->cleanUser($userId, $dryRun, $report);
+		}
+
+		// What was played of a game goes with it too: a row per game ever
+		// played, read whole each time the library is drawn.
+		$plays = 0;
+		foreach (array_keys($this->playMapper->totalsByUser()) as $userId) {
+			$userId = (string)$userId;
+			if (!isset($existing[$userId])) {
+				$report("Removing what a user that no longer exists played ($userId)");
+				if (!$dryRun) {
+					$this->playMapper->deleteAllForUser($userId);
+				}
+				if (!isset($cleaned[$userId])) {
+					$users++;
+				}
+				continue;
+			}
+			$plays += $this->userFilesystems->forUser($userId, fn (): int => $this->cleanPlaysOf($userId, $dryRun, $report));
 		}
 
 		$appData = $this->legacy->count();
@@ -106,6 +127,7 @@ class CleanupService {
 		return [
 			'users' => $users,
 			'games' => $games,
+			'plays' => $plays,
 			'appData' => $appData,
 			'appDataRemoved' => $appDataRemoved,
 		];
@@ -161,6 +183,28 @@ class CleanupService {
 	private function cleanUser(string $userId, bool $dryRun, \Closure $report): int {
 		// One user's files held at a time, however many users there are.
 		return $this->userFilesystems->forUser($userId, fn (): int => $this->cleanFilesOf($userId, $dryRun, $report));
+	}
+
+	/**
+	 * Forget what was played of the games that are gone. As with the
+	 * states, a game in the trash can come back, and keeps its count.
+	 *
+	 * @param \Closure(string): void $report
+	 */
+	private function cleanPlaysOf(string $userId, bool $dryRun, \Closure $report): int {
+		$gone = [];
+		foreach (array_keys($this->playMapper->statsOf($userId)) as $fileId) {
+			if (!Folders::stillAround($this->rootFolder, $userId, $fileId)) {
+				$gone[] = $fileId;
+			}
+		}
+		if ($gone !== []) {
+			$report('Removing what ' . $userId . ' played of ' . count($gone) . ' games that no longer exist');
+			if (!$dryRun) {
+				$this->playMapper->removeFiles($userId, ...$gone);
+			}
+		}
+		return count($gone);
 	}
 
 	/**

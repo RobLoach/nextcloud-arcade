@@ -193,6 +193,21 @@ class PlayMapper extends QBMapper {
 	}
 
 	/**
+	 * Drop what was counted of games that are gone, by the ids of their
+	 * files.
+	 */
+	public function removeFiles(string $userId, int ...$fileIds): void {
+		if ($fileIds === []) {
+			return;
+		}
+		$qb = $this->db->getTypedQueryBuilder();
+		$qb->delete($this->getTableName())
+			->where($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)))
+			->andWhere($qb->expr()->in('file_id', $qb->createNamedParameter($fileIds, IQueryBuilder::PARAM_INT_ARRAY)));
+		$qb->executeStatement();
+	}
+
+	/**
 	 * Bring over what an old JSON blob counted. A row that is already there
 	 * has counted on since, and wins.
 	 */

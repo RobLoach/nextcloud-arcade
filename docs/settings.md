@@ -215,7 +215,7 @@ waiting in the queue.
 | Command | Does |
 | --- | --- |
 | `occ arcade:bios` | List, add or remove the BIOS files the instance offers to every player |
-| `occ arcade:cleanup` | Remove save states of games and users that no longer exist; `--legacy` also removes the saves versions before 0.48.8 left in the app data, which nothing reads; `--dry-run` only reports |
+| `occ arcade:cleanup` | Remove save states of games and users that no longer exist, and what was played of them; `--legacy` also removes the saves versions before 0.48.8 left in the app data, which nothing reads; `--dry-run` only reports |
 | `occ arcade:cloudsync` | Record in each user's Cloud Sync manifest the saves that got into the saves folder some other way, and the ones that are gone; `--user`, `--full` |
 | `occ arcade:repair` | Make the database tables and columns of Arcade that are missing |
 | `occ arcade:status` | Report the games with saves and the play activity of every user, and what earlier versions left in the app data; `--json` for machines |
@@ -290,7 +290,9 @@ inside. See [the library guide](library.md#in-the-files-app).
 save states and battery save, since it can be restored with the same file
 id. They go when the trash lets go of it. The weekly cleanup sweep — or
 `occ arcade:cleanup` — picks up whatever the event listeners could not
-catch, such as a whole folder of games deleted in one go.
+catch, such as a whole folder of games deleted in one go. It also forgets
+how long a game that is gone for good was played; one in the trash keeps
+that too.
 
 **A table of Arcade is missing.** An upgrade that went wrong half way can
 leave Arcade without a table or a column, and `occ arcade:status` says

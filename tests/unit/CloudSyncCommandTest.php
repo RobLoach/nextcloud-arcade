@@ -6,6 +6,7 @@ namespace OCA\Arcade\Tests\Unit;
 
 use OCA\Arcade\Command\CloudSync;
 use OCA\Arcade\Db\GameMapper;
+use OCA\Arcade\Db\PlayMapper;
 use OCA\Arcade\Service\CleanupService;
 use OCA\Arcade\Service\LegacyAppDataSaves;
 use OCA\Arcade\Service\StateService;
@@ -52,6 +53,7 @@ class CloudSyncCommandTest extends TestCase {
 		return new CleanupService(
 			$stateService,
 			$this->createStub(GameMapper::class),
+			$this->createStub(PlayMapper::class),
 			$userManager,
 			$this->createStub(IRootFolder::class),
 			new UserFilesystems(

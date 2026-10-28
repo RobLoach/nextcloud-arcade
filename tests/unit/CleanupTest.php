@@ -6,6 +6,7 @@ namespace OCA\Arcade\Tests\Unit;
 
 use OCA\Arcade\Command\Cleanup;
 use OCA\Arcade\Db\GameMapper;
+use OCA\Arcade\Db\PlayMapper;
 use OCA\Arcade\Service\CleanupService;
 use OCA\Arcade\Service\LegacyAppDataSaves;
 use OCA\Arcade\Service\StateService;
@@ -44,6 +45,10 @@ class CleanupTest extends TestCase {
 	private array $deletedGames = [];
 	/** The registry users dropped wholesale. */
 	private array $deletedUsers = [];
+	/** @var array<string, list<int>> what each user played, by file id */
+	private array $plays = [];
+	/** The play records dropped, as "user:file id", or the user alone. */
+	private array $forgottenPlays = [];
 
 	private function filesystems(IUserManager $userManager): UserFilesystems {
 		return new UserFilesystems(
@@ -111,6 +116,26 @@ class CleanupTest extends TestCase {
 			fn (): array => array_map(count(...), $this->games),
 		);
 
+		$playMapper = $this->createStub(PlayMapper::class);
+		$playMapper->method('totalsByUser')->willReturnCallback(
+			fn (): array => array_map(fn (array $ids): array => ['plays' => count($ids), 'seconds' => 0], $this->plays),
+		);
+		$playMapper->method('statsOf')->willReturnCallback(
+			fn (string $userId): array => array_fill_keys($this->plays[$userId] ?? [], ['seconds' => 0, 'plays' => 1, 'time' => 0]),
+		);
+		$playMapper->method('removeFiles')->willReturnCallback(
+			function (string $userId, int ...$fileIds): void {
+				foreach ($fileIds as $id) {
+					$this->forgottenPlays[] = "$userId:$id";
+				}
+			},
+		);
+		$playMapper->method('deleteAllForUser')->willReturnCallback(
+			function (string $userId): void {
+				$this->forgottenPlays[] = $userId;
+			},
+		);
+
 		$storageRoot = $this->createStub(Folder::class);
 		$storageRoot->method('getFirstNodeById')->willReturnCallback(
 			fn (int $id): ?Node => isset($this->stillAround[$id]) ? $this->createStub(Node::class) : null,
@@ -124,7 +149,7 @@ class CleanupTest extends TestCase {
 		$rootFolder->method('getUserFolder')->willReturn($userFolder);
 
 		return new CommandTester(new Cleanup(
-			new CleanupService($stateService, $gameMapper, $userManager, $rootFolder, $this->filesystems($userManager), $legacy),
+			new CleanupService($stateService, $gameMapper, $playMapper, $userManager, $rootFolder, $this->filesystems($userManager), $legacy),
 		));
 	}
 
@@ -191,6 +216,39 @@ class CleanupTest extends TestCase {
 		$display = $tester->getDisplay();
 		$this->assertStringContainsString('Dry run, nothing is removed.', $display);
 		$this->assertStringContainsString('Removed the states of 2 users and 1 games', $display);
+	}
+
+	public function testWhatWasPlayedOfAGameThatIsGoneForGoodIsForgotten(): void {
+		$this->plays = ['alice' => [7, 8, 9]];
+		// 8 sits in the trash and can come back; 9 is still in the library.
+		$this->stillAround = [8 => true, 9 => true];
+
+		$tester = $this->tester();
+		$tester->execute([]);
+
+		$this->assertSame(['alice:7'], $this->forgottenPlays);
+		$this->assertStringContainsString('Forgot what was played of 1 games that no longer exist', $tester->getDisplay());
+	}
+
+	public function testWhatAUserThatIsGonePlayedIsForgottenAndCountedOnce(): void {
+		$this->games = ['carol' => ['3' => '/Games/Hers.gb']];
+		$this->plays = ['carol' => [3], 'dave' => [4]];
+
+		$tester = $this->tester();
+		$tester->execute([]);
+
+		$this->assertSame(['carol', 'dave'], $this->forgottenPlays);
+		$this->assertStringContainsString('Removed the states of 2 users and 0 games', $tester->getDisplay());
+	}
+
+	public function testADryRunForgetsNothingThatWasPlayed(): void {
+		$this->plays = ['alice' => [7], 'dave' => [4]];
+
+		$tester = $this->tester();
+		$tester->execute(['--dry-run' => true]);
+
+		$this->assertSame([], $this->forgottenPlays);
+		$this->assertStringContainsString('Would forget what was played of 1 games', $tester->getDisplay());
 	}
 
 	public function testWhatEarlierVersionsLeftIsOnlyCountedUnlessAsked(): void {

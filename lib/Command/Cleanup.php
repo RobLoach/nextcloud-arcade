@@ -52,6 +52,9 @@ class Cleanup extends Command {
 		$output->writeln(
 			"Removed the states of <info>{$counts['users']}</info> users and <info>{$counts['games']}</info> games",
 		);
+		if ($counts['plays'] > 0) {
+			$output->writeln(($dryRun ? 'Would forget' : 'Forgot') . " what was played of <info>{$counts['plays']}</info> games that no longer exist");
+		}
 		if ($counts['appDataRemoved'] > 0) {
 			$output->writeln("Removed <info>{$counts['appDataRemoved']}</info> save files earlier versions left in the app data");
 		}
