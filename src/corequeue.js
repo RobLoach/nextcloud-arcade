@@ -37,6 +37,15 @@ export function oneAtATime(instance) {
 	const wrapped = new Map()
 	return new Proxy(instance, {
 		get(target, property, receiver) {
+			// Work of the caller's own in the core's file system, in its
+			// turn like the calls above: handed the emulator itself.
+			if (property === 'exclusive') {
+				return (work) => {
+					const mine = tail.then(() => work(target))
+					tail = mine.then(() => {}, () => {})
+					return mine
+				}
+			}
 			const value = Reflect.get(target, property, receiver)
 			if (typeof value !== 'function') {
 				return value

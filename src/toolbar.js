@@ -5,8 +5,10 @@ import { AUTO_SLOT, dav } from './api.js'
 import { ICONS, icon } from './icons.js'
 import { createGalleryPanel } from './panels/gallery.js'
 import { offerResume } from './panels/resume.js'
-import { createStatesPanel } from './panels/states.js'
-import { davUrl, fileIdOf, makeFolder } from './player.js'
+import { createStatesPanel, databaseBroken, whyFailed } from './panels/states.js'
+import { davUrl, makeFolder } from './player.js'
+import { hasFilesSidebar, showDetails } from './sidebar.js'
+import { takeStartSlot } from './startslot.js'
 import { shortNameForPath } from './systems.js'
 import { UNTIL_DISMISSED } from './toast.js'
 import { attachTouchControls, isTouchDevice, isTouchPrimary } from './touch.js'
@@ -33,9 +35,11 @@ const CHROME_SELECTOR = '.arcade-toolbar, .arcade-topbar, .arcade-actions-menu, 
  * @param {string} [options.closeUrl] when set, adds a close button leading there
  * @param {Function} options.flash says something to the player, taking the
  *   message and how it reads: success, info, warning or error
+ * @param {?object} [options.stateCache] the save states of the game held
+ *   for the session; without one the game cannot be saved
  * @return {Function} detaches the toolbar again
  */
-export function attachToolbar({ container, instance, romPath, romName, settings = {}, closeUrl = '', onClose = null, flash: say }) {
+export function attachToolbar({ container, instance, romPath, romName, settings = {}, closeUrl = '', onClose = null, flash: say, stateCache = null }) {
 	container.classList.add('arcade-player-container')
 
 	// Fires when the toolbar is taken down, so anything still on its way
@@ -151,8 +155,9 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 	}
 
 	// Saving needs a logged-in user and somewhere of their own to put it,
-	// so on a public share, or without a saves folder, there is none.
-	const canSave = getCurrentUser() !== null && romPath && (settings.saves_folder ?? '') !== ''
+	// so on a public share, or without a saves folder, the session hands
+	// over no states to keep.
+	const canSave = stateCache !== null
 	let autosaveTimer = null
 	let statesPanel = null
 	let statesButton = null
@@ -202,6 +207,7 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 			// Saving or loading a slot is the end of the interaction, so get
 			// the panel out of the way and back to the game.
 			onDone: hideStates,
+			cache: stateCache,
 		})
 		statesButton = button(ICONS.save, t('arcade', 'Save states'), (element) => {
 			togglePanel(statesPanel, element, () => {
@@ -213,13 +219,21 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 		})
 		statesButton.setAttribute('aria-haspopup', 'dialog')
 		setExpanded(statesButton, false)
+		// The listing the offer is made from is also what says which
+		// states to fetch ahead, so the slots load at once from then on.
+		// After the offer, so a game resumed as it opens gets the line to
+		// itself for the one state it is waiting on.
 		offerResume({
 			container,
-			romPath,
 			load: statesPanel.load,
+			list: stateCache.list,
 			automatic: settings.autoload_on_start === true,
+			startSlot: takeStartSlot(romPath),
 			signal: gone.signal,
-		})
+			onFailure: (error) => flash(error?.reason === 'database'
+				? databaseBroken()
+				: t('arcade', 'Could not read the save states ({why}).', { why: whyFailed(error) }), 'error'),
+		}).then(() => stateCache.prefetch(gone.signal))
 
 		// And keep saving it while it is played, when asked to. Two tabs
 		// on the same game write over each other's automatic slot here,
@@ -235,6 +249,22 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 				}
 			}, interval * 1000)
 		}
+	}
+
+	// Signed in but with no Saves folder: the button is there, switched
+	// off, rather than missing -- a player looking for where saving went
+	// is told where to turn it on. On a public share there is nobody to
+	// tell, and it stays away.
+	const savingOff = t('arcade', 'Saving is off. Choose a Saves folder under Personal settings → Arcade to save games.')
+	const sayWhySavingIsOff = () => {
+		if (getCurrentUser() !== null) {
+			flash(savingOff, 'info')
+		}
+	}
+	if (!canSave && getCurrentUser() !== null && romPath) {
+		statesButton = button(ICONS.save, t('arcade', 'Save states'), sayWhySavingIsOff)
+		statesButton.setAttribute('aria-disabled', 'true')
+		statesButton.title = savingOff
 	}
 
 	// Virtual gamepad for touch play. It is offered wherever a finger
@@ -465,41 +495,17 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 		item(ICONS.screenshot, t('arcade', 'Screenshot'), takeScreenshot)
 		item(ICONS.menu, t('arcade', 'RetroArch menu'), toggleRetroArchMenu)
 		item(ICONS.restart, t('arcade', 'Restart'), restartGame)
-		// Without the sidebar, the details live one page away: in the Files
-		// app, with the file's details pane open. Going there ends the game
-		// the same way closing it does, and like closing it, what the game
-		// is worth keeping is the player's to have saved.
-		const openFilesDetails = async () => {
-			const missing = window.OCA === undefined
-				? 'OCA'
-				: window.OCA.Files === undefined ? 'OCA.Files' : 'OCA.Files.Sidebar'
-			console.warn(`arcade: cannot open the Files sidebar, window.${missing} is undefined; opening the Files app instead`)
-			const absolute = romPath.startsWith('/') ? romPath : `/${romPath}`
-			const dir = absolute.replace(/\/[^/]*$/, '') || '/'
-			let target
-			try {
-				const fileId = await fileIdOf(romPath)
-				target = generateUrl('/apps/files/files/' + fileId) + '?dir=' + encodeURIComponent(dir) + '&opendetails=true'
-			} catch (error) {
-				console.warn('arcade: could not resolve the file id, opening the folder instead', error)
-				target = generateUrl('/apps/files') + '?dir=' + encodeURIComponent(dir)
-			}
-			window.location.href = target
-		}
 		// The full Files sidebar. Whether the page carries it is only known
 		// for sure when it is asked for, so the item always shows and the
-		// click looks for it.
-		const sidebarItem = item(ICONS.sidebar, t('arcade', 'Open sidebar'), () => {
-			if (window.OCA?.Files?.Sidebar === undefined) {
-				openFilesDetails()
-				return
-			}
-			window.OCA.Files.Sidebar.open(romPath.startsWith('/') ? romPath : `/${romPath}`)
-		})
+		// click looks for it. Without it, the details live one page away,
+		// in the Files app: going there ends the game the same way closing
+		// it does, and like closing it, what the game is worth keeping is
+		// the player's to have saved.
+		const sidebarItem = item(ICONS.sidebar, t('arcade', 'Open sidebar'), () => showDetails(romPath))
 		// What the item does depends on the page, so its face follows suit
 		// each time the menu opens.
 		refreshSidebarItem = () => {
-			const available = window.OCA?.Files?.Sidebar !== undefined
+			const available = hasFilesSidebar()
 			sidebarItem.innerHTML = icon(available ? ICONS.sidebar : ICONS.information)
 			sidebarItem.appendChild(document.createTextNode(
 				available ? t('arcade', 'Open sidebar') : t('arcade', 'Details'),
@@ -558,7 +564,7 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 			element.disabled = true
 			// Closing is the session's to do, not the toolbar's: it waits
 			// for the battery save before it takes the core away.
-			await onClose?.()
+			await onClose?.({ leaving: true })
 			window.location.href = closeUrl
 		}, topbar)
 	}
@@ -571,8 +577,10 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 		pause: () => pauseButton.click(),
 		fastForward: () => fastForwardButton.click(),
 		fullscreen: () => fullscreenButton.click(),
-		saveState: () => statesPanel?.save(1),
-		loadState: () => statesPanel?.load(1),
+		// Slot 0, as RetroArch's own quick save and load: its default slot,
+		// Game.state.
+		saveState: () => (statesPanel === null ? sayWhySavingIsOff() : statesPanel.save(0)),
+		loadState: () => (statesPanel === null ? sayWhySavingIsOff() : statesPanel.load(0)),
 		// Straight to the handler, not through a button: on the app page
 		// there is no button any more, only the actions entry.
 		screenshot: takeScreenshot,

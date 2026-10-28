@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace OCA\Arcade\Service;
 
+use OCP\Files\File;
 use OCP\Files\Folder;
 use OCP\Files\IRootFolder;
 use OCP\Files\NotFoundException;
@@ -76,5 +77,38 @@ final class Folders {
 		} catch (\Throwable) {
 			return null;
 		}
+	}
+
+	/**
+	 * The folder at a path under a folder, made one level at a time where
+	 * it is not there yet; null when something on the way is a file.
+	 */
+	public static function make(Folder $base, string $path): ?Folder {
+		$folder = $base;
+		foreach (explode('/', trim($path, '/')) as $segment) {
+			if ($segment === '' || $segment === '.') {
+				continue;
+			}
+			try {
+				$node = $folder->get($segment);
+				if (!$node instanceof Folder) {
+					return null;
+				}
+				$folder = $node;
+			} catch (NotFoundException) {
+				$folder = $folder->newFolder($segment);
+			}
+		}
+		return $folder;
+	}
+
+	/**
+	 * The MD5 of a file: the storage's own where it keeps one, rather than
+	 * reading a save of megabytes in whole for it, and worked out from the
+	 * content where it does not.
+	 */
+	public static function md5Of(File $file): string {
+		$hash = $file->hash('md5');
+		return is_string($hash) && $hash !== '' ? $hash : md5($file->getContent());
 	}
 }

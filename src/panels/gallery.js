@@ -1,6 +1,6 @@
 import { translate as t } from '@nextcloud/l10n'
 import { generateUrl } from '@nextcloud/router'
-import { api } from '../api.js'
+import { api, encodePath } from '../api.js'
 import { ICONS, icon } from '../icons.js'
 import { previewUrl } from '../play.js'
 import { createPanel } from './panel.js'
@@ -57,8 +57,8 @@ export function createGalleryPanel({ romPath, flash, onCount = null }) {
 
 	const list = async () => {
 		const response = await api(generateUrl(
-			'/apps/arcade/arcade/screenshots?file={file}',
-			{ file: romPath },
+			'/apps/arcade/arcade/screenshots?f={f}',
+			{ f: encodePath(romPath) },
 		))
 		return await response.json()
 	}

@@ -11,6 +11,7 @@ use OCA\Arcade\Service\LibraryService;
 use OCA\Arcade\Service\RecentService;
 use OCA\Arcade\Service\SettingsService;
 use OCA\Files\Event\LoadSidebar;
+use OCA\Viewer\Event\LoadViewer;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\FrontpageRoute;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
@@ -55,6 +56,7 @@ class PageController extends ArcadeController {
 	#[NoAdminRequired]
 	#[FrontpageRoute(verb: 'GET', url: '/')]
 	public function index(string $file = '', int $fileId = 0): TemplateResponse {
+		$file = $this->romPath($file);
 		// Play links carry the file id, which survives renames and moves;
 		// ?file= keeps working for old bookmarks. The frontend is path-based
 		// throughout, so the id is resolved to a path right here, and an id
@@ -74,6 +76,12 @@ class PageController extends ArcadeController {
 		// event is only worth dispatching when the Files app is really here.
 		if (class_exists(LoadSidebar::class)) {
 			$this->eventDispatcher->dispatchTyped(new LoadSidebar());
+		}
+		// The Viewer, on the library only: a screenshot or a box picked in
+		// the sidebar opens over the library rather than leaving it for the
+		// Files app. A game being played has no use for it.
+		if ($file === '' && class_exists(LoadViewer::class)) {
+			$this->eventDispatcher->dispatchTyped(new LoadViewer());
 		}
 
 		// The emulator's Content Security Policy needs are added globally by

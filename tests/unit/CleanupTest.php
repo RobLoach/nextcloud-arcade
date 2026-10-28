@@ -7,13 +7,16 @@ namespace OCA\Arcade\Tests\Unit;
 use OCA\Arcade\Command\Cleanup;
 use OCA\Arcade\Db\GameMapper;
 use OCA\Arcade\Service\CleanupService;
+use OCA\Arcade\Service\LegacyAppDataSaves;
 use OCA\Arcade\Service\StateService;
+use OCA\Arcade\Service\UserFilesystems;
 use OCP\Files\Folder;
 use OCP\Files\IRootFolder;
+use OCP\Files\ISetupManager;
 use OCP\Files\Node;
-use OCP\Files\SimpleFS\ISimpleFolder;
 use OCP\IUser;
 use OCP\IUserManager;
+use OCP\IUserSession;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Console\Tester\CommandTester;
 
@@ -42,26 +45,16 @@ class CleanupTest extends TestCase {
 	/** The registry users dropped wholesale. */
 	private array $deletedUsers = [];
 
+	private function filesystems(IUserManager $userManager): UserFilesystems {
+		return new UserFilesystems(
+			$this->createStub(ISetupManager::class),
+			$userManager,
+			$this->createStub(IUserSession::class),
+		);
+	}
+
 	private function tester(): CommandTester {
 		$stateService = $this->createStub(StateService::class);
-		$stateService->method('folderKeyOf')->willReturnCallback(
-			static fn (string $userId): string => hash('sha256', $userId),
-		);
-		$stateService->method('userFolders')->willReturnCallback(
-			function (): array {
-				$folders = [];
-				foreach ($this->folders as $uid => $_) {
-					$folder = $this->createStub(ISimpleFolder::class);
-					$folder->method('delete')->willReturnCallback(
-						function () use ($uid): void {
-							$this->deletedFolders[] = $uid;
-						},
-					);
-					$folders[hash('sha256', (string)$uid)] = $folder;
-				}
-				return $folders;
-			},
-		);
 		$stateService->method('gamesOf')->willReturnCallback(
 			fn (string $userId): array => $this->games[$userId] ?? [],
 		);
@@ -75,7 +68,32 @@ class CleanupTest extends TestCase {
 				$this->deletedUsers[] = $userId;
 			},
 		);
-		$stateService->method('countLegacyFiles')->willReturnCallback(fn (): int => $this->legacy);
+		$legacy = $this->createStub(LegacyAppDataSaves::class);
+				$legacy->method('userFolders')->willReturnCallback(
+			function (): array {
+				$folders = [];
+				foreach ($this->folders as $uid => $_) {
+					$folder = $this->createStub(Folder::class);
+					$folder->method('delete')->willReturnCallback(
+						function () use ($uid): void {
+							$this->deletedFolders[] = $uid;
+						},
+					);
+					$folders[hash('sha256', (string)$uid)] = $folder;
+				}
+				return $folders;
+			},
+		);
+		$legacy->method('count')->willReturnCallback(
+			fn (): array => ['files' => $this->legacy, 'bytes' => $this->legacy * 100],
+		);
+		$legacy->method('deleteAll')->willReturnCallback(
+			function (): int {
+				$removed = $this->legacy;
+				$this->legacy = 0;
+				return $removed;
+			},
+		);
 
 		$userManager = $this->createStub(IUserManager::class);
 		$userManager->method('callForSeenUsers')->willReturnCallback(
@@ -106,7 +124,7 @@ class CleanupTest extends TestCase {
 		$rootFolder->method('getUserFolder')->willReturn($userFolder);
 
 		return new CommandTester(new Cleanup(
-			new CleanupService($stateService, $gameMapper, $userManager, $rootFolder),
+			new CleanupService($stateService, $gameMapper, $userManager, $rootFolder, $this->filesystems($userManager), $legacy),
 		));
 	}
 
@@ -175,13 +193,36 @@ class CleanupTest extends TestCase {
 		$this->assertStringContainsString('Removed the states of 2 users and 1 games', $display);
 	}
 
-	public function testLegacyFilesAreOnlyCounted(): void {
+	public function testWhatEarlierVersionsLeftIsOnlyCountedUnlessAsked(): void {
 		$this->legacy = 4;
 
 		$tester = $this->tester();
 		$tester->execute([]);
 
-		$this->assertStringContainsString('4 files written before', $tester->getDisplay());
+		$this->assertStringContainsString('4 save files earlier versions left in the app data', $tester->getDisplay());
+		$this->assertStringContainsString('Run with --legacy to remove them', $tester->getDisplay());
+		$this->assertSame(4, $this->legacy);
+	}
+
+	public function testWhatEarlierVersionsLeftGoesWhenAsked(): void {
+		$this->legacy = 4;
+
+		$tester = $this->tester();
+		$tester->execute(['--legacy' => true]);
+
+		$this->assertSame(0, $this->legacy);
+		$this->assertStringContainsString('Removed 4 save files earlier versions left', $tester->getDisplay());
+		$this->assertStringNotContainsString('--legacy to remove', $tester->getDisplay());
+	}
+
+	public function testADryRunOnlySaysWhatEarlierVersionsLeftWouldGo(): void {
+		$this->legacy = 4;
+
+		$tester = $this->tester();
+		$tester->execute(['--legacy' => true, '--dry-run' => true]);
+
+		$this->assertSame(4, $this->legacy);
+		$this->assertStringContainsString('Removing the 4 save files', $tester->getDisplay());
 	}
 
 	public function testNothingToDoSaysSoQuietly(): void {
@@ -192,6 +233,6 @@ class CleanupTest extends TestCase {
 			'Removed the states of 0 users and 0 games',
 			$tester->getDisplay(),
 		);
-		$this->assertStringNotContainsString('files written before', $tester->getDisplay());
+		$this->assertStringNotContainsString('left in the app data', $tester->getDisplay());
 	}
 }

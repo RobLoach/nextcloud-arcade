@@ -25,8 +25,8 @@ describe('playUrl', () => {
 	})
 
 	test('falls back to the path without one', () => {
-		expect(playUrl('/Games/NES/game.nes')).toBe('/apps/arcade/?file=%2FGames%2FNES%2Fgame.nes')
-		expect(generateUrl).toHaveBeenCalledWith('/apps/arcade/?file={file}', { file: '/Games/NES/game.nes' })
+		expect(playUrl('/Games/NES/game.nes')).toBe('/apps/arcade/?f=L0dhbWVzL05FUy9nYW1lLm5lcw')
+		expect(generateUrl).toHaveBeenCalledWith('/apps/arcade/?f={f}', { f: 'L0dhbWVzL05FUy9nYW1lLm5lcw' })
 	})
 })
 

@@ -4,10 +4,10 @@
 	<id>arcade</id>
 	<name>Arcade</name>
 	<summary>Play retro games from your files</summary>
-	<description><![CDATA[Play retro console games straight from NextCloud.
+	<description><![CDATA[Play retro console games straight from Nextcloud.
 
-NextCloud Arcade runs RetroArch libretro cores in the browser. Seventeen systems are covered, from ColecoVision to the PlayStation, with a games library you can browse by keyboard, mouse, touch or gamepad.]]></description>
-	<version>0.48.7</version>
+Nextcloud Arcade runs RetroArch libretro cores in the browser. Seventeen systems are covered, from ColecoVision to the PlayStation, with a games library you can browse by keyboard, mouse, touch or gamepad.]]></description>
+	<version>0.48.28</version>
 	<licence>AGPL-3.0-or-later</licence>
 	<author homepage="https://robloach.net">Rob Loach</author>
 	<namespace>Arcade</namespace>
@@ -39,7 +39,7 @@ NextCloud Arcade runs RetroArch libretro cores in the browser. Seventeen systems
 	<screenshot>https://raw.githubusercontent.com/robloach/nextcloud-arcade/master/screenshots/administration.png</screenshot>
 	<dependencies>
 		<php min-version="8.3"/>
-		<nextcloud min-version="34" max-version="35"/>
+		<nextcloud min-version="34.0.4" max-version="35"/>
 	</dependencies>
 	<background-jobs>
 		<job>OCA\Arcade\BackgroundJob\CleanupSweep</job>
@@ -49,6 +49,7 @@ NextCloud Arcade runs RetroArch libretro cores in the browser. Seventeen systems
 			<step>OCA\Arcade\Migration\RegisterMimeTypes</step>
 			<step>OCA\Arcade\Migration\RegisterMetadata</step>
 			<step>OCA\Arcade\Migration\ConvertLegacyStorage</step>
+			<step>OCA\Arcade\Migration\RereadSnesHeaders</step>
 		</post-migration>
 		<install>
 			<step>OCA\Arcade\Migration\RegisterMimeTypes</step>
@@ -63,9 +64,12 @@ NextCloud Arcade runs RetroArch libretro cores in the browser. Seventeen systems
 		<command>OCA\Arcade\Command\Uninstall</command>
 		<command>OCA\Arcade\Command\Bios</command>
 		<command>OCA\Arcade\Command\Status</command>
+		<command>OCA\Arcade\Command\CloudSync</command>
+		<command>OCA\Arcade\Command\Repair</command>
 	</commands>
 	<settings>
 		<admin>OCA\Arcade\Settings\Admin</admin>
+		<admin>OCA\Arcade\Settings\MaintenanceAdmin</admin>
 		<admin-section>OCA\Arcade\Settings\AdminSection</admin-section>
 		<personal>OCA\Arcade\Settings\Personal</personal>
 		<personal-section>OCA\Arcade\Settings\PersonalSection</personal-section>

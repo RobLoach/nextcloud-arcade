@@ -18,7 +18,7 @@ class CleanupSweepTest extends TestCase {
 	/** The sweep calls made, as [dryRun]. */
 	private array $swept = [];
 	/** What the sweep will report. */
-	private array $counts = ['users' => 0, 'games' => 0, 'legacy' => 0];
+	private array $counts = ['users' => 0, 'games' => 0, 'appData' => ['files' => 0, 'bytes' => 0], 'appDataRemoved' => 0];
 	private ?\Throwable $failure = null;
 	/** The log lines, as [level, message]. */
 	private array $logged = [];
@@ -76,7 +76,7 @@ class CleanupSweepTest extends TestCase {
 	}
 
 	public function testASweepThatRemovedSomethingIsWorthAnInfoLine(): void {
-		$this->counts = ['users' => 1, 'games' => 3, 'legacy' => 0];
+		$this->counts = ['users' => 1, 'games' => 3, 'appData' => ['files' => 0, 'bytes' => 0], 'appDataRemoved' => 0];
 		$this->runJob();
 
 		$this->assertSame(

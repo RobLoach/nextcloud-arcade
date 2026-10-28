@@ -69,8 +69,8 @@ says so.
 
 The cores are built by
 [retroarch-emscripten-build](https://github.com/arianrhodsandlot/retroarch-emscripten-build),
-which is a git submodule of this repository. To extract them again from
-the submodule, run:
+and fetched at a pinned commit by `build/cores.sh`. To fetch and extract
+them again, run:
 
 ```sh
 npm run cores

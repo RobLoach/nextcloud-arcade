@@ -308,6 +308,30 @@ class SettingsServiceTest extends TestCase {
 		$this->assertSame(7, $saved['library_folder_id']);
 	}
 
+	/**
+	 * The id stored for a folder wins on every read, so it must not outlive
+	 * the folder being emptied: the Saves folder came straight back.
+	 */
+	public function testAFolderThatIsEmptiedStaysEmpty(): void {
+		$root = $this->rootFolderWith([42 => $this->folderNode(42, '/Saves'), 7 => $this->folderNode(7, '/Games')]);
+		$current = json_encode(['saves_folder' => '/Saves', 'saves_folder_id' => 42, 'library_folder' => '/Games', 'library_folder_id' => 7]);
+		$config = $this->createStub(IUserConfig::class);
+		$config->method('getValueString')->willReturnCallback(static function () use (&$current): string {
+			return $current;
+		});
+		$config->method('setValueString')->willReturnCallback(static function (string $user, string $app, string $key, string $value) use (&$current): bool {
+			$current = $value;
+			return true;
+		});
+		$service = new SettingsService($config, $this->createStub(IAppConfig::class), $root);
+
+		$this->assertSame('', $service->setUserSettings(self::USER, ['saves_folder' => ''])['saves_folder']);
+		$this->assertSame('', (new SettingsService($config, $this->createStub(IAppConfig::class), $root))->getUserSettings(self::USER)['saves_folder']);
+		$this->assertArrayNotHasKey('saves_folder_id', json_decode($current, true));
+		// A folder that was not posted keeps following its id.
+		$this->assertSame(7, json_decode($current, true)['library_folder_id']);
+	}
+
 	public function testFastForwardRatioIsClamped(): void {
 		// Stored as JSON, where a round number comes back as an integer.
 		$this->assertEquals(5, $this->save(['fastforward_ratio' => 1000])['fastforward_ratio']);

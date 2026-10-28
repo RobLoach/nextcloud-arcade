@@ -17,7 +17,7 @@ cd "$(dirname "$0")/.."
 
 readme='img/cores/README.md'
 reuse='REUSE.toml'
-licenses='img/cores/LICENSES'
+licenses='LICENSES'
 
 missing=0
 

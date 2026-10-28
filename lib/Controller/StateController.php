@@ -14,9 +14,10 @@ use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
 use OCP\AppFramework\Http\Attribute\OpenAPI;
 use OCP\AppFramework\Http\Attribute\UserRateLimit;
-use OCP\AppFramework\Http\DataDownloadResponse;
+use OCP\AppFramework\Http\FileDisplayResponse;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\AppFramework\Http\Response;
+use OCP\Files\File;
 use OCP\Files\IRootFolder;
 use OCP\IRequest;
 
@@ -50,6 +51,7 @@ class StateController extends ArcadeController {
 	#[NoAdminRequired]
 	#[FrontpageRoute(verb: 'GET', url: '/arcade/states')]
 	public function list(string $file = ''): JSONResponse {
+		$file = $this->romPath($file);
 		if (!$this->isValidRequest($file, StateService::AUTO_SLOT)) {
 			return new JSONResponse([], Http::STATUS_BAD_REQUEST);
 		}
@@ -63,6 +65,7 @@ class StateController extends ArcadeController {
 	#[NoAdminRequired]
 	#[FrontpageRoute(verb: 'GET', url: '/arcade/state')]
 	public function get(string $file = '', int $slot = 1): Response {
+		$file = $this->romPath($file);
 		if (!$this->isValidRequest($file, $slot)) {
 			return new JSONResponse([], Http::STATUS_BAD_REQUEST);
 		}
@@ -70,7 +73,7 @@ class StateController extends ArcadeController {
 		if ($state === null) {
 			return new JSONResponse([], Http::STATUS_NOT_FOUND);
 		}
-		return new DataDownloadResponse($state, basename($file) . '.state', 'application/octet-stream');
+		return $this->download($state, basename($file) . '.state', 'application/octet-stream');
 	}
 
 	// The fastest autosave interval is 30 seconds, so with a manual saving
@@ -80,19 +83,46 @@ class StateController extends ArcadeController {
 	#[UserRateLimit(limit: 60, period: 60)]
 	#[FrontpageRoute(verb: 'POST', url: '/arcade/state')]
 	public function save(string $file = '', int $slot = 1): JSONResponse {
+		$file = $this->romPath($file);
 		if (!$this->isWritableSlot($file, $slot)) {
 			return new JSONResponse([], Http::STATUS_BAD_REQUEST);
 		}
-		$state = $this->readBody(self::MAX_STATE_SIZE);
+		$state = $this->readUpload(self::MAX_STATE_SIZE);
 		if ($state === null) {
 			return new JSONResponse([], Http::STATUS_BAD_REQUEST);
 		}
-		$this->stateService->save($this->userId, $file, $slot, $state);
+		$mtime = $this->stateService->save($this->userId, $file, $slot, $state);
 		// Only here: a state saved by hand is worth a stream entry, the
 		// autosaves and the thumbnail and SRAM writes are not. The
 		// publisher additionally keeps the auto slot out.
 		$this->activityPublisher->stateSaved($this->userId, $file, $slot);
-		return new JSONResponse(['size' => strlen($state)]);
+		return new JSONResponse(['size' => strlen($state), 'mtime' => $mtime]);
+	}
+
+	/**
+	 * Bring the user's Cloud Sync manifest in line with their saves folder,
+	 * for the button in the personal settings: saves that got there some
+	 * other way than through the player are recorded, so RetroArch fetches
+	 * them, and the ones that are gone recorded as deleted.
+	 */
+	// A button pressed by hand, and with $full a walk that hashes every
+	// save the user has: a few a minute is plenty.
+	#[NoAdminRequired]
+	#[UserRateLimit(limit: 6, period: 60)]
+	#[FrontpageRoute(verb: 'POST', url: '/arcade/cloudsync')]
+	public function reconcile(bool $full = false): JSONResponse {
+		if ($this->userId === null) {
+			return new JSONResponse([], Http::STATUS_UNAUTHORIZED);
+		}
+		try {
+			$counts = $this->stateService->reconcile($this->userId, $full);
+		} catch (\RuntimeException) {
+			return new JSONResponse(['error' => 'unreadable'], Http::STATUS_CONFLICT);
+		}
+		if ($counts === null) {
+			return new JSONResponse(['error' => 'no-saves-folder'], Http::STATUS_NOT_FOUND);
+		}
+		return new JSONResponse($counts);
 	}
 
 	// Thumbnails load through plain <img> tags, which cannot send the CSRF
@@ -101,6 +131,7 @@ class StateController extends ArcadeController {
 	#[NoCSRFRequired]
 	#[FrontpageRoute(verb: 'GET', url: '/arcade/state/thumbnail')]
 	public function getThumbnail(string $file = '', int $slot = 1): Response {
+		$file = $this->romPath($file);
 		if (!$this->isValidRequest($file, $slot)) {
 			return new JSONResponse([], Http::STATUS_BAD_REQUEST);
 		}
@@ -108,7 +139,7 @@ class StateController extends ArcadeController {
 		if ($thumbnail === null) {
 			return new JSONResponse([], Http::STATUS_NOT_FOUND);
 		}
-		$response = new DataDownloadResponse($thumbnail, 'thumbnail.png', 'image/png');
+		$response = $this->download($thumbnail, 'thumbnail.png', 'image/png');
 		// The panel asks for every slot's picture each time it opens, and
 		// the answer never changes: the caller hangs the slot's mtime on
 		// the URL, so a rewritten slot is a different one to ask for.
@@ -126,10 +157,11 @@ class StateController extends ArcadeController {
 	#[UserRateLimit(limit: 60, period: 60)]
 	#[FrontpageRoute(verb: 'POST', url: '/arcade/state/thumbnail')]
 	public function saveThumbnail(string $file = '', int $slot = 1): JSONResponse {
+		$file = $this->romPath($file);
 		if (!$this->isWritableSlot($file, $slot)) {
 			return new JSONResponse([], Http::STATUS_BAD_REQUEST);
 		}
-		$thumbnail = $this->readBody(self::MAX_THUMBNAIL_SIZE);
+		$thumbnail = $this->readUpload(self::MAX_THUMBNAIL_SIZE);
 		if ($thumbnail === null) {
 			return new JSONResponse([], Http::STATUS_BAD_REQUEST);
 		}
@@ -140,6 +172,7 @@ class StateController extends ArcadeController {
 	#[NoAdminRequired]
 	#[FrontpageRoute(verb: 'GET', url: '/arcade/sram')]
 	public function getSram(string $file = ''): Response {
+		$file = $this->romPath($file);
 		if (!$this->isValidRequest($file, StateService::AUTO_SLOT)) {
 			return new JSONResponse([], Http::STATUS_BAD_REQUEST);
 		}
@@ -147,7 +180,7 @@ class StateController extends ArcadeController {
 		if ($sram === null) {
 			return new JSONResponse([], Http::STATUS_NOT_FOUND);
 		}
-		return new DataDownloadResponse($sram, basename($file) . '.srm', 'application/octet-stream');
+		return $this->download($sram, basename($file) . '.srm', 'application/octet-stream');
 	}
 
 	// SRAM syncs once a minute plus a flush when the page hides or the game
@@ -156,10 +189,11 @@ class StateController extends ArcadeController {
 	#[UserRateLimit(limit: 30, period: 60)]
 	#[FrontpageRoute(verb: 'POST', url: '/arcade/sram')]
 	public function saveSram(string $file = ''): JSONResponse {
+		$file = $this->romPath($file);
 		if (!$this->isValidRequest($file, StateService::AUTO_SLOT)) {
 			return new JSONResponse([], Http::STATUS_BAD_REQUEST);
 		}
-		$sram = $this->readBody(self::MAX_STATE_SIZE);
+		$sram = $this->readUpload(self::MAX_STATE_SIZE);
 		if ($sram === null) {
 			return new JSONResponse([], Http::STATUS_BAD_REQUEST);
 		}
@@ -173,6 +207,7 @@ class StateController extends ArcadeController {
 	#[UserRateLimit(limit: 30, period: 60)]
 	#[FrontpageRoute(verb: 'DELETE', url: '/arcade/sram')]
 	public function deleteSram(string $file = ''): JSONResponse {
+		$file = $this->romPath($file);
 		if (!$this->isPlausibleRequest($file, StateService::AUTO_SLOT)) {
 			return new JSONResponse([], Http::STATUS_BAD_REQUEST);
 		}
@@ -188,6 +223,7 @@ class StateController extends ArcadeController {
 	#[UserRateLimit(limit: 30, period: 60)]
 	#[FrontpageRoute(verb: 'DELETE', url: '/arcade/state')]
 	public function delete(string $file = '', int $slot = 1): JSONResponse {
+		$file = $this->romPath($file);
 		if (!$this->isPlausibleRequest($file, $slot)) {
 			return new JSONResponse([], Http::STATUS_BAD_REQUEST);
 		}
@@ -198,8 +234,8 @@ class StateController extends ArcadeController {
 	}
 
 	/**
-	 * Slots of earlier versions can still be read and removed, so that what
-	 * they hold is not stranded.
+	 * Slots RetroArch saved into can be read and removed, even the ones the
+	 * player does not offer, so that what they hold is not stranded.
 	 *
 	 * On top of the shape of the request, the game itself has to be among
 	 * the user's files: saves are keyed by the ROM's path, and a path that
@@ -220,28 +256,52 @@ class StateController extends ArcadeController {
 	 *
 	 * This is all the DELETE routes ask, and deliberately so: they clean
 	 * up after games that are already gone, where isValidRequest would
-	 * turn them away. deleteSram and delete both fall back to a hash of
-	 * the path when the file id is gone, and the per-game saves folder
-	 * outlives the ROM, so removing what a deleted game left behind must
-	 * still go through.
+	 * turn them away. Saves are named after the game and outlive the ROM,
+	 * so removing what a deleted game left behind must still go through.
 	 *
 	 * @psalm-assert-if-true string $this->userId
 	 */
 	private function isPlausibleRequest(string $file, int $slot): bool {
-		return $this->userId !== null
+		$plausible = $this->userId !== null
 			&& $file !== ''
 			// Saves live in the files of the user, so there has to be a
 			// folder to put them in.
 			&& $this->settingsService->getUserSettings($this->userId)['saves_folder'] !== ''
-			// Slot 0 is the one the player writes by itself.
+			// The automatic slot, or one RetroArch could have saved into.
 			&& $slot >= StateService::AUTO_SLOT
 			&& $slot <= StateService::HIGHEST_SLOT;
+		if ($plausible) {
+			// Every route of a save takes the core the player ran the game
+			// on, which decides the folder its files are under. Said here,
+			// once, rather than by each of them; an unknown one is ignored.
+			$core = $this->request->getParam('core', '');
+			$this->stateService->useCore($this->userId, $file, is_string($core) ? $core : '');
+			// And the name its saves go by, which for a zip is the game in
+			// it, as RetroArch names them.
+			$this->stateService->useName($this->userId, $file, $this->encodedParam('n'));
+		}
+		return $plausible;
 	}
 
 	/**
+	 * Only the automatic slot and the numbered ones the player offers are
+	 * written; the rest are RetroArch's, to be loaded and removed.
+	 *
 	 * @psalm-assert-if-true string $this->userId
 	 */
 	private function isWritableSlot(string $file, int $slot): bool {
-		return $this->isValidRequest($file, $slot) && $slot <= StateService::SLOTS;
+		return $this->isValidRequest($file, $slot)
+			&& ($slot === StateService::AUTO_SLOT || ($slot >= 0 && $slot < StateService::SLOTS));
+	}
+
+	/**
+	 * A file of the saves folder, streamed from storage rather than read
+	 * into memory first, under the name and type the player expects.
+	 */
+	private function download(File $file, string $name, string $mime): FileDisplayResponse {
+		$response = new FileDisplayResponse($file);
+		$response->addHeader('Content-Type', $mime);
+		$response->addHeader('Content-Disposition', 'attachment; filename="' . rawurlencode($name) . '"');
+		return $response;
 	}
 }

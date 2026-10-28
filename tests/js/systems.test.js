@@ -17,6 +17,7 @@ const fixture = vi.hoisted(() => ({
 			label: 'Super Nintendo Entertainment System',
 			short: 'SNES',
 			mime: 'application/vnd.nintendo.snes.rom',
+			legacy_mimes: ['application/x-snes-rom'],
 			extensions: ['sfc', 'smc'],
 			core: 'snes9x',
 			bios: [],
@@ -80,6 +81,8 @@ describe('romMimes', () => {
 			'application/x-gba-rom',
 			'application/x-neo-geo-pocket-rom',
 			'application/x-nes-rom',
+			// What earlier versions called the Super Nintendo's games.
+			'application/x-snes-rom',
 		])
 	})
 })
@@ -208,5 +211,13 @@ describe('isPlayable', () => {
 	test('leaves anything else alone', () => {
 		expect(isPlayable('notes.txt')).toBe(false)
 		expect(isPlayable('song.mp3')).toBe(false)
+	})
+})
+
+describe('the mimetypes of earlier versions', () => {
+	test('are still taken for games of their system', async () => {
+		const { romMimes, systemForFile } = await import('../../src/systems.js')
+		expect(romMimes()).toContain('application/x-snes-rom')
+		expect(systemForFile('Mario.bin', 'application/x-snes-rom')?.id).toBe('snes')
 	})
 })

@@ -9,6 +9,8 @@ use OCA\Arcade\Controller\StateController;
 use OCA\Arcade\Service\SettingsService;
 use OCA\Arcade\Service\StateService;
 use OCP\AppFramework\Http;
+use OCP\AppFramework\Http\FileDisplayResponse;
+use OCP\Files\File;
 use OCP\Files\Folder;
 use OCP\Files\IRootFolder;
 use OCP\IRequest;
@@ -21,9 +23,20 @@ use PHPUnit\Framework\TestCase;
  */
 class TestableStateController extends StateController {
 	public string $body = '';
+	/** The file of the form, as PHP would describe it, with what it holds. */
+	public ?array $upload = null;
+	public string $uploadContent = '';
 
 	protected function rawBody(int $limit): string|false {
 		return substr($this->body, 0, $limit);
+	}
+
+	protected function uploadedFile(string $field): ?array {
+		return $field === 'data' ? $this->upload : null;
+	}
+
+	protected function uploadedContent(string $path): ?string {
+		return $path === '/tmp/php-upload' ? $this->uploadContent : null;
 	}
 }
 
@@ -41,6 +54,9 @@ class StateControllerTest extends TestCase {
 		string $body = '',
 		bool $fileExists = true,
 		string $contentLength = '',
+		string $core = '',
+		string $f = '',
+		string $n = '',
 	): TestableStateController {
 		$this->stateService = $this->createMock(StateService::class);
 		$settings = $this->createStub(SettingsService::class);
@@ -51,6 +67,14 @@ class StateControllerTest extends TestCase {
 		$rootFolder->method('getUserFolder')->willReturn($userFolder);
 		$request = $this->createStub(IRequest::class);
 		$request->method('getHeader')->willReturn($contentLength);
+		$request->method('getParam')->willReturnCallback(
+			static fn (string $key, $default = null) => match ($key) {
+				'core' => $core,
+				'f' => $f,
+				'n' => $n,
+				default => $default,
+			},
+		);
 		$controller = new TestableStateController(
 			'arcade',
 			$request,
@@ -67,12 +91,15 @@ class StateControllerTest extends TestCase {
 	public function testSavingHandsTheBodyToTheSlot(): void {
 		$controller = $this->controller(body: 'the state');
 		$this->stateService->expects($this->once())->method('save')
-			->with('alice', self::GAME, 2, 'the state');
+			->with('alice', self::GAME, 2, 'the state')
+			->willReturn(1234);
 
 		$response = $controller->save(self::GAME, 2);
 
 		$this->assertSame(Http::STATUS_OK, $response->getStatus());
-		$this->assertSame(['size' => strlen('the state')], $response->getData());
+		// The moment it was written, which the player tells its own save
+		// apart from somebody else's later one by.
+		$this->assertSame(['size' => strlen('the state'), 'mtime' => 1234], $response->getData());
 	}
 
 	public function testSavingRefusesAnEmptyBody(): void {
@@ -245,5 +272,129 @@ class StateControllerTest extends TestCase {
 		$response = $controller->deleteSram(self::GAME);
 
 		$this->assertSame(Http::STATUS_BAD_REQUEST, $response->getStatus());
+	}
+
+	/**
+	 * The automatic slot and the numbered ones the player offers -- from 0,
+	 * as RetroArch numbers them -- are written; the far ones are only read.
+	 */
+	public function testOnlyTheSlotsThePlayerOffersAreWritten(): void {
+		foreach ([StateService::AUTO_SLOT => Http::STATUS_OK, 0 => Http::STATUS_OK, StateService::SLOTS - 1 => Http::STATUS_OK,
+			StateService::SLOTS => Http::STATUS_BAD_REQUEST, -2 => Http::STATUS_BAD_REQUEST] as $slot => $status) {
+			$response = $this->controller(body: 'the state')->save(self::GAME, $slot);
+			$this->assertSame($status, $response->getStatus(), "slot $slot");
+		}
+	}
+
+	public function testAnySlotRetroArchSavedIntoCanBeLoaded(): void {
+		$controller = $this->controller();
+		// Asked for, and found empty: a slot turned away is never asked.
+		$this->stateService->expects($this->once())->method('load')->with('alice', self::GAME, 990)->willReturn(null);
+
+		$this->assertSame(Http::STATUS_NOT_FOUND, $controller->get(self::GAME, 990)->getStatus());
+		$this->assertSame(Http::STATUS_BAD_REQUEST, $controller->get(self::GAME, StateService::HIGHEST_SLOT + 1)->getStatus());
+	}
+
+	public function testAStateIsStreamedRatherThanReadIntoMemory(): void {
+		$controller = $this->controller();
+		$file = $this->createStub(File::class);
+		$file->method('getName')->willReturn('Mario.state');
+		$file->method('getEtag')->willReturn('etag');
+		$file->method('getMTime')->willReturn(1000);
+		$this->stateService->method('load')->willReturn($file);
+
+		$response = $controller->get(self::GAME, 1);
+
+		$this->assertInstanceOf(FileDisplayResponse::class, $response);
+		$this->assertSame('application/octet-stream', $response->getHeaders()['Content-Type']);
+		$this->assertStringStartsWith('attachment;', $response->getHeaders()['Content-Disposition']);
+	}
+
+	public function testTheCoreThePlayerRanIsHandedOn(): void {
+		$controller = $this->controller(body: 'the state', core: 'snes9x');
+		$this->stateService->expects($this->once())->method('useCore')->with('alice', self::GAME, 'snes9x');
+
+		$controller->save(self::GAME, 1);
+	}
+
+	public function testTheManifestIsPutRightOnRequest(): void {
+		$controller = $this->controller();
+		$this->stateService->expects($this->once())->method('reconcile')->with('alice', true)
+			->willReturn(['recorded' => 3, 'removed' => 1]);
+
+		$response = $controller->reconcile(true);
+
+		$this->assertSame(['recorded' => 3, 'removed' => 1], $response->getData());
+	}
+
+	public function testPuttingTheManifestRightSaysWhyItCannot(): void {
+		$controller = $this->controller();
+		$this->stateService->method('reconcile')->willReturnOnConsecutiveCalls(
+			null,
+			$this->throwException(new \RuntimeException('unreadable')),
+		);
+
+		$this->assertSame(Http::STATUS_NOT_FOUND, $controller->reconcile()->getStatus());
+		$this->assertSame(Http::STATUS_CONFLICT, $controller->reconcile()->getStatus());
+	}
+
+	/**
+	 * The player sends the path in base64url, so a name like this one is
+	 * not turned away by a firewall in front of the server.
+	 */
+	public function testThePathCanArriveInBase64Url(): void {
+		$path = "/ROMs/NES/Kirby's Adventure (USA) (Rev 1).nes";
+		$encoded = rtrim(strtr(base64_encode($path), '+/', '-_'), '=');
+		$controller = $this->controller(body: 'the state', f: $encoded);
+		$this->stateService->expects($this->once())->method('save')
+			->with('alice', $path, 2, 'the state');
+
+		$controller->save('', 2);
+	}
+
+	public function testAPathThatIsNotBase64UrlIsNoPath(): void {
+		$controller = $this->controller(body: 'the state', f: '!!not base64!!');
+		$this->stateService->expects($this->never())->method('save');
+
+		$this->assertSame(Http::STATUS_BAD_REQUEST, $controller->save('', 2)->getStatus());
+	}
+
+	/**
+	 * The player sends the save as the file of a form: a firewall in front
+	 * of the server refuses a bare application/octet-stream body.
+	 */
+	public function testASaveCanArriveAsTheFileOfAForm(): void {
+		$controller = $this->controller();
+		$controller->upload = ['tmp_name' => '/tmp/php-upload', 'error' => UPLOAD_ERR_OK, 'size' => 9];
+		$controller->uploadContent = 'the state';
+		$this->stateService->expects($this->once())->method('save')
+			->with('alice', self::GAME, 2, 'the state');
+
+		$this->assertSame(Http::STATUS_OK, $controller->save(self::GAME, 2)->getStatus());
+	}
+
+	public function testAFileOfAFormThatDidNotArriveWholeIsRefused(): void {
+		foreach ([
+			['tmp_name' => '/tmp/php-upload', 'error' => UPLOAD_ERR_PARTIAL, 'size' => 9],
+			['tmp_name' => '/tmp/php-upload', 'error' => UPLOAD_ERR_OK, 'size' => 50],
+			['tmp_name' => '/tmp/php-upload', 'error' => UPLOAD_ERR_OK, 'size' => 0],
+			['tmp_name' => '/etc/passwd', 'error' => UPLOAD_ERR_OK, 'size' => 9],
+		] as $upload) {
+			$controller = $this->controller();
+			$controller->upload = $upload;
+			$controller->uploadContent = 'the state';
+			$this->stateService->expects($this->never())->method('save');
+
+			$this->assertSame(Http::STATUS_BAD_REQUEST, $controller->save(self::GAME, 2)->getStatus());
+		}
+	}
+
+	public function testTheNameOfTheGameInAZipIsHandedOn(): void {
+		$encoded = rtrim(strtr(base64_encode('Super Street Fighter II (USA)'), '+/', '-_'), '=');
+		$controller = $this->controller(body: 'the state', n: $encoded);
+		$this->stateService->expects($this->once())->method('useName')
+			->with('alice', self::GAME, 'Super Street Fighter II (USA)');
+
+		$controller->save(self::GAME, 1);
 	}
 }

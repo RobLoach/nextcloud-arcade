@@ -7,7 +7,10 @@ namespace OCA\Arcade\AppInfo;
 use OCA\Arcade\BackgroundJob\CleanupSweep;
 use OCA\Arcade\BackgroundJob\FetchThumbnails;
 use OCA\Arcade\BackgroundJob\RefreshMetadata;
+use OCA\Arcade\BackgroundJob\RereadRoms;
+use OCA\Arcade\BackgroundJob\ScanLibraries;
 use OCA\Arcade\Capabilities;
+use OCA\Arcade\Middleware\DatabaseMiddleware;
 use OCA\Arcade\CoreMap;
 use OCA\Arcade\Listener\CleanupListener;
 use OCA\Arcade\Listener\CSPListener;
@@ -52,7 +55,7 @@ class Application extends App implements IBootstrap {
 	 * brings it back when the app is enabled again.
 	 */
 	public const CACHES = [self::CACHE_LIBRARY, self::CACHE_FETCH, self::CACHE_PREVIEW];
-	public const JOBS = [FetchThumbnails::class, RefreshMetadata::class, CleanupSweep::class];
+	public const JOBS = [FetchThumbnails::class, RefreshMetadata::class, CleanupSweep::class, RereadRoms::class, ScanLibraries::class];
 
 	/** @psalm-suppress PossiblyUnusedMethod */
 	public function __construct() {
@@ -94,6 +97,8 @@ class Application extends App implements IBootstrap {
 		// apps that are enabled, so a disabled Arcade is simply absent
 		// from /ocs/v2.php/cloud/capabilities, with nothing to clean up.
 		$context->registerCapability(Capabilities::class);
+		// A request that fails for a table an upgrade left out says so.
+		$context->registerMiddleware(DatabaseMiddleware::class);
 	}
 
 	public function boot(IBootContext $context): void {

@@ -39,6 +39,7 @@ class RecentController extends ArcadeController {
 	#[UserRateLimit(limit: 30, period: 60)]
 	#[FrontpageRoute(verb: 'POST', url: '/arcade/recent')]
 	public function record(string $file = '', int $seconds = 0): JSONResponse {
+		$file = $this->romPath($file);
 		if (!$this->isGame($file)) {
 			return new JSONResponse([], Http::STATUS_BAD_REQUEST);
 		}
@@ -57,6 +58,7 @@ class RecentController extends ArcadeController {
 	#[UserRateLimit(limit: 60, period: 60)]
 	#[FrontpageRoute(verb: 'POST', url: '/arcade/favorite')]
 	public function favorite(string $file = ''): JSONResponse {
+		$file = $this->romPath($file);
 		if (!$this->isGame($file)) {
 			return new JSONResponse([], Http::STATUS_BAD_REQUEST);
 		}

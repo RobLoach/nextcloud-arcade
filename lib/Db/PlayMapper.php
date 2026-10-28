@@ -31,8 +31,8 @@ class PlayMapper extends QBMapper {
 	 * @return list<int>
 	 */
 	public function recentFileIds(string $userId, int $limit): array {
-		$qb = $this->db->getQueryBuilder();
-		$qb->select('file_id')
+		$qb = $this->db->getTypedQueryBuilder();
+		$qb->selectColumns('file_id')
 			->from($this->getTableName())
 			->where($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)))
 			->andWhere($qb->expr()->gt('plays', $qb->createNamedParameter(0, IQueryBuilder::PARAM_INT)))
@@ -54,8 +54,8 @@ class PlayMapper extends QBMapper {
 	 * @return array<int, array{seconds: int, plays: int, time: int}>
 	 */
 	public function statsOf(string $userId): array {
-		$qb = $this->db->getQueryBuilder();
-		$qb->select('file_id', 'plays', 'seconds', 'last_played')
+		$qb = $this->db->getTypedQueryBuilder();
+		$qb->selectColumns('file_id', 'plays', 'seconds', 'last_played')
 			->from($this->getTableName())
 			->where($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)));
 		$result = $qb->executeQuery();
@@ -78,11 +78,19 @@ class PlayMapper extends QBMapper {
 	 * @return array<string, array{plays: int, seconds: int}> by user id
 	 */
 	public function totalsByUser(): array {
-		$qb = $this->db->getQueryBuilder();
-		$qb->select('user_id')
-			->selectAlias($qb->func()->sum('plays'), 'plays')
-			->selectAlias($qb->func()->sum('seconds'), 'seconds')
-			->from($this->getTableName())
+		$qb = $this->db->getTypedQueryBuilder();
+		// One call each: what a row holds is read off $qb itself, which a
+		// chain does not tell Psalm about past its first link. Every select
+		// after the first trips the `S of never` bound the builder is
+		// declared with -- core's own Psalm test of it does the same -- so
+		// that one issue is let through here; the columns still add up.
+		$qb->selectColumns('user_id');
+		/** @psalm-suppress InvalidTemplateParam */
+		$qb->selectAlias($qb->func()->sum('plays'), 'plays');
+		/** @psalm-suppress InvalidTemplateParam */
+		$qb->selectAlias($qb->func()->sum('seconds'), 'seconds');
+		/** @psalm-suppress InvalidTemplateParam */
+		$qb->from($this->getTableName())
 			->groupBy('user_id');
 		$result = $qb->executeQuery();
 		$totals = [];
@@ -121,7 +129,7 @@ class PlayMapper extends QBMapper {
 	}
 
 	private function countPlay(string $userId, int $fileId, int $time): int {
-		$qb = $this->db->getQueryBuilder();
+		$qb = $this->db->getTypedQueryBuilder();
 		// Played again within the same second, the game still moves in
 		// front of what was played since: one past its old moment, when
 		// the clock alone would leave it where it was.
@@ -164,7 +172,7 @@ class PlayMapper extends QBMapper {
 	}
 
 	private function countSeconds(string $userId, int $fileId, int $seconds): int {
-		$qb = $this->db->getQueryBuilder();
+		$qb = $this->db->getTypedQueryBuilder();
 		$qb->update($this->getTableName())
 			->set('seconds', $qb->func()->add('seconds', $qb->createNamedParameter($seconds, IQueryBuilder::PARAM_INT)))
 			->where($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)))
@@ -178,7 +186,7 @@ class PlayMapper extends QBMapper {
 	 * ours to clear.
 	 */
 	public function deleteAllForUser(string $userId): void {
-		$qb = $this->db->getQueryBuilder();
+		$qb = $this->db->getTypedQueryBuilder();
 		$qb->delete($this->getTableName())
 			->where($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)));
 		$qb->executeStatement();

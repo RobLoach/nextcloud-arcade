@@ -7,57 +7,30 @@ namespace OCA\Arcade\Tests\Unit;
 use OCA\Arcade\Command\Status;
 use OCA\Arcade\Db\GameMapper;
 use OCA\Arcade\Db\PlayMapper;
-use OCA\Arcade\Service\StateService;
-use OCP\Files\SimpleFS\ISimpleFile;
-use OCP\Files\SimpleFS\ISimpleFolder;
-use OCP\IUser;
-use OCP\IUserManager;
+use OCA\Arcade\Service\Maintenance;
+use OCA\Arcade\Service\LegacyAppDataSaves;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Console\Tester\CommandTester;
 
 /**
- * What `occ arcade:status` reports: the storage nothing else shows, put to
- * the users it belongs to.
+ * What `occ arcade:status` reports: what no file listing shows, put to the
+ * users it belongs to, and what earlier versions left behind.
  */
 class StatusTest extends TestCase {
-	/** The users the instance has seen, by uid. */
-	private array $seen = ['alice', 'bob'];
-	/** The app data folders of states, by name, as name => file sizes. */
-	private array $folders = [];
 	/** @var array<string, int> games with saves, by user */
 	private array $games = [];
 	/** @var array<string, array{plays: int, seconds: int}> */
 	private array $plays = [];
-	private int $legacy = 0;
-	/** How often each folder was listed, by name. */
-	private array $listed = [];
+	/** What earlier versions left in the app data. */
+	private array $appData = ['files' => 0, 'bytes' => 0];
+	/** What is wrong with the tables. */
+	private array $problems = [];
+	/** How the background jobs last went. */
+	private array $jobs = [];
 
 	private function tester(): CommandTester {
-		$stateService = $this->createStub(StateService::class);
-		$stateService->method('folderKeyOf')->willReturnCallback(
-			static fn (string $userId): string => hash('sha256', $userId),
-		);
-		$stateService->method('userFolders')->willReturnCallback(
-			function (): array {
-				$folders = [];
-				foreach (array_keys($this->folders) as $name) {
-					$folders[$name] = $this->folder($name);
-				}
-				return $folders;
-			},
-		);
-		$stateService->method('countLegacyFiles')->willReturnCallback(fn (): int => $this->legacy);
-
-		$userManager = $this->createStub(IUserManager::class);
-		$userManager->method('callForSeenUsers')->willReturnCallback(
-			function (\Closure $callback): void {
-				foreach ($this->seen as $uid) {
-					$user = $this->createStub(IUser::class);
-					$user->method('getUID')->willReturn($uid);
-					$callback($user);
-				}
-			},
-		);
+		$legacy = $this->createStub(LegacyAppDataSaves::class);
+		$legacy->method('count')->willReturnCallback(fn (): array => $this->appData);
 
 		$gameMapper = $this->createStub(GameMapper::class);
 		$gameMapper->method('countsByUser')->willReturnCallback(fn (): array => $this->games);
@@ -65,124 +38,94 @@ class StatusTest extends TestCase {
 		$playMapper = $this->createStub(PlayMapper::class);
 		$playMapper->method('totalsByUser')->willReturnCallback(fn (): array => $this->plays);
 
-		return new CommandTester(new Status($stateService, $userManager, $gameMapper, $playMapper));
+		$maintenance = $this->createStub(Maintenance::class);
+		$maintenance->method('databaseProblems')->willReturnCallback(fn (): array => $this->problems);
+		$maintenance->method('jobs')->willReturnCallback(fn (): array => $this->jobs);
+
+		return new CommandTester(new Status($legacy, $gameMapper, $playMapper, $maintenance));
 	}
 
-	private function folder(string $name): ISimpleFolder {
-		$folder = $this->createStub(ISimpleFolder::class);
-		$folder->method('getName')->willReturn($name);
-		$folder->method('getDirectoryListing')->willReturnCallback(
-			function () use ($name): array {
-				$this->listed[$name] = ($this->listed[$name] ?? 0) + 1;
-				$files = [];
-				foreach ($this->folders[$name] as $i => $size) {
-					$file = $this->createStub(ISimpleFile::class);
-					$file->method('getName')->willReturn("file-$i");
-					$file->method('getSize')->willReturn($size);
-					$files[] = $file;
-				}
-				return $files;
-			},
-		);
-		return $folder;
-	}
-
-	private function aliceAndBobAndAStranger(): void {
-		$this->folders[hash('sha256', 'alice')] = [100, 200, 44];
-		$this->folders[hash('sha256', 'bob')] = [2048];
-		// A folder whose hash matches nobody the instance has seen.
-		$this->folders[hash('sha256', 'who was this')] = [512, 512];
-		$this->games = ['alice' => 2, 'bob' => 1];
-		$this->plays = [
-			'alice' => ['plays' => 14, 'seconds' => 7530],
-			'bob' => ['plays' => 2, 'seconds' => 59],
-		];
-	}
-
-	public function testEveryFolderIsPutToItsUser(): void {
-		$this->aliceAndBobAndAStranger();
+	public function testEveryUserWithSavesOrPlaysIsReportedWithTheTotals(): void {
+		$this->games = ['bob' => 2, 'alice' => 3];
+		$this->plays = ['alice' => ['plays' => 5, 'seconds' => 3900], 'carol' => ['plays' => 1, 'seconds' => 30]];
 		$tester = $this->tester();
-		$this->assertSame(0, $tester->execute([]));
-		$display = $tester->getDisplay();
 
-		$this->assertMatchesRegularExpression('/alice\s+3\s+344 B\s+2\s+14\s+2h 05m/', $display);
-		$this->assertMatchesRegularExpression('/bob\s+1\s+2\.0 KB\s+1\s+2\s+59s/', $display);
-		$this->assertMatchesRegularExpression(
-			'/Total\s+4\s+2\.3 KB\s+3\s+16\s+2h 06m/',
-			$display,
-			'the totals count the users; the orphan is reported apart',
-		);
+		$tester->execute([]);
+
+		$display = $tester->getDisplay();
+		$this->assertMatchesRegularExpression('/alice\s+3\s+5\s+1h 05m/', $display);
+		$this->assertMatchesRegularExpression('/bob\s+2\s+0\s+0s/', $display);
+		$this->assertMatchesRegularExpression('/carol\s+0\s+1\s+30s/', $display);
+		$this->assertMatchesRegularExpression('/Total\s+5\s+6\s+1h 05m/', $display);
+		// In order of the users, whichever table they came from.
+		$this->assertLessThan(strpos($display, 'bob'), strpos($display, 'alice'));
 	}
 
-	public function testAFolderOfNobodyIsReportedNotTouched(): void {
-		$this->aliceAndBobAndAStranger();
+	public function testNothingStoredSaysSo(): void {
 		$tester = $this->tester();
 		$tester->execute([]);
+		$this->assertStringContainsString('Nothing is stored', $tester->getDisplay());
+	}
+
+	public function testWhatEarlierVersionsLeftIsReportedWithTheWayToRemoveIt(): void {
+		$this->appData = ['files' => 4, 'bytes' => 3 * 1024 * 1024];
+		$tester = $this->tester();
+
+		$tester->execute([]);
+
 		$display = $tester->getDisplay();
-
-		$this->assertStringContainsString('no longer exists', $display);
-		$this->assertStringContainsString(hash('sha256', 'who was this'), $display);
-		$this->assertStringContainsString('2 files (1.0 KB)', $display);
-		$this->assertStringContainsString('arcade:cleanup', $display, 'removal is pointed at, not done');
-		$this->assertStringNotContainsString(
-			hash('sha256', 'who was this'),
-			preg_replace('/^.*no longer exists.*$/m', '', $display) ?? '',
-			'the stranger is no row of the table',
-		);
+		$this->assertStringContainsString('4 save files (3.0 MB)', $display);
+		$this->assertStringContainsString('arcade:cleanup --legacy', $display);
 	}
 
-	public function testEachFolderIsListedOnce(): void {
-		$this->aliceAndBobAndAStranger();
-		$this->tester()->execute([]);
-		$this->assertSame([1, 1, 1], array_values($this->listed), 'one listing answers for a folder');
-	}
-
-	public function testPlaysWithoutAFolderStillShow(): void {
-		// Saves kept in the user's own files leave no app data folder, and
-		// play records need no saves at all.
-		$this->plays = ['carol' => ['plays' => 3, 'seconds' => 90]];
+	public function testNothingLeftSaysNothingAboutIt(): void {
+		$this->games = ['alice' => 1];
 		$tester = $this->tester();
 		$tester->execute([]);
-		$this->assertMatchesRegularExpression('/carol\s+0\s+0 B\s+0\s+3\s+1m/', $tester->getDisplay());
-	}
-
-	public function testLegacyFilesAreCounted(): void {
-		$this->legacy = 4;
-		$tester = $this->tester();
-		$tester->execute([]);
-		$display = $tester->getDisplay();
-		$this->assertStringContainsString('4 files written before', $display);
-		$this->assertStringContainsString('Nothing is stored', $display, 'an empty table says so instead');
+		$this->assertStringNotContainsString('--legacy', $tester->getDisplay());
 	}
 
 	public function testJsonSaysTheSameThingsByMachine(): void {
-		$this->aliceAndBobAndAStranger();
-		$this->legacy = 1;
+		$this->games = ['alice' => 3];
+		$this->plays = ['alice' => ['plays' => 5, 'seconds' => 60]];
+		$this->appData = ['files' => 1, 'bytes' => 10];
 		$tester = $this->tester();
-		$this->assertSame(0, $tester->execute(['--json' => true]));
+
+		$tester->execute(['--json' => true]);
 
 		$status = json_decode($tester->getDisplay(), true);
-		$this->assertIsArray($status);
-		$this->assertSame(
-			['users', 'totals', 'legacyFiles', 'orphanedFolders'],
-			array_keys($status),
-		);
-		$this->assertSame(
-			['user' => 'alice', 'files' => 3, 'bytes' => 344, 'games' => 2, 'plays' => 14, 'seconds' => 7530],
-			$status['users'][0],
-		);
-		$this->assertSame(
-			['user' => 'bob', 'files' => 1, 'bytes' => 2048, 'games' => 1, 'plays' => 2, 'seconds' => 59],
-			$status['users'][1],
-		);
-		$this->assertSame(
-			['files' => 4, 'bytes' => 2392, 'games' => 3, 'plays' => 16, 'seconds' => 7589],
-			$status['totals'],
-		);
-		$this->assertSame(1, $status['legacyFiles']);
-		$this->assertSame(
-			[['folder' => hash('sha256', 'who was this'), 'files' => 2, 'bytes' => 1024]],
-			$status['orphanedFolders'],
-		);
+		$this->assertSame(['users', 'totals', 'appDataSaves', 'jobs'], array_keys($status));
+		$this->assertSame([['user' => 'alice', 'games' => 3, 'plays' => 5, 'seconds' => 60]], $status['users']);
+		$this->assertSame(['files' => 1, 'bytes' => 10], $status['appDataSaves']);
+	}
+
+	public function testHowEachBackgroundJobWentIsSaid(): void {
+		$at = mktime(9, 30, 0, 10, 20, 2026);
+		$this->jobs = [
+			'scan' => ['running' => false, 'last' => ['status' => 'succeeded', 'at' => $at, 'seconds' => 3.5]],
+			'cleanup' => ['running' => false, 'last' => ['status' => 'failed', 'at' => $at, 'seconds' => 125.0]],
+			'thumbnails' => ['running' => true, 'last' => null],
+			'metadata' => ['running' => false, 'last' => null],
+		];
+		$tester = $this->tester();
+
+		$tester->execute([]);
+
+		$display = $tester->getDisplay();
+		$this->assertMatchesRegularExpression('/Scanning every library +finished at 2026-10-20 09:30, took 3\.5s/', $display);
+		$this->assertMatchesRegularExpression('/Weekly cleanup +failed at 2026-10-20 09:30, took 2m/', $display);
+		$this->assertMatchesRegularExpression('/Fetching thumbnails +running now\n/', $display);
+		$this->assertMatchesRegularExpression('/Reading game details +has not run yet/', $display);
+	}
+
+	public function testMissingTablesAreSaidPlainlyWithWhatToDo(): void {
+		$this->problems = ['The table oc_arcade_games is missing'];
+		$tester = $this->tester();
+
+		$this->assertSame(1, $tester->execute([]));
+
+		$display = $tester->getDisplay();
+		$this->assertStringContainsString('The table oc_arcade_games is missing', $display);
+		$this->assertStringContainsString('occ arcade:repair', $display);
 	}
 }

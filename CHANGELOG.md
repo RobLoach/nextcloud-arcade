@@ -1,12 +1,60 @@
 # Changelog
 
-All notable changes to NextCloud Arcade. The format follows
+All notable changes to Nextcloud Arcade. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the app uses
 [semantic versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
 ### Added
+- The saves of earlier versions are moved to the new layout: each game's
+  folder of `Auto.state`, `Slot N.state` and its battery save becomes
+  `states/<core>/<game>.state.auto`, `.stateN` and
+  `saves/<core>/<game>.srm`, recorded for RetroArch Cloud Sync. Nothing
+  is overwritten: a save whose new place is taken stays where it was, and
+  is logged. A user's saves are moved the first time they open Arcade,
+  in their own request, so a game never starts without them and the
+  files keep their versions; a second tab asking meanwhile is told to try
+  again in a moment. A run that cannot move everything is retried on the
+  next two visits, then left and logged.
+- A zip's saves kept under the zip's own name, as earlier versions kept
+  them, are renamed after the game inside the first time it is played.
+- RetroArch Cloud Sync. The saves folder is laid out the way RetroArch
+  keeps its own -- `saves/` and `states/`, filed under the name of the
+  core, with RetroArch's file names -- and every save and delete is
+  recorded in the `manifest.server` its Cloud Sync reads. Point RetroArch
+  at the folder over WebDAV and a game saved there carries on in Arcade,
+  and the other way around. The personal settings say how, with each
+  player's own address.
+- Any slot RetroArch saved into is listed in the player, and can be
+  loaded and deleted there.
+- A Maintenance section at the bottom of the administration settings:
+  repairing the database, giving ROMs their file types, removing the
+  saves of deleted games and users and those earlier versions left in the
+  app data -- each saying how things stand before it is pressed.
+- `occ arcade:repair`, which makes the database tables and columns of
+  Arcade that are missing.
+- A Scan button beside the games library folder: in the personal settings
+  it scans your library afresh and says how many games it found; in the
+  administration settings it scans every user's library in the
+  background.
+- Opening a game (at most once an hour), the weekly background job, and
+  `occ arcade:cloudsync` record in the manifest the saves that got into
+  the saves folder some other way — the desktop client, an upload in
+  Files — so RetroArch fetches them, and the ones that are gone as
+  deleted.
+- A progress bar while a game downloads, and then a word that the
+  emulator is starting.
+- Save states load and save at once. The states of a game are fetched
+  as it starts and held for the session; a save is held at once and sent
+  to the server in the background, and closing the game waits for it.
+  A slot written meanwhile by RetroArch or another tab is fetched anew.
+- A battery save the game did not change is no longer sent and written
+  again every minute, which made a new version of the file each time.
+- A save state the emulator turns down says so in plain words, instead of
+  a success message followed by RetroArch's own log line.
+- `occ arcade:cleanup --legacy` removes the saves earlier versions left in
+  the app data, and `occ arcade:status` says how many there are.
 - "Least played", alongside "Most played", for the games you have started
   and not come back to. The ones never started stay behind them either
   way, so it is not a list of everything untouched.
@@ -20,8 +68,73 @@ All notable changes to NextCloud Arcade. The format follows
   put back to its defaults.
 - Mute, in the player's control bar, drawn as whichever of the two it
   would do next.
+- The Maintenance section and `occ arcade:status` say how each of
+  Arcade's background jobs last went -- scanning every library, the
+  weekly cleanup, fetching thumbnails, reading game details -- and when,
+  so one that failed shows there rather than only in the log.
+- The Arcade tab of the sidebar -- in the Files app, and opened from the
+  library -- shows more of a game: the emulator that runs it, the BIOS
+  files its system asks for and whether they are found, a picture of
+  each save state with a Load button that starts the game in it, and the
+  latest screenshots. Opened from the library, it links to the game in
+  Files. A game the background pass has not read yet is read there and
+  then, so its title and region show straight away.
+- Zipped games get the Arcade tab too: a zip, .bin or .rom in the games
+  library, or in a folder that names a system. A zip played before says
+  its system and emulator from the core that ran it, and which game in
+  it the saves are named after.
+- Closing a game shows a box like the loading one, saying what it is
+  doing -- keeping the in-game save, sending the last save states,
+  stopping the emulator -- rather than a frozen game until the library
+  appears.
+- The Arcade tab shows the game's pictures from the thumbnails folder --
+  box art, title screen, snap and logo -- under Thumbnails, below the
+  screenshots. The BIOS files come last.
+- Screenshots and thumbnails picked in the sidebar on the library page
+  open in the Viewer, over the library.
+- A Details button on every game of the library -- in the corner of a
+  card, at the end of a row of the list and the table -- opening the
+  Files sidebar on it, with its tags, shares, versions and Arcade tab,
+  without leaving the library. Nextcloud 34 can only show that sidebar in
+  the Files app, so there the button opens the game's details in Files.
 
 ### Changed
+- The player's text is sized from the server's own font size, so a larger
+  one makes the player's larger too.
+- The offer to continue from the last save sits along the bottom of the
+  game and goes by itself after seven seconds, waiting while the pointer
+  or the focus is on it.
+- Nextcloud 34.0.4 or newer is required.
+- Save states, battery saves, their pictures and BIOS files are streamed
+  to the player straight from storage, rather than read whole into the
+  server's memory first.
+- Looking for box art and screenshots asks the database for the images of
+  a folder only, rather than listing everything in it.
+- The queries of the app's own tables say which columns they read, so
+  static analysis catches a misspelled one before it reaches a database.
+- The background jobs that go through every user -- scanning every
+  library, the weekly cleanup and Cloud Sync check -- let go of each
+  user's files once done with them, so on a large instance they no longer
+  hold everybody's mounts at once and run out of memory partway.
+- ROMs take the file types the shared freedesktop.org database gives
+  them: Super Nintendo games are `application/vnd.nintendo.snes.rom` and
+  Atari Lynx games `application/x-atari-lynx-rom`, and Neo Geo Pocket
+  Color (`.ngc`) and WonderSwan Color (`.wsc`) games have types of their
+  own. Files are given the new types at upgrade, and the names earlier
+  versions gave are still taken until then.
+- The upgrade no longer converts the save states earlier versions kept in
+  the app data: nothing reads them any more. The maintenance section
+  removes them.
+- `occ arcade:status` reports the games with saves and the plays of each
+  user; the files and sizes it used to list were those of the app data,
+  where saves no longer live.
+- Psalm 6, which runs on PHP 8.5.
+- Saves are no longer read from the old `Saves/<System>/<Game>/` layout,
+  nor from the app data of versions before saves folders: save states
+  and battery saves start afresh under the new one. The automatic slot is
+  RetroArch's `.state.auto`, and slots 0 to 2 its `.state` to `.state2`,
+  numbered from 0 as RetroArch numbers them; the save and load hotkeys
+  use slot 0, as RetroArch's quick save does.
 - Which picture a system is shown with is now set once for the instance,
   in the administration settings, where it sat alongside a personal copy
   of the same choice. A value an earlier version stored for a user is no
@@ -56,6 +169,107 @@ All notable changes to NextCloud Arcade. The format follows
   what each limit is currently set to.
 
 ### Fixed
+- Scanning every library from the administration settings did not reach
+  the libraries the web server had kept, on a server whose cache is APCu:
+  the scans were kept by the background job, and a library whose folder had
+  not changed went on showing what it showed before. Every library is now
+  scanned afresh on its next visit.
+- A battery save that could not be read when a game started -- the
+  server having a bad moment -- left the game running from a blank
+  cartridge, and the next sync wrote that blank over the real save. The
+  game now says so, and its battery save is left alone for that session.
+- On the narrowest phones, the offer to continue from the last save
+  stretched into a tall box: a rule from when it sat mid-screen was left
+  pulling its top up while the new one held its bottom down.
+- A save brought into the saves folder some other way -- the desktop
+  client, Files -- could be passed over by the Cloud Sync check for good,
+  whenever a save in the player had written the manifest since. The check
+  now goes by when it last ran.
+- A save made just before its slot was deleted, when the delete then
+  failed, stayed only in the browser and was lost with the session. It is
+  sent after all.
+- The in-game save could stop being kept for the rest of a session after
+  two looks found none, though a game paused or out of view is not a game
+  without one. Only looks taken while the game is in view count now.
+- The Arcade tab read a ROM that has no title to give again every time it
+  was opened.
+- States fetched ahead from the Save states panel kept downloading after
+  the game was closed.
+- The emulator core was downloaded twice where the browser would not keep
+  it: once for the progress bar, once more to start it.
+- Titles read in the background reach the library at once, rather than
+  when its scan next runs -- also on servers whose cache is APCu.
+- The Sharing tab of the sidebar opened from the library stayed blank on
+  Nextcloud 35: away from the Files app the sidebar has no folder or view
+  to hand its tabs, and the Sharing tab cannot draw without them. The
+  sidebar is now given the game's folder and a view of its own.
+- Super Nintendo games never got their title or region: the header sits
+  32 KiB into the file, and the read stopped at the 8 KiB a Nextcloud
+  file stream hands over at a time. The upgrade has every SNES game
+  without a title read again, once, in the background.
+- "Play with Arcade" now appears in the file menu of the Files app. It was
+  added where @nextcloud/files 3 keeps actions, and the Files app of
+  Nextcloud 34 and 35 reads them where version 4 does, so it never showed.
+- Scan finds games copied into the library folder outside Nextcloud -- a
+  network share, rsync, a drive -- by having Nextcloud look at the folder
+  on disk first.
+- Putting the Cloud Sync manifest right no longer records a save as
+  deleted -- which RetroArch then deletes too -- because it lay deeper
+  than the walk went, was a dot-file, or sat on a storage that cannot
+  hash; and it notices a save copied in with an older time.
+- A game renamed and first opened from the Files sidebar keeps its saves;
+  a zipped game deleted once its file was gone has its saves removed from
+  the right folder; and deleting a game keeps a save in the shared flat
+  folders that another game of the same name uses.
+- The maintenance section looks for the saves of deleted games and users
+  only when asked, rather than on every visit of the page.
+- Nextcloud 35 replaced the Files sidebar, and with it the two ways the
+  app used it: "Open sidebar" in the player failed with "Sidebar.open is
+  not a function", and the Arcade tab of the sidebar never appeared. Both
+  now use the new sidebar, and still the old one on Nextcloud 34.
+- The saves of a zipped game are named after the game inside the zip, as
+  RetroArch names them, so the two find each other's saves. They were
+  named after the zip, and RetroArch's were never found.
+- Saves reach the server behind a web application firewall. They were
+  sent as a bare application/octet-stream body, which ModSecurity's
+  OWASP Core Rule Set refuses as a body type it does not allow, so every
+  save was turned away before Nextcloud saw it; they now travel as the
+  file of a form, as every browser upload does. The BIOS upload too.
+- A folder emptied in the personal settings stays empty. The id kept to
+  follow a folder that moves won on every read, so an emptied Saves
+  folder came straight back.
+- Without a Saves folder the save button is there but switched off, and
+  says where to choose one, rather than being missing.
+- An instance with no memory cache no longer rescans the games library on
+  every request: the scan is kept in files of the app data instead, until
+  a memory cache is configured. The administration overview says so as a
+  note rather than a warning.
+- A save that cannot reach the server says why: the status the server
+  answered with, or that it did not answer. When the reason is a table
+  of Arcade an upgrade left out, the player says the database needs
+  repairing and where an administrator does it, as soon as the game
+  opens -- the saves it could not fetch used to go unmentioned.
+- Saving a game whose name has a quote or brackets in it, like "Kirby's
+  Adventure (USA)", no longer fails behind a web application firewall.
+  The name went into the address of every request about the game, where
+  a firewall takes a quote and brackets for SQL and refuses the request
+  before Nextcloud sees it. The player now sends the name encoded, as
+  letters and digits only; the old form is still understood.
+- `occ arcade:status` says which table is missing and how to repair it,
+  instead of failing with the database's own error.
+- The cleanup now finds the app-data folders of users who no longer
+  exist. Nextcloud's app data lists only the files of a folder, never the
+  folders in it, so the folders it was looking for were never there.
+- A save state no longer fails with "The game did not hand over a save
+  state" in a game without a battery save. Reading the battery save waited
+  a minute for a file such a game never writes, once a minute, and a save
+  state asked for meanwhile gave up waiting behind it. It now looks for
+  two seconds, and stops looking once the game is seen to keep none.
+- What the emulator has to say for itself now reaches the player.
+  RetroArch prints nothing unless told to, and it never was, so the
+  messages meant to pass its errors on never had any to pass. It is now
+  told to print its errors, and the two the browser build prints on
+  every launch are left out.
 - What the app gives up on is now written to the log. Six places caught
   every possible failure and carried on without a word — among them the
   one that hid two bugs fixed just before this, where a single unreadable
@@ -69,8 +283,8 @@ All notable changes to NextCloud Arcade. The format follows
   single GPL-3.0 file that named no core and was not the licence of
   several of them; snes9x and genesis_plus_gx each require their notice to
   accompany any redistribution, and neither notice was anywhere in the
-  tree. Every core's licence text now sits in `img/cores/LICENSES/` with
-  `img/cores/README.md` saying which applies to which, and `npm run cores`
+  tree. Every core's licence text now sits in the top-level `LICENSES/`,
+  with `img/cores/README.md` saying which applies to which, and `npm run cores`
   refuses to finish if a core is shipped that nothing accounts for.
 - The background reading of ROM headers could stop for a whole library
   and stay stopped. Working out which games had never been looked at

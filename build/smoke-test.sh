@@ -169,6 +169,10 @@ for line in sys.stdin:
     # enough: core logs the whole list of installed apps in some of its
     # own failures -- an app store fetch that cannot reach the internet
     # does, and used to fail this run for no reason at all.
+    # Asked for: the run drops a table on purpose to see the player told,
+    # and saying so in the log is part of the answer.
+    if str(entry.get("message", "")).startswith("Arcade cannot use its database tables"):
+        continue
     if entry.get("app") == "arcade" or "apps/arcade/" in line.replace(chr(92) + "/", "/"):
         bad.append(line.rstrip())
 if bad:
@@ -272,7 +276,13 @@ occ config:system:set trusted_domains 1 --value=127.0.0.1 >/dev/null
 
 step 'Installing the app into the container'
 docker exec "$CONTAINER" mkdir -p /var/www/html/apps/arcade
-git -C "$REPO_ROOT" ls-files -z \
+# What the working tree holds, not only what the index does: a rebuild
+# renames the bundles, and a run before staging it would otherwise ask tar
+# for files that are gone and leave out the ones that replaced them.
+git -C "$REPO_ROOT" ls-files -z --cached --others --exclude-standard \
+	| (cd "$REPO_ROOT" && while IFS= read -r -d '' file; do
+		[ -f "$file" ] && printf '%s\0' "$file"
+	done) \
 	| tar -C "$REPO_ROOT" --null -T - -cf - \
 	| docker exec -i "$CONTAINER" tar -xf - -C /var/www/html/apps/arcade
 docker exec "$CONTAINER" chown -R www-data:www-data /var/www/html/apps/arcade
@@ -426,9 +436,21 @@ if kept != "/Saves":
 '
 fi
 STATE_URL="$BASE/index.php/apps/arcade/arcade/state?file=$GAME&slot=1"
+# As the file of a form, the way the player sends it: a firewall in front
+# of the server refuses a bare application/octet-stream body. The picture
+# below still goes as one, which the server takes too.
+printf 'not a real save state' > "$WORKDIR/state.bin"
 expect_status 'a state is saved' 200 -X POST \
-	-H 'Content-Type: application/octet-stream' \
-	--data-binary 'not a real save state' "$STATE_URL" || true
+	-F "data=@$WORKDIR/state.bin;filename=state" "$STATE_URL" || true
+# Streamed back from the saves folder rather than read into memory first,
+# which is a different response type -- so the bytes are checked whole.
+if expect_status 'the state comes back' 200 "$STATE_URL"; then
+	if cmp -s "$BODY" "$WORKDIR/state.bin"; then
+		echo "ok: the state comes back byte for byte"
+	else
+		fail "the state came back as '$(head -c 100 "$BODY")'"
+	fi
+fi
 
 # The panel asks for every slot's picture each time it opens, and the URL
 # it asks with carries the slot's mtime -- so the answer is good until the
@@ -458,11 +480,49 @@ if 1 not in slots:
 '
 fi
 
+# The saves folder is what RetroArch's Cloud Sync syncs with, and all it
+# reads to know what changed is manifest.server -- over WebDAV, as here.
+# A save written without a word in it is one RetroArch never fetches.
+if curl -sSf -o "$BODY" -b "$COOKIES" -H "requesttoken: $TOKEN" \
+	"$BASE/remote.php/dav/files/$ADMIN_USER/Saves/manifest.server"; then
+	assert_json 'the save is recorded for RetroArch, under the core' '
+import hashlib
+entries = {entry.get("path"): entry.get("hash") for entry in data}
+want = hashlib.md5(b"not a real save state").hexdigest()
+if entries.get("states/Gambatte/Tetris.state1") != want:
+    raise SystemExit(f"states/Gambatte/Tetris.state1 is not recorded as {want}: {entries}")
+'
+else
+	fail 'manifest.server cannot be read over WebDAV'
+fi
+
+# A save copied in some other way -- the desktop client, here WebDAV --
+# reaches RetroArch once something records it, which the button in the
+# personal settings asks for.
+curl -sS -o /dev/null -X MKCOL -b "$COOKIES" -H "requesttoken: $TOKEN" \
+	"$BASE/remote.php/dav/files/$ADMIN_USER/Saves/saves" || true
+curl -sSf -o /dev/null -X PUT -b "$COOKIES" -H "requesttoken: $TOKEN" \
+	--data-binary 'a battery save from elsewhere' \
+	"$BASE/remote.php/dav/files/$ADMIN_USER/Saves/saves/Zelda.srm" \
+	|| fail 'could not copy a save into the saves folder over WebDAV'
+if expect_status 'the manifest is put right' 200 -X POST \
+	"$BASE/index.php/apps/arcade/arcade/cloudsync"; then
+	assert_json 'the copied save is recorded' '
+if data.get("recorded", 0) < 1:
+    raise SystemExit(f"nothing was recorded: {data}")
+'
+fi
+if occ arcade:cloudsync --user "$ADMIN_USER" --full > "$BODY" 2>&1; then
+	echo 'ok: arcade:cloudsync'
+else
+	fail "occ arcade:cloudsync exited non-zero: $(head -c 300 "$BODY")"
+fi
+
 # From here the game itself goes away, and the endpoint that lists states
 # turns away a request naming a game the user does not have -- so the save
 # is watched where it actually lives: in the user's own files.
 SAVES_DIR=/var/www/html/data/admin/files/Saves
-SAVE_FILE=$(docker exec "$CONTAINER" find "$SAVES_DIR" -name '*.state' | head -1 || true)
+SAVE_FILE=$(docker exec "$CONTAINER" find "$SAVES_DIR" -name 'Tetris.state1' | head -1 || true)
 if [ -z "$SAVE_FILE" ]; then
 	die "nothing was written under $SAVES_DIR ($(docker exec "$CONTAINER" find "$SAVES_DIR" | head -5 | tr '\n' ' '))"
 fi
@@ -628,6 +688,35 @@ if occ arcade:status; then
 	echo 'ok: arcade:status'
 else
 	fail 'occ arcade:status exited non-zero'
+fi
+
+step 'Repairing a table that went missing'
+# What an upgrade gone wrong half way leaves behind: a table Nextcloud
+# believes it made. Repairing has to make it again, with every column,
+# whatever the database says about the migrations that ran.
+docker exec "$CONTAINER" php -r '$d = new PDO("sqlite:/var/www/html/data/owncloud.db"); $d->exec("DROP TABLE oc_arcade_games");' \
+	|| die 'could not drop the games table'
+if occ arcade:status > "$BODY" 2>&1; then
+	fail 'occ arcade:status did not notice the missing table'
+elif grep -q 'arcade_games is missing' "$BODY"; then
+	echo 'ok: arcade:status says the table is missing'
+else
+	fail "occ arcade:status failed without saying why: $(head -c 300 "$BODY")"
+fi
+# And a request of the player says so too, rather than failing bare: the
+# failure comes up from the database, which is what has the tables looked
+# at -- and only that does, so it has to be a real one to be seen here.
+if expect_status 'a request over the missing table answers' 503 "$BASE/index.php/apps/arcade/arcade/states?file=/Games/Super%20Nintendo/Chrono.sfc"; then
+	if grep -q '"error":"database"' "$BODY"; then
+		echo 'ok: the player is told the database is to blame'
+	else
+		fail "a request over the missing table did not say why: $(head -c 300 "$BODY")"
+	fi
+fi
+if occ arcade:repair > "$BODY" 2>&1 && occ arcade:status > /dev/null 2>&1; then
+	echo 'ok: arcade:repair made the table again'
+else
+	fail "occ arcade:repair did not put the table back: $(head -c 300 "$BODY")"
 fi
 
 check_log 'after the fresh install'

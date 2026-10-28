@@ -1,31 +1,23 @@
+import { loadState } from '@nextcloud/initial-state'
 import { translate as t, translatePlural as n } from '@nextcloud/l10n'
 import { generateUrl } from '@nextcloud/router'
-import { api } from './api.js'
+import { AUTO_SLOT, api, encodePath, stateUrl } from './api.js'
 import { formatPlayTime } from './format.js'
 import { ICONS, icon } from './icons.js'
-import { playGame } from './play.js'
-import { romMimes } from './systems.js'
+import { playGame, previewUrl } from './play.js'
+import { isPlayable, romMimes, systemForFile, systemForFolderPath } from './systems.js'
 
 /**
  * The Arcade tab of the Files sidebar: what the app knows about a ROM --
  * its system, what the cartridge calls itself, what it has been played
  * for, the saves waiting in its slots -- and a button that plays it.
  *
- * Registered through the plain-DOM callbacks of OCA.Files.Sidebar, so no
- * Vue is carried onto the Files page for a definition list.
+ * Registered as a web component, which is how the sidebar of Nextcloud 34
+ * and 35 renders a tab, so no Vue is carried onto the Files page for a
+ * definition list.
  */
 
 const TAB_ID = 'arcade'
-
-/**
- * @param {object} fileInfo what the sidebar was opened on
- * @return {string} the path of the file, relative to the user folder
- */
-function pathOf(fileInfo) {
-	const directory = typeof fileInfo?.path === 'string' ? fileInfo.path : '/'
-	const name = typeof fileInfo?.name === 'string' ? fileInfo.name : ''
-	return `${directory === '/' ? '' : directory}/${name}`
-}
 
 /**
  * @param {object} playtime what the game was played for
@@ -46,7 +38,7 @@ function playedLine(playtime) {
  * @return {string} what the slot is called where the player shows it
  */
 function slotName(slot) {
-	return slot === 0 ? t('arcade', 'Autosave') : t('arcade', 'Slot {slot}', { slot })
+	return slot === AUTO_SLOT ? t('arcade', 'Autosave') : t('arcade', 'Slot {slot}', { slot })
 }
 
 /**
@@ -66,6 +58,26 @@ function addRow(list, label, value) {
 }
 
 /**
+ * Whether this page is the Files app, where the file is already in view
+ * and a link to it would lead nowhere new.
+ *
+ * @return {boolean}
+ */
+function inFilesApp() {
+	return /\/apps\/files(\/|$)/.test(window.location.pathname)
+}
+
+/**
+ * @param {string} file path of the game
+ * @param {number|string} fileId the Nextcloud file id
+ * @return {string} the file in the Files app, its folder open around it
+ */
+function filesUrl(file, fileId) {
+	const dir = file.replace(/\/[^/]*$/, '') || '/'
+	return generateUrl('/apps/files/files/{fileId}?dir={dir}', { fileId, dir })
+}
+
+/**
  * @param {object} game what the endpoint answered
  * @param {string} file path of the game
  * @param {string} mime its mimetype
@@ -76,17 +88,32 @@ function render(game, file, mime, fileId) {
 	const container = document.createElement('div')
 	container.className = 'arcade-sidebar'
 
+	const actions = document.createElement('div')
+	actions.className = 'arcade-sidebar-actions'
 	const button = document.createElement('button')
 	button.type = 'button'
 	button.className = 'primary arcade-sidebar-play'
 	button.innerHTML = icon(ICONS.gamepad)
 	button.appendChild(document.createTextNode(t('arcade', 'Play')))
 	button.addEventListener('click', () => playGame(file, mime, fileId))
-	container.appendChild(button)
+	actions.appendChild(button)
+	// From the library, the file is one step away in Files: its folder,
+	// its shares, its versions.
+	if (fileId && !inFilesApp()) {
+		const link = document.createElement('a')
+		link.className = 'button arcade-sidebar-files'
+		link.href = filesUrl(file, fileId)
+		link.innerHTML = icon(ICONS.folder)
+		link.appendChild(document.createTextNode(t('arcade', 'Show in Files')))
+		actions.appendChild(link)
+	}
+	container.appendChild(actions)
 
 	const list = document.createElement('dl')
 	list.className = 'arcade-sidebar-details'
 	addRow(list, t('arcade', 'System'), game.system?.name ?? '')
+	addRow(list, t('arcade', 'Emulator'), game.emulator ?? '')
+	addRow(list, t('arcade', 'Game in the archive'), game.inside ?? '')
 	addRow(list, t('arcade', 'Title'), game.title ?? '')
 	addRow(list, t('arcade', 'Region'), game.region ?? '')
 	addRow(list, t('arcade', 'Mapper'), game.mapper ?? '')
@@ -97,62 +124,288 @@ function render(game, file, mime, fileId) {
 
 	const states = Array.isArray(game.states) ? game.states : []
 	if (states.length > 0) {
-		const heading = document.createElement('h3')
-		heading.textContent = t('arcade', 'Save states')
-		container.appendChild(heading)
-		const slots = document.createElement('ul')
-		slots.className = 'arcade-sidebar-slots'
-		for (const state of states) {
-			const item = document.createElement('li')
-			const name = document.createElement('strong')
-			name.textContent = slotName(state.slot)
-			const when = document.createElement('span')
-			when.textContent = new Date(state.mtime * 1000).toLocaleString()
-			item.append(name, when)
-			// A stale state was marked by colour and a tooltip alone, which
-			// is nothing at all to anybody not pointing at it. Said in
-			// words, the way the player's own states panel says it.
-			if (state.stale === true) {
-				const warning = document.createElement('span')
-				warning.className = 'arcade-sidebar-stale-warning'
-				warning.textContent = t('arcade', 'made from another copy of this game')
-				warning.title = t('arcade', 'The ROM has changed since this state was saved, so loading it may go wrong.')
-				item.appendChild(warning)
-				item.classList.add('arcade-sidebar-stale')
-			}
-			slots.appendChild(item)
-		}
-		container.appendChild(slots)
+		container.appendChild(heading(t('arcade', 'Save states')))
+		container.appendChild(renderStates(states, file, mime, fileId))
 	}
+
+	// Asked for after the rest is up: a folder of screenshots can take a
+	// moment to look through, and nothing else waits on it.
+	const screenshots = document.createElement('div')
+	screenshots.className = 'arcade-sidebar-screenshots'
+	container.appendChild(screenshots)
+	fillScreenshots(screenshots, file)
+
+	const thumbnails = game.thumbnails && typeof game.thumbnails === 'object' ? game.thumbnails : {}
+	if (Object.keys(thumbnails).length > 0) {
+		container.appendChild(renderThumbnails(thumbnails))
+	}
+
+	// Last: something to see to once, not every time the game is looked at.
+	const bios = Array.isArray(game.bios) ? game.bios : []
+	if (bios.length > 0) {
+		container.appendChild(renderBios(bios))
+	}
+
 	return container
 }
 
-/** Where the tab renders, and which request is still the current one. */
-let mountPoint = null
-let generation = 0
+/**
+ * @param {string} text the heading
+ * @return {HTMLElement} a heading of the tab
+ */
+function heading(text) {
+	const element = document.createElement('h3')
+	element.textContent = text
+	return element
+}
 
 /**
- * Fetches what the app knows and fills the tab with it.
+ * Whether a click on a link asks for it somewhere else -- a new tab, a new
+ * window -- which the browser does by itself, and the Viewer must not
+ * take over.
  *
- * @param {object} fileInfo what the sidebar was opened on
+ * @param {MouseEvent} event the click
+ * @return {boolean}
  */
-async function show(fileInfo) {
-	if (mountPoint === null) {
+export function opensElsewhere(event) {
+	return event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey
+}
+
+/**
+ * A link to a picture: it opens in the Viewer where there is one, over the
+ * page rather than taking it away, and in Files where there is not -- or
+ * when the click asks for a new tab or window.
+ *
+ * @param {number} fileId the file of the picture
+ * @param {string} path its path, for the Viewer; empty when not known
+ * @return {HTMLAnchorElement} the link
+ */
+function pictureLink(fileId, path) {
+	const link = document.createElement('a')
+	link.href = generateUrl('/f/{fileId}', { fileId })
+	link.addEventListener('click', (event) => {
+		if (opensElsewhere(event) || window.OCA?.Viewer?.open === undefined || path === '') {
+			return
+		}
+		event.preventDefault()
+		window.OCA.Viewer.open({ path })
+	})
+	return link
+}
+
+// What each kind of picture of the thumbnail packs is called.
+const THUMBNAIL_KINDS = {
+	boxart: () => t('arcade', 'Box art'),
+	title: () => t('arcade', 'Title screen'),
+	snap: () => t('arcade', 'Snap'),
+	logo: () => t('arcade', 'Logo'),
+}
+
+/**
+ * The pictures of the game the thumbnails folder holds -- Named_Boxarts,
+ * Named_Titles, Named_Snaps and Named_Logos -- each under what it is.
+ *
+ * @param {Object<string, {fileId: number, path: string}>} thumbnails the
+ *   pictures, by kind
+ * @return {HTMLElement} the section
+ */
+function renderThumbnails(thumbnails) {
+	const section = document.createElement('div')
+	section.className = 'arcade-sidebar-thumbnails'
+	section.appendChild(heading(t('arcade', 'Thumbnails')))
+	const list = document.createElement('ul')
+	list.className = 'arcade-sidebar-thumbnail-list'
+	for (const [kind, { fileId, path }] of Object.entries(thumbnails)) {
+		const item = document.createElement('li')
+		const link = pictureLink(fileId, path)
+		const picture = document.createElement('img')
+		picture.alt = THUMBNAIL_KINDS[kind]?.() ?? kind
+		picture.loading = 'lazy'
+		picture.src = previewUrl(fileId, 256, 256)
+		const caption = document.createElement('span')
+		caption.textContent = THUMBNAIL_KINDS[kind]?.() ?? kind
+		link.append(picture, caption)
+		item.appendChild(link)
+		list.appendChild(item)
+	}
+	section.appendChild(list)
+	return section
+}
+
+/**
+ * The BIOS files the emulator asks for, and whether the player finds them.
+ *
+ * @param {Array<{name: string, present: boolean, source: ?string}>} bios the files
+ * @return {HTMLElement} the section
+ */
+function renderBios(bios) {
+	const section = document.createElement('div')
+	section.appendChild(heading(t('arcade', 'BIOS')))
+	const files = document.createElement('ul')
+	files.className = 'arcade-sidebar-bios'
+	for (const file of bios) {
+		const item = document.createElement('li')
+		const name = document.createElement('strong')
+		name.textContent = file.name
+		const where = document.createElement('span')
+		where.textContent = !file.present
+			? t('arcade', 'Missing')
+			: (file.source === 'folder'
+				? t('arcade', 'In your system folder')
+				: t('arcade', 'Provided by the server'))
+		item.append(name, where)
+		if (!file.present) {
+			item.classList.add('arcade-sidebar-bios-missing')
+		}
+		files.appendChild(item)
+	}
+	section.appendChild(files)
+	if (bios.some((file) => !file.present)) {
+		const hint = document.createElement('p')
+		hint.className = 'arcade-sidebar-hint'
+		hint.textContent = t('arcade', 'Games may run worse without them. Add them to the system folder chosen in the personal Arcade settings.')
+		section.appendChild(hint)
+	}
+	return section
+}
+
+/**
+ * The save states of the game, each with its picture and a button that
+ * starts the game in it.
+ *
+ * @param {object[]} states the slots
+ * @param {string} file path of the game
+ * @param {string} mime its mimetype
+ * @param {number|string} fileId the Nextcloud file id
+ * @return {HTMLElement} the list
+ */
+function renderStates(states, file, mime, fileId) {
+	const slots = document.createElement('ul')
+	slots.className = 'arcade-sidebar-slots'
+	for (const state of [...states].sort((a, b) => b.mtime - a.mtime)) {
+		const item = document.createElement('li')
+
+		if (state.hasThumbnail) {
+			const picture = document.createElement('img')
+			picture.className = 'arcade-sidebar-slot-picture'
+			picture.alt = ''
+			picture.loading = 'lazy'
+			// The mtime keeps a rewritten slot from showing its old picture.
+			picture.src = stateUrl('/state/thumbnail', file, state.slot) + '&v=' + state.mtime
+			item.appendChild(picture)
+		} else {
+			const blank = document.createElement('span')
+			blank.className = 'arcade-sidebar-slot-picture'
+			item.appendChild(blank)
+		}
+
+		const text = document.createElement('div')
+		text.className = 'arcade-sidebar-slot-text'
+		const name = document.createElement('strong')
+		name.textContent = slotName(state.slot)
+		const when = document.createElement('span')
+		when.textContent = new Date(state.mtime * 1000).toLocaleString()
+		text.append(name, when)
+		// A stale state was marked by colour and a tooltip alone, which
+		// is nothing at all to anybody not pointing at it. Said in
+		// words, the way the player's own states panel says it.
+		if (state.stale === true) {
+			const warning = document.createElement('span')
+			warning.className = 'arcade-sidebar-stale-warning'
+			warning.textContent = t('arcade', 'made from another copy of this game')
+			warning.title = t('arcade', 'The ROM has changed since this state was saved, so loading it may go wrong.')
+			text.appendChild(warning)
+			item.classList.add('arcade-sidebar-stale')
+		}
+		item.appendChild(text)
+
+		const load = document.createElement('button')
+		load.type = 'button'
+		load.className = 'arcade-sidebar-load'
+		load.textContent = t('arcade', 'Load')
+		load.setAttribute('aria-label', t('arcade', 'Play from {slot}', { slot: slotName(state.slot) }))
+		load.addEventListener('click', () => playGame(file, mime, fileId, state.slot))
+		item.appendChild(load)
+
+		slots.appendChild(item)
+	}
+	return slots
+}
+
+// How many screenshots the tab shows; the player's gallery has the rest.
+const SCREENSHOTS_SHOWN = 6
+
+/**
+ * The latest screenshots of the game, from the user's screenshots folder.
+ * Nothing at all when there are none, or no folder to keep them in.
+ *
+ * @param {HTMLElement} section where they go
+ * @param {string} file path of the game
+ */
+async function fillScreenshots(section, file) {
+	let data
+	try {
+		const response = await api(generateUrl('/apps/arcade/arcade/screenshots?f={f}', { f: encodePath(file) }))
+		data = await response.json()
+	} catch (error) {
+		console.debug('arcade: could not list the screenshots of a game', error)
 		return
 	}
-	const mine = ++generation
-	const file = pathOf(fileInfo)
+	const shots = Array.isArray(data?.screenshots) ? data.screenshots.slice(0, SCREENSHOTS_SHOWN) : []
+	if (shots.length === 0 || !section.isConnected) {
+		return
+	}
+	section.appendChild(heading(t('arcade', 'Screenshots')))
+	const strip = document.createElement('ul')
+	strip.className = 'arcade-sidebar-screenshot-strip'
+	const folder = String(data.folder ?? '').replace(/\/+$/, '')
+	for (const shot of shots) {
+		const item = document.createElement('li')
+		const link = pictureLink(shot.fileId, folder === '' ? '' : `${folder}/${shot.basename}`)
+		link.title = shot.basename
+		const picture = document.createElement('img')
+		picture.alt = shot.basename
+		picture.loading = 'lazy'
+		picture.src = previewUrl(shot.fileId, 160, 120, String(shot.mtime))
+		link.appendChild(picture)
+		item.appendChild(link)
+		strip.appendChild(item)
+	}
+	section.appendChild(strip)
+}
+
+// Which request each tab is waiting on: a tab switched to another file
+// before the answer came drops the answer that is no longer its own.
+const generations = new WeakMap()
+
+/**
+ * Fetches what the app knows about a game and fills a tab with it.
+ *
+ * @param {HTMLElement} mountPoint the element of the tab
+ * @param {{path: string, mime: string, id: number|string}} target the game
+ */
+async function show(mountPoint, target) {
+	const mine = (generations.get(mountPoint) ?? 0) + 1
+	generations.set(mountPoint, mine)
+	const current = () => generations.get(mountPoint) === mine && mountPoint.isConnected !== false
+	const file = target.path
 	mountPoint.textContent = ''
+	// A game not read yet is read for this answer, which can take a
+	// moment for a big one: said, rather than an empty tab.
+	const waiting = document.createElement('p')
+	waiting.className = 'arcade-sidebar-empty'
+	waiting.textContent = t('arcade', 'Reading the game …')
+	mountPoint.appendChild(waiting)
 	try {
-		const response = await api(generateUrl('/apps/arcade/arcade/game?file={file}', { file }))
+		const response = await api(generateUrl('/apps/arcade/arcade/game?f={f}', { f: encodePath(file) }))
 		const game = await response.json()
-		if (mine !== generation || mountPoint === null) {
+		if (!current()) {
 			return
 		}
 		mountPoint.textContent = ''
-		mountPoint.appendChild(render(game, file, fileInfo?.mimetype ?? '', fileInfo?.id ?? 0))
+		mountPoint.appendChild(render(game, file, target.mime, target.id))
 	} catch (error) {
-		if (mine !== generation || mountPoint === null) {
+		if (!current()) {
 			return
 		}
 		mountPoint.textContent = ''
@@ -176,48 +429,127 @@ async function show(fileInfo) {
 		const retry = document.createElement('button')
 		retry.type = 'button'
 		retry.textContent = t('arcade', 'Try again')
-		retry.addEventListener('click', () => show(fileInfo))
+		retry.addEventListener('click', () => show(mountPoint, target))
 		mountPoint.append(message, retry)
 	}
 }
 
+// The web component the sidebar renders the tab as, given
+// the file it is open on as its node.
+const TAG_NAME = 'arcade-files-sidebar-tab'
+
 /**
- * @return {boolean} whether the tab was registered
+ * The tab as the sidebar renders it: an element it hands the node of the
+ * file to, and tells when the tab is the one showing.
  */
-function register() {
-	const Sidebar = window.OCA?.Files?.Sidebar
-	if (Sidebar?.registerTab === undefined || Sidebar?.Tab === undefined) {
+class ArcadeSidebarTab extends HTMLElement {
+	constructor() {
+		super()
+		this._node = null
+		this._shown = null
+	}
+
+	connectedCallback() {
+		// Set on the element before it was defined, a property hides the
+		// setter below; taken back so it goes through it.
+		for (const name of ['node', 'active']) {
+			if (Object.prototype.hasOwnProperty.call(this, name)) {
+				const value = this[name]
+				delete this[name]
+				this[name] = value
+			}
+		}
+		this.refresh()
+	}
+
+	disconnectedCallback() {
+		// Whatever was on its way for this file is dropped while the tab is
+		// away, so it asks again when it is put back.
+		this._shown = null
+	}
+
+	get node() {
+		return this._node
+	}
+
+	set node(node) {
+		this._node = node ?? null
+		this.refresh()
+	}
+
+	get active() {
+		return this._active === true
+	}
+
+	set active(active) {
+		this._active = active === true
+		this.refresh()
+	}
+
+	refresh() {
+		const node = this._node
+		if (!this.isConnected || node === null) {
+			return
+		}
+		// Asked once per file, not every time the sidebar sets a property.
+		if (this._shown === node.source) {
+			return
+		}
+		this._shown = node.source
+		show(this, { path: node.path, mime: node.mime ?? '', id: node.fileid ?? node.id ?? 0 })
+	}
+}
+
+/**
+ * Whether a file is a game the tab is for. A ROM says so by its type; a
+ * zip, a .bin or a .rom has none to say it with, and counts when its
+ * folder names a system -- Games/SNES/NHL 96.zip -- or it lies in the
+ * user's games library, as everything the library shows does.
+ *
+ * @param {?object} node the file the sidebar is open on
+ * @return {boolean}
+ */
+export function isGame(node) {
+	if (romMimes().includes(node?.mime ?? '')) {
+		return true
+	}
+	const path = typeof node?.path === 'string' ? node.path : ''
+	const name = path.split('/').pop() ?? ''
+	// Only the names that say nothing: a .nes carries its type, and a
+	// README.md in the library is no Mega Drive game.
+	if (path === '' || !isPlayable(name) || systemForFile(name) !== null) {
 		return false
 	}
-	Sidebar.registerTab(new Sidebar.Tab({
+	if (systemForFolderPath(path) !== null) {
+		return true
+	}
+	const library = String(loadState('arcade', 'libraryFolder', '')).replace(/\/+$/, '')
+	return library !== '' && `/${path.replace(/^\/+/, '')}`.startsWith(`/${library.replace(/^\/+/, '')}/`)
+}
+
+/**
+ * The sidebar renders a tab as a web component and keeps the tabs in the global scope of @nextcloud/files 4 -- written
+ * to directly here, as the library would, rather than carrying a second
+ * major version of it onto every Files page for one map.
+ */
+function registerWebComponent() {
+	if (!customElements.get(TAG_NAME)) {
+		customElements.define(TAG_NAME, ArcadeSidebarTab)
+	}
+	window._nc_files_scope ??= {}
+	window._nc_files_scope.v4_0 ??= {}
+	const scope = window._nc_files_scope.v4_0
+	scope.filesSidebarTabs ??= new Map()
+	scope.filesSidebarTabs.set(TAB_ID, {
 		id: TAB_ID,
-		name: t('arcade', 'Arcade'),
-		iconSvg: icon(ICONS.gamepad),
-
-		enabled(fileInfo) {
-			return romMimes().includes(fileInfo?.mimetype ?? '')
-		},
-
-		async mount(el, fileInfo) {
-			mountPoint = el
-			await show(fileInfo)
-		},
-
-		async update(fileInfo) {
-			await show(fileInfo)
-		},
-
-		destroy() {
-			generation++
-			if (mountPoint !== null) {
-				mountPoint.textContent = ''
-				mountPoint = null
-			}
-		},
-	}))
-	return true
+		displayName: t('arcade', 'Arcade'),
+		iconSvgInline: icon(ICONS.gamepad),
+		// After the Files app's own tabs.
+		order: 90,
+		tagName: TAG_NAME,
+		enabled: ({ node }) => isGame(node),
+		onInit: async () => {},
+	})
 }
 
-if (!register()) {
-	document.addEventListener('DOMContentLoaded', register)
-}
+registerWebComponent()

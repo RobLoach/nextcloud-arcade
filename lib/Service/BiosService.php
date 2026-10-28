@@ -13,6 +13,7 @@ use OCP\Files\GenericFileException;
 use OCP\Files\IRootFolder;
 use OCP\Files\NotFoundException;
 use OCP\Files\NotPermittedException;
+use OCP\Files\SimpleFS\ISimpleFile;
 use OCP\Files\SimpleFS\ISimpleFolder;
 use OCP\Lock\LockedException;
 
@@ -81,14 +82,7 @@ class BiosService {
 		if ($name === null) {
 			return null;
 		}
-		try {
-			$folder = $this->folder(false);
-			return $folder !== null && $folder->fileExists($name)
-				? $folder->getFile($name)->getContent()
-				: null;
-		} catch (NotFoundException) {
-			return null;
-		}
+		return $this->storeFile($name)?->getContent();
 	}
 
 	/**
@@ -97,7 +91,7 @@ class BiosService {
 	 * instance. Without a user -- a public page -- only the store is
 	 * looked at.
 	 */
-	public function readFor(?string $userId, string $name): ?string {
+	public function fileFor(?string $userId, string $name): File|ISimpleFile|null {
 		$name = self::canonicalName($name);
 		if ($name === null) {
 			return null;
@@ -108,14 +102,24 @@ class BiosService {
 				try {
 					$node = $this->nodeNamed($folder, $name);
 					if ($node !== null) {
-						return $node->getContent();
+						return $node;
 					}
 				} catch (NotFoundException|NotPermittedException|GenericFileException|LockedException) {
 					// The folder could not be read; the store may still help.
 				}
 			}
 		}
-		return $this->read($name);
+		return $this->storeFile($name);
+	}
+
+	/** The file of the store of the instance, under its one spelling. */
+	private function storeFile(string $name): ?ISimpleFile {
+		try {
+			$folder = $this->folder(false);
+			return $folder !== null && $folder->fileExists($name) ? $folder->getFile($name) : null;
+		} catch (NotFoundException) {
+			return null;
+		}
 	}
 
 	/**

@@ -5,7 +5,7 @@ the settings change in play is in [the usage guide](usage.md).
 
 There is no Save button anywhere: every setting, personal or
 administrative, is saved the moment it is changed. Folder settings have a
-browse button that opens the NextCloud file picker.
+browse button that opens the Nextcloud file picker.
 
 ## Personal settings
 
@@ -25,24 +25,93 @@ Personal settings → Arcade:
 | Volume | 100% | How loud the game plays, 0 to 100 |
 | Audio latency | 64 ms | Raise it if the sound crackles |
 | Controls | [see the usage guide](usage.md#the-keyboard) | The key of every button and of the player itself |
-| Games library folder | `/Games` | Scanned for the games library page |
+| Games library folder | `/Games` | Scanned for the games library page. Scan, beside it, scans it afresh now -- games copied into it outside Nextcloud included -- and says how many it holds |
 | Thumbnails folder | empty | Images used as game thumbnails, and where fetched box art lands |
-| Saves folder | empty | Save states and battery saves, in your own files. Without one, a game cannot be saved |
+| Saves folder | empty | Save states and battery saves, in your own files, in RetroArch's layout. Without one, a game cannot be saved |
 | System folder | empty | Where BIOS files are read from |
 | Screenshots folder | empty | Where the screenshot button saves images; left empty, they are downloaded |
 
 ## Where saves are kept
 
-With a saves folder set, saves are written to your own files, filed under
-the system and the game, so a `Mario.sfc` saves into
-`Saves/Super Nintendo/Mario/Slot 1.state` with `Slot 1.png` next to it,
-the automatic one as `Auto.state`, and the battery save as `Mario.srm`.
-They sync to your devices like anything else. Without a saves folder, a
-game cannot be saved at all, and the player says so.
+With a saves folder set, saves are written to your own files, laid out
+the way RetroArch keeps its own: battery saves under `saves/`, save
+states and their screenshots under `states/`, each filed under the name
+of the core that plays the game. So a `Mario.sfc` saves into
 
-Versions before 0.19 kept saves in the app's internal storage when no
-folder was set; those are still read and still cleaned up with their
-game. Changing the saves folder does not move existing saves.
+```
+Saves/manifest.server
+Saves/saves/Snes9x/Mario.srm
+Saves/states/Snes9x/Mario.state1
+Saves/states/Snes9x/Mario.state1.png
+Saves/states/Snes9x/Mario.state.auto
+```
+
+with slots 0 to 2 as `.state`, `.state1` and `.state2`, numbered as
+RetroArch numbers them, and the automatic one as
+`.state.auto`. They sync to your devices like anything else. Without a
+saves folder, a game cannot be saved at all, and the player says so.
+
+Games played on the same core share its folder, so two games of the same
+name on it — a `Tetris.gb` and a `Tetris.gbc` — share their saves, as they
+do in RetroArch. Deleting one of them leaves the saves alone for as long
+as the other is still there. A zip is filed under the core the player
+found inside it, which is noted with the game, so the Files sidebar and
+the cleanup find it there too; a game whose system cannot be told at all
+saves straight into `saves/` and `states/`.
+
+A zipped game's saves are named after the game inside the zip, as
+RetroArch names them: `Super Street Fighter II.zip` holding
+`Super Street Fighter II (USA).sfc` saves as
+`saves/Snes9x/Super Street Fighter II (USA).srm`. Renaming the zip keeps
+its saves.
+
+A battery save the game did not change is not written again — it is read
+out of the game once a minute, and every write would be a new version of
+the file.
+
+Changing the saves folder does not move existing saves.
+
+### RetroArch Cloud Sync
+
+The saves folder is what RetroArch's
+[Cloud Sync](https://docs.libretro.com/guides/retroarch-cloud-sync/) syncs
+with: every save and delete made in Arcade is recorded in
+`manifest.server`, which is all RetroArch reads to know what changed. To
+play the same games with the same saves in RetroArch:
+
+1. Set a saves folder.
+2. Create an app password for RetroArch under Personal settings →
+   Security.
+3. In RetroArch, open Settings → Saving → Cloud Sync, turn on Cloud Sync,
+   and choose the `webdav` backend.
+4. Set the Cloud Storage URL to the saves folder over WebDAV, with the
+   trailing slash — the RetroArch Cloud Sync section of the personal settings shows yours:
+   `https://cloud.example.com/remote.php/dav/files/USERNAME/Saves/`
+5. Enter your user name and the app password, keep Sync Saves on, and
+   restart RetroArch.
+
+Saves copied into the folder some other way — the desktop client, an
+upload in Files — are only in the manifest once something records them,
+and RetroArch does not fetch them until then. That happens by itself:
+opening a game does, at most once an hour, and the weekly background job
+does for everybody. `occ arcade:cloudsync` does it from the command line.
+Saves that are gone from the folder are recorded as deleted, so RetroArch
+deletes its copy too. A file the manifest already has, and that has not
+been touched since the manifest was written, is taken at its word;
+`--full` hashes them all.
+
+Keep RetroArch's "Sort Saves into Folders by Core Name" and "Sort Save
+States into Folders by Core Name" on, as they are by default; saves it
+already filed without them, straight in `saves/` or `states/`, are read
+and written where they are. Arcade offers slots 0 to 2 and the automatic
+slot, and lists any other slot RetroArch saved into — slot 5, or 990 — to
+be loaded or deleted.
+
+A save state belongs to the core that made it, at the version that made
+it. The cores Arcade runs are RetroArch's own, built for the browser, so
+a state usually loads on either side; one from a much older or newer
+build of the core may not. Battery saves are plain files, and always
+carry over.
 
 ## Administration settings
 
@@ -50,7 +119,7 @@ Administration settings → Arcade holds what is the same for everybody:
 
 | Setting | Default | Description |
 | --- | --- | --- |
-| Folder defaults | as above | What new users start with, and each can still change |
+| Folder defaults | as above | What new users start with, and each can still change. Scan, beside the library folder, scans every user's library afresh in the background |
 | Look up box art | On | Whether the server may ask the libretro thumbnail server at all |
 | Work out ROM checksums | Off | Whether to read a whole ROM to hash it, when the upload brought no checksum |
 | Games listed at most | 5000 | How many games one library scan lists |
@@ -58,6 +127,16 @@ Administration settings → Arcade holds what is the same for everybody:
 | How long a scan is kept | 1 day | How long an unchanged scan may be reused, from 1 hour to 1 week |
 | Core options | Core default | Options of the emulator cores, which users cannot change |
 | Picture shown for each system | Box art | Box art, title screen, screenshot or logo, per system, for everybody |
+
+At the bottom, **Maintenance** says how Arcade stands and offers what an
+administrator would otherwise do with occ, one button each:
+
+| Task | Does | occ |
+| --- | --- | --- |
+| Database | Makes whatever tables and columns of Arcade are missing, and touches nothing that is there | `occ arcade:repair` |
+| ROM file types | Gives ROMs uploaded before Arcade was enabled their file type, so they play from the Files app | `occ maintenance:mimetype:update-db` |
+| Saves of deleted games and users | Looks for them when asked, as that goes through every user's saves, then removes them; removing asks to be pressed twice | `occ arcade:cleanup` |
+| Saves left by earlier versions | Removes what versions before 0.48.8 kept in the app data; asks to be pressed twice | `occ arcade:cleanup --legacy` |
 
 Box art, checksums and the three scan limits are scalars of the instance,
 so they live in a declarative settings form that the server renders and
@@ -118,7 +197,13 @@ while a page waits:
   rescanned.
 - Fetching missing box art, when the button in the personal settings asks
   for it.
-- A weekly cleanup sweep, the same work as `occ arcade:cleanup` below.
+- Scanning every user's library, when the Scan button of the
+  administration settings asks for it.
+- Reading ROMs again after an upgrade that reads them better — the
+  titles of Super Nintendo games, say — for the games read before.
+- A weekly cleanup sweep, the same work as `occ arcade:cleanup` below,
+  and putting every Cloud Sync manifest right, as `occ arcade:cloudsync`
+  does.
 
 A setup check on the administration overview says whether background jobs
 run the way the app needs them: it warns when they are set to AJAX, have
@@ -130,8 +215,10 @@ waiting in the queue.
 | Command | Does |
 | --- | --- |
 | `occ arcade:bios` | List, add or remove the BIOS files the instance offers to every player |
-| `occ arcade:cleanup` | Remove save states of games and users that no longer exist; `--dry-run` only reports |
-| `occ arcade:status` | Report the save state storage and play activity of every user; `--json` for machines |
+| `occ arcade:cleanup` | Remove save states of games and users that no longer exist; `--legacy` also removes the saves versions before 0.48.8 left in the app data, which nothing reads; `--dry-run` only reports |
+| `occ arcade:cloudsync` | Record in each user's Cloud Sync manifest the saves that got into the saves folder some other way, and the ones that are gone; `--user`, `--full` |
+| `occ arcade:repair` | Make the database tables and columns of Arcade that are missing |
+| `occ arcade:status` | Report the games with saves and the play activity of every user, and what earlier versions left in the app data; `--json` for machines |
 | `occ arcade:uninstall` | Remove the settings, save states and mimetypes of the app, before removing the app itself; `--dry-run`, `--force` |
 
 What the app stores, and why `occ arcade:uninstall` should run before
@@ -145,7 +232,7 @@ an `.htaccess` in `img/cores/` that sets the `application/wasm` mimetype
 (streaming compilation), a week-long immutable `Cache-Control`, and
 compression — no configuration needed.
 
-On nginx, add the equivalent to the NextCloud server block:
+On nginx, add the equivalent to the Nextcloud server block:
 
 ```nginx
 location ~ ^/apps/arcade/img/cores/ {
@@ -157,7 +244,11 @@ location ~ ^/apps/arcade/img/cores/ {
 ```
 
 A memory cache (Redis or APCu) makes the games library page faster, since
-that is where the scanned library is cached.
+that is where the scanned library is cached. Without one, Arcade keeps
+the scan in files of its app data instead: slower than memory, far
+quicker than walking the library folder again on every request, and
+never used once a memory cache is configured. The weekly background job
+removes the cache files that expired.
 
 The script the Files app loads carries no more than what it takes to
 register the player with the file viewer; the emulator itself is fetched
@@ -173,7 +264,7 @@ frames, connections, images and media. They go on every page a user who
 may use the app could see, since the player also runs inside the Files
 app, and on a public share page only when that share really holds a game;
 every other page of the instance keeps its default policy. No changes to
-the NextCloud server are required.
+the Nextcloud server are required.
 
 ## Troubleshooting
 
@@ -200,3 +291,9 @@ save states and battery save, since it can be restored with the same file
 id. They go when the trash lets go of it. The weekly cleanup sweep — or
 `occ arcade:cleanup` — picks up whatever the event listeners could not
 catch, such as a whole folder of games deleted in one go.
+
+**A table of Arcade is missing.** An upgrade that went wrong half way can
+leave Arcade without a table or a column, and `occ arcade:status` says
+which. Repair the database under Administration settings → Arcade →
+Maintenance, or run `occ arcade:repair`: whatever is missing is made, and
+nothing that is there is touched.

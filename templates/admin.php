@@ -39,6 +39,12 @@ $systemFolder = $_['systemFolder'];
 					<?php endif; ?>>
 				<button type="button" class="arcade-folder-picker"
 					data-target="arcade-<?php p($key); ?>"><?php p($l->t('Browse …')); ?></button>
+				<?php if ($key === 'library_folder'): ?>
+					<?php /* Here the folder is everybody's default, so a scan is of
+					        everybody's library, and runs in the background. */ ?>
+					<button type="button" class="arcade-library-scan"><?php p($l->t('Scan')); ?></button>
+					<span class="arcade-library-scan-status" aria-live="polite"></span>
+				<?php endif; ?>
 			</p>
 		<?php endforeach; ?>
 

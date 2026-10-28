@@ -6,11 +6,8 @@ namespace OCA\Arcade\Command;
 
 use OCA\Arcade\Db\GameMapper;
 use OCA\Arcade\Db\PlayMapper;
-use OCA\Arcade\Service\StateService;
-use OCP\Files\SimpleFS\ISimpleFile;
-use OCP\Files\SimpleFS\ISimpleFolder;
-use OCP\IUser;
-use OCP\IUserManager;
+use OCA\Arcade\Service\Maintenance;
+use OCA\Arcade\Service\LegacyAppDataSaves;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -19,19 +16,19 @@ use Symfony\Component\Console\Output\OutputInterface;
 /**
  * Says what the app holds, and for whom.
  *
- * The states live in the app data, where no quota counts them and no file
- * listing shows them, so this is the one place an administrator sees what
- * each user's saves add up to. The play records live in a table of their
- * own and are just as invisible; they are reported alongside.
+ * Saves live in each user's own files now, where their quota counts them,
+ * so what is reported is what no file listing shows: the games each user
+ * has saves for, what they played and for how long, and whatever earlier
+ * versions left in the app data, which nothing reads any more.
  *
  * @psalm-suppress UnusedClass
  */
 class Status extends Command {
 	public function __construct(
-		private StateService $stateService,
-		private IUserManager $userManager,
+		private LegacyAppDataSaves $legacy,
 		private GameMapper $gameMapper,
 		private PlayMapper $playMapper,
+		private Maintenance $maintenance,
 	) {
 		parent::__construct();
 	}
@@ -44,55 +41,31 @@ class Status extends Command {
 	}
 
 	protected function execute(InputInterface $input, OutputInterface $output): int {
-		// The folders are named after a hash of their user, so the users are
-		// hashed and matched against the folders. Only a user who has signed
-		// in at least once can have anything here, and that is what "seen"
-		// means, so walking the seen users -- answered from the local
-		// database -- misses nobody, where callForAllUsers would also ask
-		// every backend (an LDAP one at length) about users who cannot have
-		// a folder.
-		$names = [];
-		$this->userManager->callForSeenUsers(function (IUser $user) use (&$names): void {
-			$names[$this->stateService->folderKeyOf($user->getUID())] = $user->getUID();
-		});
-
+		// Everything below reads the tables of the app, and a missing one
+		// is a database error a page long that says nothing of what to do.
+		$problems = $this->maintenance->databaseProblems();
+		if ($problems !== []) {
+			foreach ($problems as $problem) {
+				$output->writeln("<error>$problem</error>");
+			}
+			$output->writeln('Run `occ arcade:repair`, or Repair the database under Administration settings → Arcade → Maintenance.');
+			return 1;
+		}
 		$games = $this->gameMapper->countsByUser();
 		$plays = $this->playMapper->totalsByUser();
-
-		/** @var array<string, array{files: int, bytes: int}> $folders */
-		$folders = [];
-		$orphans = [];
-		foreach ($this->stateService->userFolders() as $key => $folder) {
-			[$files, $bytes] = $this->measure($folder);
-			$userId = $names[(string)$key] ?? null;
-			if ($userId === null) {
-				$orphans[] = ['folder' => (string)$key, 'files' => $files, 'bytes' => $bytes];
-				continue;
-			}
-			$folders[$userId] = ['files' => $files, 'bytes' => $bytes];
-		}
-		// A user can have plays or registered games without a folder, when
-		// their saves go to a folder of their own files instead.
-		foreach ([...array_keys($games), ...array_keys($plays)] as $userId) {
-			$folders[(string)$userId] ??= ['files' => 0, 'bytes' => 0];
-		}
-		ksort($folders);
+		$userIds = array_unique(array_map(strval(...), [...array_keys($games), ...array_keys($plays)]));
+		sort($userIds);
 
 		$users = [];
-		$totals = ['files' => 0, 'bytes' => 0, 'games' => 0, 'plays' => 0, 'seconds' => 0];
-		foreach ($folders as $userId => $folder) {
-			$userId = (string)$userId;
+		$totals = ['games' => 0, 'plays' => 0, 'seconds' => 0];
+		foreach ($userIds as $userId) {
 			$user = [
 				'user' => $userId,
-				'files' => $folder['files'],
-				'bytes' => $folder['bytes'],
 				'games' => $games[$userId] ?? 0,
 				'plays' => $plays[$userId]['plays'] ?? 0,
 				'seconds' => $plays[$userId]['seconds'] ?? 0,
 			];
 			$users[] = $user;
-			$totals['files'] += $user['files'];
-			$totals['bytes'] += $user['bytes'];
 			$totals['games'] += $user['games'];
 			$totals['plays'] += $user['plays'];
 			$totals['seconds'] += $user['seconds'];
@@ -101,8 +74,8 @@ class Status extends Command {
 		$status = [
 			'users' => $users,
 			'totals' => $totals,
-			'legacyFiles' => $this->stateService->countLegacyFiles(),
-			'orphanedFolders' => $orphans,
+			'appDataSaves' => $this->legacy->count(),
+			'jobs' => $this->maintenance->jobs(),
 		];
 
 		if ((bool)$input->getOption('json')) {
@@ -116,26 +89,21 @@ class Status extends Command {
 
 	/**
 	 * @param array{
-	 *     users: list<array{user: string, files: int, bytes: int, games: int, plays: int, seconds: int}>,
-	 *     totals: array{files: int, bytes: int, games: int, plays: int, seconds: int},
-	 *     legacyFiles: int,
-	 *     orphanedFolders: list<array{folder: string, files: int, bytes: int}>,
+	 *     users: list<array{user: string, games: int, plays: int, seconds: int}>,
+	 *     totals: array{games: int, plays: int, seconds: int},
+	 *     appDataSaves: array{files: int, bytes: int},
+	 *     jobs: array<string, array{running: bool, last: ?array{status: string, at: int, seconds: ?float}}>,
 	 * } $status
 	 */
 	private function report(array $status, OutputInterface $output): void {
 		if ($status['users'] === []) {
 			$output->writeln('Nothing is stored: nobody has saved or played anything yet.');
 		} else {
-			$output->writeln(sprintf(
-				'  %-24s %7s %10s %7s %7s %10s',
-				'User', 'Files', 'Size', 'Games', 'Plays', 'Playtime',
-			));
+			$output->writeln(sprintf('  %-24s %7s %7s %10s', 'User', 'Games', 'Plays', 'Playtime'));
 			foreach ($status['users'] as $user) {
 				$output->writeln(sprintf(
-					'  %-24s %7d %10s %7d %7d %10s',
+					'  %-24s %7d %7d %10s',
 					$user['user'],
-					$user['files'],
-					$this->sizeOf($user['bytes']),
 					$user['games'],
 					$user['plays'],
 					$this->playtimeOf($user['seconds']),
@@ -143,51 +111,73 @@ class Status extends Command {
 			}
 			$totals = $status['totals'];
 			$output->writeln(sprintf(
-				'  %-24s %7d %10s %7d %7d %10s',
+				'  %-24s %7d %7d %10s',
 				'Total',
-				$totals['files'],
-				$this->sizeOf($totals['bytes']),
 				$totals['games'],
 				$totals['plays'],
 				$this->playtimeOf($totals['seconds']),
 			));
 		}
 
-		$legacy = $status['legacyFiles'];
-		if ($legacy > 0) {
-			$output->writeln(
-				"<comment>$legacy files written before the states were kept per user hold "
-				. 'no record of whose they are, so they are only counted.</comment>',
-			);
-		}
-		foreach ($status['orphanedFolders'] as $orphan) {
+		$this->reportJobs($status['jobs'], $output);
+
+		$left = $status['appDataSaves'];
+		if ($left['files'] > 0) {
 			$output->writeln(sprintf(
-				'<comment>A folder of a user that no longer exists holds %d files (%s): %s. '
-				. 'arcade:cleanup removes it.</comment>',
-				$orphan['files'],
-				$this->sizeOf($orphan['bytes']),
-				$orphan['folder'],
+				'<comment>%d save files (%s) earlier versions left in the app data are no longer read. '
+				. '`occ arcade:cleanup --legacy` removes them.</comment>',
+				$left['files'],
+				$this->sizeOf($left['bytes']),
 			));
 		}
 	}
 
 	/**
-	 * What a user's folder holds, from one listing: how many files, and
-	 * their sizes added up. The sizes come from the file cache; nothing is
-	 * read.
+	 * How each background job last went: a failure otherwise only shows
+	 * in the log.
 	 *
-	 * @return array{0: int, 1: int} files, bytes
+	 * @param array<string, array{running: bool, last: ?array{status: string, at: int, seconds: ?float}}> $jobs
 	 */
-	private function measure(ISimpleFolder $folder): array {
-		$files = 0;
-		$bytes = 0;
-		foreach ($folder->getDirectoryListing() as $node) {
-			if ($node instanceof ISimpleFile) {
-				$files++;
-				$bytes += (int)$node->getSize();
-			}
+	private function reportJobs(array $jobs, OutputInterface $output): void {
+		if ($jobs === []) {
+			return;
 		}
-		return [$files, $bytes];
+		$names = [
+			'scan' => 'Scanning every library',
+			'cleanup' => 'Weekly cleanup',
+			'thumbnails' => 'Fetching thumbnails',
+			'metadata' => 'Reading game details',
+		];
+		$output->writeln('');
+		$output->writeln('Background jobs:');
+		foreach ($jobs as $job => $state) {
+			$last = $state['last'];
+			if ($last === null) {
+				$said = 'has not run yet';
+			} else {
+				$when = date('Y-m-d H:i', $last['at']);
+				$took = $last['seconds'] === null ? '' : sprintf(', took %s', $this->durationOf($last['seconds']));
+				$said = match ($last['status']) {
+					'failed' => "<error>failed</error> at $when$took",
+					'crashed' => "<error>crashed</error> at $when$took",
+					default => "finished at $when$took",
+				};
+			}
+			if ($state['running']) {
+				$said = $last === null ? 'running now' : "running now; last $said";
+			}
+			$output->writeln(sprintf('  %-24s %s', $names[$job] ?? $job, $said));
+		}
+	}
+
+	private function durationOf(float $seconds): string {
+		if ($seconds < 1) {
+			return '<1s';
+		}
+		if ($seconds < 60) {
+			return sprintf('%.1fs', $seconds);
+		}
+		return $this->playtimeOf((int)round($seconds));
 	}
 
 	private function sizeOf(int $bytes): string {

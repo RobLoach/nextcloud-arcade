@@ -1,18 +1,39 @@
 /* The Arcade tab of the Files sidebar. The sidebar itself brings the type
    and the spacing of the panel; only what is ours is styled here. */
 
-.arcade-sidebar {
-	padding: calc(var(--default-grid-baseline, 4px) * 2) 0;
+/* The spacing steps of the app: the grid baseline of the server, and
+   multiples of it. */
+:root {
+	--arcade-space-1: var(--default-grid-baseline, 4px);
+	--arcade-space-2: calc(var(--default-grid-baseline, 4px) * 2);
+	--arcade-space-3: calc(var(--default-grid-baseline, 4px) * 3);
+	--arcade-space-4: calc(var(--default-grid-baseline, 4px) * 4);
+	--arcade-space-5: calc(var(--default-grid-baseline, 4px) * 5);
+	--arcade-space-6: calc(var(--default-grid-baseline, 4px) * 6);
+	--arcade-space-8: calc(var(--default-grid-baseline, 4px) * 8);
 }
 
-.arcade-sidebar .arcade-sidebar-play {
+.arcade-sidebar {
+	padding: var(--arcade-space-2) 0;
+}
+
+.arcade-sidebar .arcade-sidebar-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--arcade-space-2);
+	margin-bottom: var(--arcade-space-3);
+}
+
+.arcade-sidebar .arcade-sidebar-play,
+.arcade-sidebar .arcade-sidebar-files {
 	display: flex;
 	align-items: center;
-	gap: calc(var(--default-grid-baseline, 4px) * 2);
-	margin-bottom: calc(var(--default-grid-baseline, 4px) * 3);
+	gap: var(--arcade-space-2);
+	margin: 0;
 }
 
-.arcade-sidebar .arcade-sidebar-play svg {
+.arcade-sidebar .arcade-sidebar-play svg,
+.arcade-sidebar .arcade-sidebar-files svg {
 	width: 20px;
 	height: 20px;
 	fill: currentColor;
@@ -21,11 +42,16 @@
 .arcade-sidebar .arcade-sidebar-details {
 	display: grid;
 	grid-template-columns: auto 1fr;
-	gap: calc(var(--default-grid-baseline, 4px)) calc(var(--default-grid-baseline, 4px) * 3);
+	gap: var(--arcade-space-1) var(--arcade-space-3);
 }
 
 .arcade-sidebar .arcade-sidebar-details dt {
 	color: var(--color-text-maxcontrast);
+	/* The sidebar of Nextcloud 35 gives every label a fixed width that
+	   does not wrap, so a long one ran into its value. */
+	width: auto;
+	max-width: 10em;
+	white-space: normal;
 }
 
 .arcade-sidebar .arcade-sidebar-details dd {
@@ -33,32 +59,94 @@
 }
 
 .arcade-sidebar h3 {
-	margin-top: calc(var(--default-grid-baseline, 4px) * 4);
-	margin-bottom: calc(var(--default-grid-baseline, 4px));
+	margin-top: var(--arcade-space-4);
+	margin-bottom: var(--arcade-space-1);
 }
 
 .arcade-sidebar .arcade-sidebar-slots {
 	display: flex;
 	flex-direction: column;
-	gap: calc(var(--default-grid-baseline, 4px));
+	gap: var(--arcade-space-1);
 }
 
 .arcade-sidebar .arcade-sidebar-slots li {
 	display: flex;
-	flex-wrap: wrap;
-	justify-content: space-between;
-	gap: calc(var(--default-grid-baseline, 4px) * 2);
+	align-items: center;
+	gap: var(--arcade-space-2);
 }
 
-.arcade-sidebar .arcade-sidebar-slots li span {
+/* The picture of a slot, at the 4:3 the consoles drew at; an empty frame
+   of the same size for a slot saved without one, so the rows line up. */
+.arcade-sidebar .arcade-sidebar-slot-picture {
+	flex-shrink: 0;
+	width: 64px;
+	height: 48px;
+	object-fit: cover;
+	border-radius: var(--border-radius);
+	background-color: var(--color-background-dark);
+}
+
+.arcade-sidebar .arcade-sidebar-slot-text {
+	display: flex;
+	flex-direction: column;
+	flex: 1;
+	min-width: 0;
+}
+
+.arcade-sidebar .arcade-sidebar-slot-text span {
 	color: var(--color-text-maxcontrast);
 }
 
-/* The warning is words now, not a colour: it takes a line of its own
-   under the slot it belongs to. */
+.arcade-sidebar .arcade-sidebar-load {
+	flex-shrink: 0;
+	margin: 0;
+}
+
+/* The warning is words now, not a colour: it sits under the time of the
+   slot it belongs to. */
 .arcade-sidebar .arcade-sidebar-slots li .arcade-sidebar-stale-warning {
-	flex-basis: 100%;
 	color: var(--color-warning-text, var(--color-text-maxcontrast));
+}
+
+.arcade-sidebar .arcade-sidebar-bios {
+	display: flex;
+	flex-direction: column;
+	gap: var(--arcade-space-1);
+}
+
+.arcade-sidebar .arcade-sidebar-bios li {
+	display: flex;
+	justify-content: space-between;
+	gap: var(--arcade-space-2);
+	overflow-wrap: anywhere;
+}
+
+.arcade-sidebar .arcade-sidebar-bios li span {
+	color: var(--color-text-maxcontrast);
+}
+
+.arcade-sidebar .arcade-sidebar-bios li.arcade-sidebar-bios-missing span {
+	color: var(--color-warning-text, var(--color-text-maxcontrast));
+}
+
+.arcade-sidebar .arcade-sidebar-hint {
+	margin-top: var(--arcade-space-1);
+	color: var(--color-text-maxcontrast);
+}
+
+.arcade-sidebar .arcade-sidebar-screenshot-strip {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+	gap: var(--arcade-space-2);
+}
+
+.arcade-sidebar .arcade-sidebar-screenshot-strip img {
+	display: block;
+	width: 100%;
+	aspect-ratio: 4 / 3;
+	object-fit: cover;
+	border-radius: var(--border-radius);
+	background-color: var(--color-background-dark);
 }
 
 .arcade-sidebar .arcade-sidebar-empty {
@@ -67,4 +155,29 @@
 
 .arcade-sidebar .arcade-sidebar-error {
 	color: var(--color-error-text, var(--color-main-text));
+}
+
+/* The pictures of the thumbnail packs, whole rather than cropped: a box
+   is taller than it is wide, a logo far wider, and each is worth seeing
+   as it is. */
+.arcade-sidebar .arcade-sidebar-thumbnail-list {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+	gap: var(--arcade-space-2);
+}
+
+.arcade-sidebar .arcade-sidebar-thumbnail-list a {
+	display: flex;
+	flex-direction: column;
+	gap: var(--arcade-space-1);
+	color: var(--color-text-maxcontrast);
+}
+
+.arcade-sidebar .arcade-sidebar-thumbnail-list img {
+	display: block;
+	width: 100%;
+	height: 120px;
+	object-fit: contain;
+	border-radius: var(--border-radius);
+	background-color: var(--color-background-dark);
 }

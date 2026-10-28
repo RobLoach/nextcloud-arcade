@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
-import { MESSAGE_CAP, coreMessage, createCoreLog } from '../../src/corelog.js'
+import { MESSAGE_CAP, coreMessage, createCoreLog, watchCoreLog } from '../../src/corelog.js'
 
 describe('coreMessage', () => {
 	test('reads the level off the front of the line', () => {
@@ -72,5 +72,36 @@ describe('createCoreLog', () => {
 			log(`[ERROR] Something went wrong ${number}`)
 		}
 		expect(said).toHaveLength(MESSAGE_CAP)
+	})
+})
+
+describe('listening in on the core', () => {
+	test('hands a watcher every line, and keeps from the player what it takes', () => {
+		const report = vi.fn()
+		const log = createCoreLog(report)
+		const heard = []
+		const stop = watchCoreLog((line) => {
+			heard.push(line)
+			return line.includes('Failed to load state')
+		})
+
+		log('[ERROR] [State] Failed to load state from "/x.state".')
+		log('[ERROR] Could not load the BIOS')
+		stop()
+		log('[ERROR] [State] Failed to load state from "/y.state".')
+
+		expect(heard).toHaveLength(2)
+		expect(report.mock.calls.map(([message]) => message)).toEqual([
+			'Could not load the BIOS',
+			'Failed to load state from "/y.state".',
+		])
+	})
+})
+
+describe('what the browser build says of itself', () => {
+	test('is not passed on, being true of every launch', () => {
+		expect(coreMessage('[ERROR] [Playlist] Cannot push NULL or empty core path into the playlist.')).toBeNull()
+		expect(coreMessage('[ERROR] [EMSCRIPTEN] Could not get screen dimensions.')).toBeNull()
+		expect(coreMessage('[ERROR] [State] Failed to load state from "/x.state".')).not.toBeNull()
 	})
 })

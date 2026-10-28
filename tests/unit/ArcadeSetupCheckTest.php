@@ -108,12 +108,12 @@ class ArcadeSetupCheckTest extends TestCase {
 		$this->assertSame(SetupResult::INFO, $result->getSeverity());
 	}
 
-	public function testNoMemoryCacheAtAllIsAWarningAboutRescanning(): void {
+	public function testNoMemoryCacheAtAllIsANoteThatFilesStandIn(): void {
 		$this->distributedCache = false;
 		$this->localCache = false;
 		$result = $this->check()->run();
-		$this->assertSame(SetupResult::WARNING, $result->getSeverity());
-		$this->assertStringContainsString('rescans the game library on every request', (string)$result->getDescription());
+		$this->assertSame(SetupResult::INFO, $result->getSeverity());
+		$this->assertStringContainsString('keeps its game library scans in files', (string)$result->getDescription());
 		$this->assertSame(ArcadeSetupCheck::CACHE_DOC_LINK, $result->getLinkToDoc());
 	}
 

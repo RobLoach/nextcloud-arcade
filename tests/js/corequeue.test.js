@@ -120,4 +120,19 @@ describe('oneAtATime', () => {
 
 		expect(oneAtATime(instance).slots).toBe(3)
 	})
+
+	test('runs work of the caller\'s own in its turn, handed the emulator itself', async () => {
+		const { calls, instance } = held()
+		const core = oneAtATime(instance)
+		const work = vi.fn(async (emulator) => emulator.slots)
+
+		core.saveState()
+		const answer = core.exclusive(work)
+		await Promise.resolve()
+		expect(work).not.toHaveBeenCalled()
+
+		calls[0].resolve()
+		expect(await answer).toBe(3)
+		expect(work).toHaveBeenCalledWith(instance)
+	})
 })

@@ -1,6 +1,6 @@
-import { translate as t } from '@nextcloud/l10n'
+import { translate as t, translatePlural as n } from '@nextcloud/l10n'
 import { generateUrl } from '@nextcloud/router'
-import { UPLOAD_WAIT, api, deadline } from './api.js'
+import { UPLOAD_WAIT, api, asUpload, deadline } from './api.js'
 import { formatSize } from './format.js'
 import { UNBOUND, keyLabel, retroarchKey } from './keys.js'
 
@@ -384,6 +384,281 @@ async function fetchThumbnails() {
 }
 
 /**
+ * Scan the games library afresh, from beside the library folder. In the
+ * personal settings that is the player's own library, now; in the
+ * administration settings everybody's, in the background.
+ *
+ * @param {HTMLButtonElement} button the Scan button
+ */
+async function scanLibrary(button) {
+	const status = button.parentElement.querySelector('.arcade-library-scan-status')
+	const admin = container.dataset.scope === 'admin'
+	button.disabled = true
+	status.textContent = t('arcade', 'Scanning …')
+	// Saving first, so a folder just typed in is the one scanned.
+	if (!await save(button)) {
+		status.textContent = t('arcade', 'The settings could not be saved, so nothing was scanned.')
+		button.disabled = false
+		return
+	}
+	try {
+		if (admin) {
+			const { queued } = await (await api(generateUrl('/apps/arcade/arcade/library/scan/all'), { method: 'POST' })).json()
+			status.textContent = queued
+				? t('arcade', 'Scanning the games library of every user in the background.')
+				: t('arcade', 'A scan of every games library is already waiting to run.')
+		} else {
+			// A large library takes a while to walk.
+			const result = await (await api(generateUrl('/apps/arcade/arcade/library/scan'), {
+				method: 'POST',
+				signal: deadline(UPLOAD_WAIT),
+			})).json()
+			status.textContent = n('arcade', 'Found %n game in {folder}.', 'Found %n games in {folder}.', result.games, { folder: result.folder })
+		}
+	} catch (error) {
+		console.error('Could not scan the games library', error)
+		status.textContent = error?.status === 404
+			? t('arcade', 'There is no such folder in your files.')
+			: t('arcade', 'Could not scan the games library.')
+	}
+	button.disabled = false
+}
+
+/**
+ * The maintenance section of the administration settings: how each task
+ * stands, and its one button. The ones that remove saves ask to be
+ * pressed twice, and forget the first press soon enough.
+ */
+function setUpMaintenance() {
+	const section = document.getElementById('arcade-maintenance')
+	if (section === null) {
+		return
+	}
+	// A task the page does not carry is left out rather than taken down
+	// with: a page and a script of two different versions -- the browser
+	// keeping one of them a while -- should lose a line, not the section.
+	const absent = document.createElement('button')
+	const task = (name) => section.querySelector(`[data-task="${name}"]`)
+	const stateOf = (name) => task(name)?.querySelector('.arcade-maintenance-state') ?? document.createElement('p')
+	const buttonOf = (name) => task(name)?.querySelector('.arcade-maintenance-action') ?? absent
+	const say = (name, text) => {
+		stateOf(name).textContent = text
+	}
+	const url = (path) => generateUrl(`/apps/arcade/arcade/maintenance${path}`)
+	// The saves of games and of users, said only for what there is of each.
+	const leftBehind = ({ games, users }, removed) => [
+		games > 0
+			? (removed
+				? n('arcade', 'Removed the saves of %n deleted game.', 'Removed the saves of %n deleted games.', games)
+				: n('arcade', 'The saves of %n deleted game are left behind.', 'The saves of %n deleted games are left behind.', games))
+			: '',
+		users > 0
+			? (removed
+				? n('arcade', 'Removed the saves of %n deleted user.', 'Removed the saves of %n deleted users.', users)
+				: n('arcade', 'The saves of %n deleted user are left behind.', 'The saves of %n deleted users are left behind.', users))
+			: '',
+	].filter(Boolean).join(' ') || t('arcade', 'Nothing was left behind.')
+
+	const show = (status) => {
+		const problems = status.database ?? []
+		say('database', problems.length === 0
+			? t('arcade', 'The database tables are in order.')
+			: problems.join('. ') + '.')
+		buttonOf('database').disabled = false
+
+		say('filetypes', t('arcade', 'ROMs uploaded before Arcade was enabled can still be plain files to Nextcloud, and do not play from the Files app.'))
+		buttonOf('filetypes').disabled = false
+
+		databaseInOrder = problems.length === 0
+		showLeftBehind()
+
+		showJobs(status.jobs ?? {})
+
+		const appData = status.appData ?? { files: 0, bytes: 0 }
+		if (appData.files === 0) {
+			say('appdata', t('arcade', 'Nothing is left.'))
+			buttonOf('appdata').disabled = true
+		} else {
+			say('appdata', n('arcade', '%n file ({size}) left in the app data by versions before 0.48.8, which nothing reads any more.',
+				'%n files ({size}) left in the app data by versions before 0.48.8, which nothing reads any more.',
+				appData.files, { size: formatSize(appData.bytes) }))
+			buttonOf('appdata').disabled = false
+		}
+
+	}
+
+	// How each background job last went, one line apiece. A failure is
+	// the reason this is here: otherwise only the log says so.
+	const jobNames = {
+		scan: t('arcade', 'Scanning every library'),
+		cleanup: t('arcade', 'Weekly cleanup'),
+		thumbnails: t('arcade', 'Fetching thumbnails'),
+		metadata: t('arcade', 'Reading game details'),
+	}
+	const jobLine = ({ running, last }) => {
+		if (running) {
+			return t('arcade', 'Running now')
+		}
+		if (!last) {
+			return t('arcade', 'Has not run yet')
+		}
+		const when = new Date(last.at * 1000).toLocaleString()
+		switch (last.status) {
+		case 'failed':
+			return t('arcade', 'Failed on {when}. The Nextcloud log says why.', { when })
+		case 'crashed':
+			return t('arcade', 'Stopped partway on {when}. The Nextcloud log says why.', { when })
+		default:
+			return t('arcade', 'Finished on {when}', { when })
+		}
+	}
+	const showJobs = (jobs) => {
+		const list = document.createElement('ul')
+		list.className = 'arcade-maintenance-jobs'
+		for (const [job, state] of Object.entries(jobs)) {
+			const item = document.createElement('li')
+			const name = document.createElement('strong')
+			name.textContent = jobNames[job] ?? job
+			item.append(name, ': ', jobLine(state))
+			if (state.last?.status === 'failed' || state.last?.status === 'crashed') {
+				item.classList.add('arcade-maintenance-job-failed')
+			}
+			list.appendChild(item)
+		}
+		const state = stateOf('jobs')
+		state.textContent = ''
+		if (list.children.length === 0) {
+			state.textContent = t('arcade', 'Nextcloud keeps no record of them.')
+			return
+		}
+		state.appendChild(list)
+	}
+
+	// What is left behind of deleted games and users takes a walk over the
+	// saves of every user to find, so it is not found until asked for: the
+	// button looks first, and once something is found, removes it.
+	let databaseInOrder = true
+	let found = null
+	const leftButton = buttonOf('leftbehind')
+	const lookLabel = leftButton.textContent
+	const removeLabel = t('arcade', 'Remove them')
+	const showLeftBehind = () => {
+		leftButton.classList.remove('arcade-maintenance-confirm')
+		if (!databaseInOrder) {
+			say('leftbehind', t('arcade', 'Repair the database first.'))
+			leftButton.textContent = lookLabel
+			leftButton.disabled = true
+		} else if (found === null) {
+			say('leftbehind', t('arcade', 'Not looked for yet. Looking goes through the saves of every user, which takes a while on a large instance.'))
+			leftButton.textContent = lookLabel
+			leftButton.disabled = false
+		} else if (found.users === 0 && found.games === 0) {
+			say('leftbehind', t('arcade', 'Nothing is left behind.'))
+			leftButton.textContent = lookLabel
+			leftButton.disabled = false
+		} else {
+			say('leftbehind', leftBehind(found, false))
+			leftButton.textContent = removeLabel
+			leftButton.disabled = false
+		}
+	}
+	const lookForLeftBehind = async () => {
+		leftButton.disabled = true
+		say('leftbehind', t('arcade', 'Looking …'))
+		try {
+			found = await (await api(url('/leftbehind'), { signal: deadline(UPLOAD_WAIT) })).json()
+		} catch (error) {
+			console.error('Could not look for saves left behind', error)
+			found = null
+			showLeftBehind()
+			say('leftbehind', t('arcade', 'Could not be checked.'))
+			return
+		}
+		showLeftBehind()
+	}
+
+	const refresh = async () => {
+		try {
+			show(await (await api(url(''))).json())
+		} catch (error) {
+			console.error('Could not read how Arcade stands', error)
+			for (const element of section.querySelectorAll('.arcade-maintenance-state')) {
+				element.textContent = t('arcade', 'Could not be checked.')
+			}
+		}
+	}
+
+	// Runs a task, says what came of it, and checks everything again.
+	const run = async (name, path, describe) => {
+		const button = buttonOf(name)
+		button.disabled = true
+		say(name, t('arcade', 'Working …'))
+		try {
+			// Repairing and clearing up walk the whole instance; give them
+			// the time an upload would get.
+			const result = await (await api(url(path), { method: 'POST', signal: deadline(UPLOAD_WAIT) })).json()
+			await refresh()
+			say(name, describe(result))
+		} catch (error) {
+			console.error(`Could not run the maintenance task ${name}`, error)
+			say(name, t('arcade', 'Could not be done. The server log says why.'))
+			button.disabled = false
+		}
+	}
+
+	const armed = (name, onConfirm) => {
+		const button = buttonOf(name)
+		const resting = button.textContent
+		let timer = null
+		button.addEventListener('click', () => {
+			if (!button.classList.contains('arcade-maintenance-confirm')) {
+				button.classList.add('arcade-maintenance-confirm')
+				button.textContent = t('arcade', 'Really remove?')
+				timer = setTimeout(() => {
+					button.classList.remove('arcade-maintenance-confirm')
+					button.textContent = resting
+				}, 4000)
+				return
+			}
+			clearTimeout(timer)
+			button.classList.remove('arcade-maintenance-confirm')
+			button.textContent = resting
+			onConfirm()
+		})
+	}
+
+	buttonOf('database').addEventListener('click', () => run('database', '/database', (result) => (result.database.length === 0
+		? t('arcade', 'Repaired: the database tables are in order.')
+		: t('arcade', 'Still wrong: {problems}.', { problems: result.database.join('. ') }))))
+	buttonOf('filetypes').addEventListener('click', () => run('filetypes', '/filetypes', (result) => (result.updated === 0 && result.healed === 0
+		? t('arcade', 'Every ROM already had its file type.')
+		: n('arcade', 'Gave %n file its ROM file type.', 'Gave %n files their ROM file type.', result.updated))))
+	// Looking is the first press; removing what was found asks for two.
+	let leftTimer = null
+	leftButton.addEventListener('click', () => {
+		if (found === null || (found.users === 0 && found.games === 0)) {
+			lookForLeftBehind()
+			return
+		}
+		if (!leftButton.classList.contains('arcade-maintenance-confirm')) {
+			leftButton.classList.add('arcade-maintenance-confirm')
+			leftButton.textContent = t('arcade', 'Really remove?')
+			leftTimer = setTimeout(showLeftBehind, 4000)
+			return
+		}
+		clearTimeout(leftTimer)
+		run('leftbehind', '/leftbehind', (result) => {
+			found = { users: 0, games: 0 }
+			showLeftBehind()
+			return leftBehind(result, true)
+		})
+	})
+	armed('appdata', () => run('appdata', '/appdata', (result) => n('arcade', 'Removed %n file.', 'Removed %n files.', result.removed)))
+
+	refresh()
+}
+
+/**
  * Show what the background job last had to say for itself.
  */
 async function showFetchStatus() {
@@ -470,8 +745,7 @@ async function uploadBios(input) {
 	try {
 		await api(generateUrl('/apps/arcade/arcade/bios?name={name}', { name: row.dataset.name }), {
 			method: 'POST',
-			headers: { 'Content-Type': 'application/octet-stream' },
-			body: file,
+			body: asUpload(file, row.dataset.name),
 			// A BIOS is a file the admin picked off their disk, so it moves
 			// like a save rather than like a listing.
 			signal: deadline(UPLOAD_WAIT),
@@ -522,6 +796,9 @@ if (container !== null) {
 		}
 	})
 	document.getElementById('arcade-fetch-thumbnails')?.addEventListener('click', fetchThumbnails)
+	container.querySelectorAll('.arcade-library-scan').forEach((button) => {
+		button.addEventListener('click', () => scanLibrary(button))
+	})
 	container.querySelectorAll('.arcade-key-binding').forEach((element) => {
 		showBinding(element)
 		element.addEventListener('click', () => captureKey(element))
@@ -573,3 +850,7 @@ if (container !== null) {
 	})
 	refreshBios()
 }
+
+// A form of its own, last on the administration page, so it is looked for
+// whether or not the other forms are there.
+setUpMaintenance()

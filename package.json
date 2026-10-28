@@ -1,6 +1,6 @@
 {
   "name": "@robloach/nextcloud-arcade",
-  "version": "0.48.7",
+  "version": "0.48.28",
   "license": "AGPL-3.0-or-later",
   "engines": {
     "node": ">=22.0.0",
@@ -8,11 +8,10 @@
   },
   "scripts": {
     "build": "vite build",
-    "cores": "mkdir -p img/cores && for core in fceumm snes9x gambatte mgba genesis_plus_gx gearsystem mednafen_pce_fast handy mednafen_ngp mednafen_wswan mednafen_vb vecx gearcoleco pcsx_rearmed; do unzip -o -q \"3rdparty/retroarch-emscripten-build/retroarch/${core}_libretro.zip\" -d img/cores; done",
+    "cores": "build/cores.sh",
     "dev": "vite build --mode development",
     "l10n:extract": "php build/translationtool.phar create-pot-files",
     "postcores": "build/check-core-licences.sh",
-    "precores": "git submodule update --init --recursive",
     "test": "npm run build",
     "test:js": "vitest run",
     "watch": "vite build --mode development --watch"

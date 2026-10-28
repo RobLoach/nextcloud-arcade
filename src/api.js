@@ -1,9 +1,56 @@
 import { getRequestToken } from '@nextcloud/auth'
 import { generateUrl } from '@nextcloud/router'
+import { encodePath } from './paths.js'
 
-// The slot the player writes by itself, on the clock in the settings;
-// StateService knows it as AUTO_SLOT.
-export const AUTO_SLOT = 0
+export { encodePath }
+
+// The slot the player writes by itself, on the clock in the settings:
+// RetroArch's .state.auto, which StateService knows as AUTO_SLOT. Not 0,
+// which is RetroArch's own first slot.
+export const AUTO_SLOT = -1
+
+// The core each game was started on, and the name of the file it was
+// given, by its path. Saves are filed under the name of the core and
+// named after that file -- for a zip, the game inside it, as RetroArch
+// names them -- and only the player knows either, having looked inside,
+// so every request about a save says so.
+const cores = new Map()
+const names = new Map()
+
+/**
+ * A file as the routes of the app take an upload: the data field of a
+ * form, which is what every browser upload is.
+ *
+ * Sent as a bare application/octet-stream body before, which a web
+ * application firewall in front of the server -- ModSecurity with the
+ * OWASP Core Rule Set is the common one -- refuses outright as a body
+ * type it does not allow: every save was turned away before Nextcloud
+ * saw it. Fetch sets the multipart type and its boundary by itself.
+ *
+ * @param {Blob} blob the file
+ * @param {string} [name] what to call it in the form
+ * @return {FormData} the form carrying it
+ */
+export function asUpload(blob, name = 'upload') {
+	const form = new FormData()
+	form.append('data', blob, name)
+	return form
+}
+
+/**
+ * Note the core a game runs on, for the save requests about it.
+ *
+ * @param {string} romPath path identifying the game
+ * @param {string} core the libretro name of the core, e.g. 'fceumm'
+ * @param {?string} [name] the name of the file the core was given, without
+ *                         its extension: for a zip, the game inside it
+ */
+export function useCore(romPath, core, name = null) {
+	cores.set(romPath, core)
+	if (name) {
+		names.set(romPath, name)
+	}
+}
 
 /**
  * @param {string} route the app route, e.g. '/state'
@@ -12,9 +59,19 @@ export const AUTO_SLOT = 0
  * @return {string} the endpoint URL
  */
 export function stateUrl(route, romPath, slot = null) {
-	return slot === null
-		? generateUrl(`/apps/arcade/arcade${route}?file={file}`, { file: romPath })
-		: generateUrl(`/apps/arcade/arcade${route}?file={file}&slot={slot}`, { file: romPath, slot })
+	const core = cores.get(romPath) ?? null
+	const name = names.get(romPath) ?? null
+	let url = `/apps/arcade/arcade${route}?f={f}`
+	if (slot !== null) {
+		url += '&slot={slot}'
+	}
+	if (core !== null) {
+		url += '&core={core}'
+	}
+	if (name !== null) {
+		url += '&n={n}'
+	}
+	return generateUrl(url, { f: encodePath(romPath), slot, core, n: name === null ? null : encodePath(name) })
 }
 
 // How long an ordinary request is given. These carry a listing or a
@@ -104,6 +161,14 @@ export async function api(url, options = {}) {
 		// and the caller wants to tell that apart from a server that broke.
 		const refused = new Error(`${response.status} ${response.statusText}`)
 		refused.status = response.status
+		// And why, when the app said: a database that needs repairing is
+		// something the player can pass on, where a bare 503 is not.
+		try {
+			const body = await response.json()
+			refused.reason = typeof body?.error === 'string' ? body.error : null
+		} catch {
+			refused.reason = null
+		}
 		throw refused
 	}
 	return response

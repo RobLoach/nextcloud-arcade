@@ -11,6 +11,7 @@ use OCP\Files\Folder;
 use OCP\Files\NotFoundException;
 use OCP\Config\IUserConfig;
 use OCP\Http\Client\IClientService;
+use OCP\Files\AppData\IAppDataFactory;
 use OCP\ICacheFactory;
 use Psr\Log\LoggerInterface;
 
@@ -41,6 +42,7 @@ class ThumbnailFetchService {
 		private SettingsService $settingsService,
 		private IUserConfig $userConfig,
 		private LoggerInterface $logger,
+		private ?IAppDataFactory $appDataFactory = null,
 	) {
 	}
 
@@ -92,7 +94,7 @@ class ThumbnailFetchService {
 		if (!$this->isAllowed()) {
 			return ['fetched' => 0, 'tried' => 0, 'missing' => count($games), 'written' => []];
 		}
-		$cache = Caches::create($this->cacheFactory, Application::CACHE_FETCH);
+		$cache = Caches::create($this->cacheFactory, Application::CACHE_FETCH, $this->appDataFactory);
 		$client = $this->clientService->newClient();
 
 		$fetched = 0;

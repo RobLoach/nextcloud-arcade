@@ -47,6 +47,15 @@ moved. The favorites row shows the games of your library folder; a ROM
 starred somewhere else is still starred, it just has no place in the
 library to be shown in.
 
+## Details
+
+The details button on each game — on its card, or in a column of its own
+in the table — opens the same sidebar the Files app has, beside the
+library: the Arcade tab above, and the Files app's own tabs, Sharing among
+them. The player's actions menu opens it too, as **Open sidebar**; where
+no sidebar can be had, **Details** opens the game in the Files app with
+its sidebar open.
+
 ## Browsing with a gamepad
 
 The library can be browsed with a controller in hand, so nobody on the
@@ -78,9 +87,14 @@ personal settings. Upload some games and rescan if it finds nothing.
   renames and moves.
 - Zips are only offered inside the games library; outside of it, an
   archive is left to Nextcloud as if the app were not installed.
-- The Files sidebar has an **Arcade** tab for ROMs: the system, what the
-  cartridge calls itself, how long the game was played, the saves waiting
-  in its slots, and a button that plays it.
+- The Files sidebar has an **Arcade** tab for ROMs and zipped games. It
+  shows the system and the emulator that plays it, what the cartridge
+  calls itself — title, region, mapper, checksums — and for a zip, the
+  game inside; how long it was played; the pictures of its save state
+  slots, each with a button that starts the game from it; its thumbnails
+  and screenshots; and the BIOS files the system wants, and whether you
+  have them. **Play** starts the game; on the library page,
+  **Show in Files** opens it in the Files app.
 - Games are given their box art as their Nextcloud preview, so a folder
   of ROMs looks like a shelf of games. The picture is the one already in
   your thumbnails folder, only scaled; a game without one keeps the icon

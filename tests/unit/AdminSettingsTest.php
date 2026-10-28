@@ -10,6 +10,7 @@ use OCA\Arcade\Settings\Admin;
 use OCP\Files\AppData\IAppDataFactory;
 use OCP\Files\IRootFolder;
 use OCP\IUser;
+use OCP\IURLGenerator;
 use OCP\IUserSession;
 use PHPUnit\Framework\TestCase;
 
@@ -39,7 +40,7 @@ class AdminSettingsTest extends TestCase {
 			$this->createStub(IRootFolder::class),
 			$settingsService,
 		);
-		return new Admin($settingsService, $biosService, $session);
+		return new Admin($settingsService, $biosService, $session, $this->createStub(IURLGenerator::class));
 	}
 
 	public function testTheResolvedSystemFolderOfTheAdministratorIsHandedOver(): void {

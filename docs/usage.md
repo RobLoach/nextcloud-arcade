@@ -107,8 +107,8 @@ button of the controller is left to the game.
 | Fast-forward | T |
 | Rewind (hold) | Backspace |
 | Fullscreen | F |
-| Save to slot 1 | F2 |
-| Load slot 1 | F4 |
+| Save to slot 0 | F2 |
+| Load slot 0 | F4 |
 | Screenshot | P |
 | Close the game | Escape |
 
@@ -116,6 +116,14 @@ Rewind does nothing until it is switched on in
 [the personal settings](settings.md#personal-settings). Its key is watched
 by RetroArch itself, which is why holding it rewinds and releasing it plays
 on.
+
+### Loading
+
+While a game is on its way, a progress bar over the player says how much
+of it has arrived — a disc image is hundreds of megabytes. The emulator
+core is counted in too, when the server says how big it is. Once
+everything is in, it says the emulator is starting, which takes a moment
+with nothing to count.
 
 ### The control bar
 
@@ -139,22 +147,40 @@ and can be dismissed.
 
 ### Save states
 
-The save state menu has three slots per game, each with a screenshot
+The save state menu has three slots per game, numbered 0 to 2 as
+RetroArch numbers them, each with a screenshot
 thumbnail; a filled slot is labeled with its date alone, since the
 screenshot already says which game it is. Saving or loading a slot closes
-the menu and returns to the game.
+the menu and returns to the game. Slots RetroArch saved into beyond
+those three are listed below them, to be loaded or deleted.
+
+Saving and loading take no longer than the core does. The states of a
+game are fetched as it starts and held while it is played — and fetched
+anew when the menu opens on a slot that RetroArch, or another tab, wrote
+since — and a save is
+held at once and sent to the server in the background; should that fail,
+the player says so, and tries again when the game closes. Closing the
+game shows a closing screen while it waits for every save to arrive, and
+the browser asks before a tab with one still on its way is closed — for a
+save made by hand, or an automatic one that has been on its way for more
+than a few seconds.
+
+A state the emulator cannot load — one RetroArch made with another
+version of the core, or one made for another copy of the game — is said
+to be so, and the game carries on as it was.
 
 Above the slots sits the Auto slot, which the player writes itself, at an
 interval while playing if one is set. When a game has save states, the
-player offers to continue from the most recent one at launch — or loads it
-straight away, if that is turned on. A slot made from a different dump of
+player offers to continue from the most recent one at launch, at the
+bottom of the screen, for 7 seconds — or loads it straight away, if that
+is turned on. A slot made from a different dump of
 the same game is marked stale, and the player warns before loading it.
 
-States are per user and per game, so every NextCloud user has their own
+States are per user and per game, so every Nextcloud user has their own
 saves, even for a shared ROM. A game is known by the id Nextcloud gave the
 file, so renaming a ROM or moving it keeps its saves, its battery save and
-how long it was played — the folder in the saves folder is brought along
-to the new name. Where the files land is in
+how long it was played — its files in the saves folder are renamed
+along with it. Where the files land is in
 [the settings guide](settings.md#where-saves-are-kept).
 
 ### Battery saves

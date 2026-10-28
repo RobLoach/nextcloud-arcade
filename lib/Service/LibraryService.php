@@ -10,12 +10,14 @@ use OCA\Arcade\Listener\MetadataListener;
 use OCA\Arcade\Search\SearchBinaryOperator;
 use OCA\Arcade\Search\SearchComparison;
 use OCA\Arcade\Search\SearchQuery;
+use OCP\Files\AppData\IAppDataFactory;
 use OCP\Files\Folder;
 use OCP\Files\NotFoundException;
 use OCP\Files\Search\ISearchBinaryOperator;
 use OCP\Files\Search\ISearchComparison;
 use OCP\Files\Search\ISearchQuery;
 use OCP\FilesMetadata\IFilesMetadataManager;
+use OCP\IAppConfig;
 use OCP\ICache;
 use OCP\ICacheFactory;
 use OCP\SystemTag\ISystemTagManager;
@@ -49,6 +51,8 @@ class LibraryService {
 	public const SUGGEST_TOP = 3;
 	/** Bumped when the shape of a cached entry changes. */
 	private const CACHE_VERSION = 7;
+	/** In the app config: goes up each time every scan is to be taken afresh. */
+	private const GENERATION = 'library_generation';
 	/** Bumped when the shape of a cached fallbacks entry changes. */
 	private const FALLBACKS_CACHE_VERSION = 1;
 	/**
@@ -92,7 +96,27 @@ class LibraryService {
 		private ISystemTagManager $tagManager,
 		private ISystemTagObjectMapper $tagObjectMapper,
 		private LoggerInterface $logger,
+		private ?IAppDataFactory $appDataFactory = null,
+		private ?IAppConfig $appConfig = null,
 	) {
+	}
+
+	/**
+	 * Every user's scan is taken afresh: what the scans hold was read out
+	 * of the files -- a title, the box art the title finds -- and reading
+	 * them again changes nothing a scan is keyed on.
+	 *
+	 * Through the app config rather than by clearing the cache: on a server
+	 * whose cache is APCu, each process has a cache of its own, and a
+	 * background job clearing its copy leaves the web server's as it was.
+	 * The app config is the same for every process.
+	 */
+	public function forgetEveryScan(): void {
+		$this->appConfig?->setValueInt(Application::APP_ID, self::GENERATION, $this->generation() + 1);
+	}
+
+	private function generation(): int {
+		return $this->appConfig?->getValueInt(Application::APP_ID, self::GENERATION) ?? 0;
 	}
 
 	/**
@@ -296,6 +320,7 @@ class LibraryService {
 		// etag changes whenever anything inside it does.
 		$key = implode('|', [
 			self::CACHE_VERSION,
+			$this->generation(),
 			$userId,
 			$folderPath,
 			$folder->getEtag(),
@@ -398,7 +423,7 @@ class LibraryService {
 	 * between.
 	 */
 	private function cache(): ICache {
-		return $this->cache ??= Caches::create($this->cacheFactory, Application::CACHE_LIBRARY);
+		return $this->cache ??= Caches::create($this->cacheFactory, Application::CACHE_LIBRARY, $this->appDataFactory);
 	}
 
 	private function folderEtag(string $userId, Folder $userFolder, string $path): string {
@@ -500,6 +525,38 @@ class LibraryService {
 				$game['thumbnails'] = $found;
 			}
 		}
+	}
+
+	/**
+	 * The pictures of one game in the thumbnails folder, by kind -- box art,
+	 * title screen, snap, logo -- matched the way the library matches them.
+	 * The index of the folder is kept until anything in it changes, so the
+	 * sidebar of the next game does not walk the folder again.
+	 *
+	 * @param array<string, mixed> $settings
+	 * @return array<string, int> kind => file id
+	 */
+	public function thumbnailsOf(string $userId, Folder $userFolder, array $settings, string $path, string $system, string $title = ''): array {
+		$thumbnailsPath = (string)($settings['thumbnails_folder'] ?? '');
+		$folder = $thumbnailsPath === '' ? null : Folders::folderAt($userFolder, $thumbnailsPath);
+		if ($folder === null) {
+			return [];
+		}
+		$cache = $this->cache();
+		$key = implode('|', ['thumbnail-index', self::CACHE_VERSION, $userId, $thumbnailsPath, $folder->getEtag()]);
+		$index = CachePacker::unpack($cache->get($key));
+		if ($index === null) {
+			$index = $this->thumbnailService->buildIndex($folder);
+			$cache->set($key, CachePacker::pack($index), (int)($settings['cache_ttl'] ?? self::CACHE_TTL));
+		}
+		/** @psalm-suppress MixedArgumentTypeCoercion the index is what buildIndex made */
+		return $this->thumbnailService->forGameNamed(
+			$index,
+			$system,
+			$this->thumbnailService->subfolderOf($path, (string)($settings['library_folder'] ?? '')),
+			basename($path),
+			$title,
+		);
 	}
 
 	/**
@@ -684,7 +741,7 @@ class LibraryService {
 	private function systemFor(string $extension, array $parents, array $extensionMap, string $mime = ''): ?string {
 		$system = $extensionMap[$extension] ?? '';
 		if ($system !== '' && isset(self::CONTESTED[$extension])) {
-			if ($mime === (CoreMap::SYSTEMS[$system]['mime'] ?? null)) {
+			if (in_array($mime, CoreMap::mimesOf($system), true)) {
 				return $system;
 			}
 			foreach (array_reverse($parents) as $parent) {
@@ -856,7 +913,7 @@ class LibraryService {
 	 */
 	private function romQuery(array $extensionMap, int $limit = 0): ISearchQuery {
 		$clauses = [];
-		foreach (array_unique(array_values(CoreMap::extensionMimeMap())) as $mime) {
+		foreach (array_keys(CoreMap::romMimes()) as $mime) {
 			$clauses[] = new SearchComparison(ISearchComparison::COMPARE_EQUAL, 'mimetype', $mime);
 		}
 		foreach (array_keys($extensionMap) as $extension) {

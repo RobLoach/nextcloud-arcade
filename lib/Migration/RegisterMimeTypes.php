@@ -31,6 +31,27 @@ class RegisterMimeTypes implements IRepairStep {
 	}
 
 	public function run(IOutput $output): void {
+		['updated' => $updated, 'healed' => $healed] = $this->register();
+		// Only when there was something to say. Every upgrade ran this and
+		// announced nought files, which is noise in the one place an
+		// administrator is reading for something that went wrong.
+		if ($updated > 0) {
+			$output->info("Updated the mimetype of $updated files");
+		}
+		if ($healed > 0) {
+			$output->info("Gave $healed files their server mimetype back");
+		}
+	}
+
+	/**
+	 * Give every ROM the file cache knows its mimetype, and every file of an
+	 * extension the server claims for itself the server's. Also asked for
+	 * from the maintenance section of the administration settings.
+	 *
+	 * @return array{updated: int, healed: int} files given a ROM mimetype,
+	 *                                          and files given back theirs
+	 */
+	public function register(): array {
 		$mappings = $this->mimeTypeDetector->getAllMappings();
 		$updated = 0;
 		$healed = 0;
@@ -49,14 +70,6 @@ class RegisterMimeTypes implements IRepairStep {
 			$mimeId = $this->mimeTypeLoader->getId($mime);
 			$updated += $this->mimeTypeLoader->updateFilecache($extension, $mimeId);
 		}
-		// Only when there was something to say. Every upgrade ran this and
-		// announced nought files, which is noise in the one place an
-		// administrator is reading for something that went wrong.
-		if ($updated > 0) {
-			$output->info("Updated the mimetype of $updated files");
-		}
-		if ($healed > 0) {
-			$output->info("Gave $healed files their server mimetype back");
-		}
+		return ['updated' => $updated, 'healed' => $healed];
 	}
 }

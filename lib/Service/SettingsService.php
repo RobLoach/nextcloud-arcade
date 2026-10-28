@@ -425,7 +425,17 @@ class SettingsService {
 		// The body may carry only the keys that changed -- the onboarding
 		// sets the library folder alone -- so what was stored stays, and
 		// only what was posted is written over it.
-		$sanitized = array_merge($this->storedUserSettings($userId), $sanitized);
+		$stored = $this->storedUserSettings($userId);
+		// A folder posted is the folder now, and the id stored for the one
+		// before is not to overrule it: the id wins on every read, so a
+		// folder emptied -- or pointed somewhere else -- came straight back
+		// as the one it was. The id of the new one is found from its path.
+		foreach (self::FOLDER_SETTINGS as $key) {
+			if (array_key_exists($key, $sanitized)) {
+				unset($stored[$key . '_id']);
+			}
+		}
+		$sanitized = array_merge($stored, $sanitized);
 		// A folder handed in as a path is remembered by its id as well,
 		// so the setting follows the folder if it moves.
 		$sanitized = $this->resolveFolders($userId, $sanitized);
@@ -466,7 +476,7 @@ class SettingsService {
 		// Decibels are a gain: every 20 of them is a factor of ten. The
 		// boost the old setting allowed has nowhere to go above a
 		// hundred, so it lands there.
-		$stored['volume'] = max(0, min(100, (int)round(100 * (10 ** ((float)$stored['audio_volume'] / 20)))));
+		$stored['volume'] = max(0, min(100, (int)round(100.0 * (10.0 ** ((float)$stored['audio_volume'] / 20.0)))));
 		unset($stored['audio_volume']);
 		return $stored;
 	}

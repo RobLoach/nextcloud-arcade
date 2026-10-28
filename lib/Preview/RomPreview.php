@@ -18,6 +18,7 @@ use OCP\Files\IRootFolder;
 use OCP\Files\NotFoundException;
 use OCP\FilesMetadata\IFilesMetadataManager;
 use OCP\ICache;
+use OCP\Files\AppData\IAppDataFactory;
 use OCP\ICacheFactory;
 use OCP\IImage;
 use OCP\Image;
@@ -47,6 +48,7 @@ class RomPreview implements IProviderV2 {
 		private IFilesMetadataManager $metadataManager,
 		private ICacheFactory $cacheFactory,
 		private LoggerInterface $logger,
+		private ?IAppDataFactory $appDataFactory = null,
 	) {
 	}
 
@@ -56,7 +58,9 @@ class RomPreview implements IProviderV2 {
 	public static function mimeTypeRegex(): string {
 		$mimes = array_map(
 			static fn (string $mime): string => preg_quote($mime, '/'),
-			array_values(array_unique(array_column(CoreMap::SYSTEMS, 'mime'))),
+			// Every name a ROM goes by, the Color variants' and what earlier
+			// versions called them included.
+			array_keys(CoreMap::romMimes()),
 		);
 		return '/^(' . implode('|', $mimes) . ')$/';
 	}
@@ -194,6 +198,6 @@ class RomPreview implements IProviderV2 {
 	 * between.
 	 */
 	private function cache(): ICache {
-		return $this->cache ??= Caches::create($this->cacheFactory, Application::CACHE_PREVIEW);
+		return $this->cache ??= Caches::create($this->cacheFactory, Application::CACHE_PREVIEW, $this->appDataFactory);
 	}
 }

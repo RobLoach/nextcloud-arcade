@@ -9,6 +9,7 @@ use OCA\Arcade\Service\LibraryService;
 use OCA\Arcade\Service\RecentService;
 use OCA\Arcade\Service\SettingsService;
 use OCA\Files\Event\LoadSidebar;
+use OCA\Viewer\Event\LoadViewer;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Services\IInitialState;
 use OCP\BackgroundJob\IJobList;
@@ -151,15 +152,29 @@ class PageControllerTest extends TestCase {
 		$this->assertSame('/Games/Mario.nes', $states['file']);
 	}
 
-	public function testIndexAsksForTheFilesSidebar(): void {
-		$dispatcher = $this->createMock(IEventDispatcher::class);
-		$dispatcher->expects($this->once())
-			->method('dispatchTyped')
-			->with($this->isInstanceOf(LoadSidebar::class));
+	public function testTheLibraryAsksForTheFilesSidebarAndTheViewer(): void {
+		$dispatched = [];
+		$dispatcher = $this->createStub(IEventDispatcher::class);
+		$dispatcher->method('dispatchTyped')->willReturnCallback(function (object $event) use (&$dispatched): void {
+			$dispatched[] = $event::class;
+		});
 
 		$response = $this->controller(eventDispatcher: $dispatcher)->index();
 
 		$this->assertSame('index', $response->getTemplateName());
+		$this->assertSame([LoadSidebar::class, LoadViewer::class], $dispatched);
+	}
+
+	public function testAGameBeingPlayedHasNoUseForTheViewer(): void {
+		$dispatched = [];
+		$dispatcher = $this->createStub(IEventDispatcher::class);
+		$dispatcher->method('dispatchTyped')->willReturnCallback(function (object $event) use (&$dispatched): void {
+			$dispatched[] = $event::class;
+		});
+
+		$this->controller(eventDispatcher: $dispatcher)->index('/Games/Mario.nes');
+
+		$this->assertSame([LoadSidebar::class], $dispatched);
 	}
 
 	public function testEtagIsSetAndStableForIdenticalInputs(): void {

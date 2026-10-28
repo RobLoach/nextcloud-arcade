@@ -5,6 +5,7 @@ $settings = $_['settings'];
 $fallbacks = $_['fallbacks'];
 $buttons = $_['buttons'];
 $hotkeys = $_['hotkeys'];
+$cloudSyncUrl = $_['cloudSyncUrl'];
 ?>
 
 <div id="arcade-settings">
@@ -21,8 +22,8 @@ $hotkeys = $_['hotkeys'];
 			'arcade-pause-hidden' => ['pause_when_hidden', $l->t('Pause the game while the tab is in the background')],
 			'arcade-autoload' => ['autoload_on_start', $l->t('Continue from the latest save when a game starts, without asking')],
 		] as $id => [$key, $label]): ?>
-			<p class="checkbox-radio-switch">
-				<input type="checkbox" id="<?php p($id); ?>" class="checkbox-radio-switch__input arcade-setting"
+			<p class="arcade-switch">
+				<input type="checkbox" id="<?php p($id); ?>" class="arcade-switch__input arcade-setting"
 					data-setting="<?php p($key); ?>" <?php if ($settings[$key]) { p('checked'); } ?>>
 				<label for="<?php p($id); ?>"><?php p($label); ?></label>
 			</p>
@@ -180,7 +181,7 @@ $hotkeys = $_['hotkeys'];
 			],
 			'saves_folder' => [
 				$l->t('Saves folder'),
-				$l->t('Save states and battery saves are stored here, under the system and the game. Without a folder, a game cannot be saved at all and the player says so.'),
+				$l->t('Save states and battery saves are stored here, in a saves and a states folder laid out the way RetroArch keeps its own. Without a folder, a game cannot be saved at all and the player says so.'),
 			],
 			'system_folder' => [
 				$l->t('System folder'),
@@ -201,12 +202,40 @@ $hotkeys = $_['hotkeys'];
 					<?php endif; ?>>
 				<button type="button" class="arcade-folder-picker"
 					data-target="arcade-<?php p($key); ?>"><?php p($l->t('Browse …')); ?></button>
+				<?php if ($key === 'library_folder'): ?>
+					<button type="button" class="arcade-library-scan"><?php p($l->t('Scan')); ?></button>
+					<span class="arcade-library-scan-status" aria-live="polite"></span>
+				<?php endif; ?>
 				<?php if ($key === 'thumbnails_folder' && $settings['fetch_enabled']): ?>
 					<button type="button" id="arcade-fetch-thumbnails"><?php p($l->t('Look for missing box art')); ?></button>
 					<span id="arcade-fetch-status" aria-live="polite"></span>
 				<?php endif; ?>
 			</p>
 		<?php endforeach; ?>
+	</div>
+
+	<?php /* The saves folder is already laid out the way RetroArch keeps its
+	        own, so connecting it is a matter of telling RetroArch where it
+	        is. Saves copied in some other way are recorded for it by
+	        themselves: whenever a game opens, and once a week. */ ?>
+	<div class="section" id="arcade-cloudsync-section">
+		<?php print_unescaped($this->inc('part.sectionhead', [
+			'title' => $l->t('RetroArch Cloud Sync'),
+			'hint' => $l->t('RetroArch on a computer, a phone or a handheld can sync with your Saves folder, so a game saved there carries on here, and the other way around.'),
+		])); ?>
+		<?php if ($cloudSyncUrl === ''): ?>
+			<p><?php p($l->t('Set a Saves folder above first.')); ?></p>
+		<?php else: ?>
+			<ol class="arcade-cloudsync-steps">
+				<li><?php p($l->t('In the Security settings, create an app password for RetroArch.')); ?></li>
+				<li><?php p($l->t('In RetroArch, open Settings → Saving → Cloud Sync, turn on Cloud Sync, and choose the webdav backend.')); ?></li>
+				<li>
+					<?php p($l->t('Set the Cloud Storage URL to:')); ?>
+					<br><code class="arcade-cloudsync-url"><?php p($cloudSyncUrl); ?></code>
+				</li>
+				<li><?php p($l->t('Enter your user name and the app password, keep Sync Saves on, then restart RetroArch.')); ?></li>
+			</ol>
+		<?php endif; ?>
 	</div>
 
 </div>

@@ -4,8 +4,9 @@ import { getCurrentUser } from '@nextcloud/auth'
 import { defaultRemoteURL, defaultRootPath } from '@nextcloud/files/dav'
 import { translate as t } from '@nextcloud/l10n'
 import { generateFilePath, generateUrl } from '@nextcloud/router'
-import { api, dav, deadline, stateUrl, UPLOAD_WAIT } from './api.js'
+import { api, asUpload, dav, deadline, encodePath, stateUrl, UPLOAD_WAIT, useCore } from './api.js'
 import { createCoreLog } from './corelog.js'
+import { createProgressTracker, lengthOf, readWithProgress } from './progress.js'
 import { inputConfig, retroarchKey } from './keys.js'
 import { volumeInDecibels } from './volume.js'
 import { biosForSystem, coreForSystem, systemForFile, systemFromBytes, systemLabel } from './systems.js'
@@ -16,6 +17,20 @@ const SRAM_SYNC_INTERVAL = 60 * 1000
 // the core's file system for the written save, so even a healthy one
 // takes a moment; a wedged one must not keep the player here.
 const SRAM_FINAL_WAIT = 5000
+
+// How long the battery save is given to appear once RetroArch is told to
+// write it, and how often to look. A game that has one writes it within a
+// few frames. Nostalgist's own saveSRAM() waits a minute for the file,
+// and a game without a battery save never writes one: every sync then
+// held the core for that minute, and a save state asked for meanwhile
+// gave up waiting behind it.
+const SRAM_APPEAR_WAIT = 2000
+const SRAM_POLL = 100
+
+// How many looks in a row that find no battery save it takes to decide the
+// game has none. More than one, in case a look came while the core could
+// not answer -- a game with a battery save writes one every time.
+const SRAM_MISSES_TO_STOP = 2
 
 // The most a request may carry and still be allowed to outlive its page.
 // The Fetch standard caps a keepalive body at 64 KiB and fails anything
@@ -33,6 +48,34 @@ const KEEPALIVE_LIMIT = 60 * 1024
 // there is nothing left to fetch.
 const sramSyncStopped = new Set()
 
+// What the server holds of each game's battery save, as far as this page
+// knows: what was fetched at launch, then what was last sent. The save is
+// read out of the core once a minute whether the game wrote to it or not,
+// and one that has not changed is not sent again.
+const sramOnServer = new Map()
+// The games whose battery save could not be read as they started -- not
+// "there is none", which the server says plainly, but a request that
+// failed. The game runs from a blank cartridge then, and syncing it would
+// write that blank over the save the server still has.
+const sramUnread = new Set()
+
+/**
+ * @param {Uint8Array} a some bytes
+ * @param {?Uint8Array} b some others, if any
+ * @return {boolean} whether they are the same
+ */
+function sameBytes(a, b) {
+	if (b === null || b === undefined || a.length !== b.length) {
+		return false
+	}
+	for (let i = 0; i < a.length; i++) {
+		if (a[i] !== b[i]) {
+			return false
+		}
+	}
+	return true
+}
+
 /**
  * Stop uploading the battery save of a game for the rest of the session,
  * after its server copy was deleted. Opening the game again resumes it.
@@ -41,6 +84,8 @@ const sramSyncStopped = new Set()
  */
 export function disableSramSync(romPath) {
 	sramSyncStopped.add(romPath)
+	// Whatever the server held is going, so nothing is the same as it.
+	sramOnServer.delete(romPath)
 }
 
 /**
@@ -178,17 +223,22 @@ async function resolveRom(blob, romName, systemHint) {
  *   with how they read, about anything the launch went without and
  *   anything the core itself has to say
  * @param {?AbortSignal} [options.signal] abandons the launch when it fires
+ * @param {?Function} [options.onProgress] told how the launch is getting
+ *   on: {phase: 'download', loaded, total} as the game and its core come
+ *   in, with total null while a length is unknown, then {phase: 'start'}
+ *   once all that is left is starting the core
  * @return {Promise<Nostalgist>} the running emulator
  */
-export async function launchRom({ element, romUrl, romName, settings = {}, systemHint = null, romPath = '', onMessage = null, signal = null }) {
+export async function launchRom({ element, romUrl, romName, settings = {}, systemHint = null, romPath = '', onMessage = null, signal = null, onProgress = null }) {
 	const canSave = (settings.saves_folder ?? '') !== ''
-	// The core is a few megabytes of its own. Warming it in the browser
-	// cache now means it is there when Nostalgist asks, instead of being
-	// fetched after the ROM.
+	const tell = typeof onProgress === 'function' ? onProgress : () => {}
+	// The game and the core come in side by side, and the bar follows
+	// them both: the core alone is a few megabytes, as big as most games.
+	const progress = createProgressTracker((snapshot) => tell({ phase: 'download', ...snapshot }))
+	// Fetched now, alongside the ROM, and handed to Nostalgist as it is
+	// rather than fetched by it a second time after the ROM.
 	const core = coreForSystem(systemForFile(romName)?.id ?? systemHint?.id ?? '')
-	if (core !== null) {
-		prefetchCore(core, signal)
-	}
+	const coreFetched = core === null ? Promise.resolve({}) : prefetchCore(core, signal, progress)
 
 	// Fetch the ROM here so the request carries the Nextcloud session.
 	// Every fetch of the launch takes the signal: a game closed while it
@@ -202,11 +252,23 @@ export async function launchRom({ element, romUrl, romName, settings = {}, syste
 	if (!response.ok) {
 		throw new Error(`Could not fetch the ROM: ${response.status} ${response.statusText}`)
 	}
-	const { rom, system } = await resolveRom(await response.blob(), romName, systemHint)
+	progress.track('rom', lengthOf(response))
+	const blob = await readWithProgress(response, (bytes) => progress.advance('rom', bytes))
+	const { rom, system } = await resolveRom(blob, romName, systemHint)
 	if (system === null) {
 		throw new Error(t('arcade', 'Unsupported ROM type: {file}', { file: romName }))
 	}
+	if (romPath !== '') {
+		// From here on every request about its saves says which core it
+		// is, the one its files are filed under, and the name of the file
+		// the core is given, the one they are named after: for a zip, the
+		// game inside it, which is what RetroArch names them after too.
+		useCore(romPath, coreForSystem(system.id), rom.name.replace(/\.[^.]+$/, ''))
+	}
 	const sram = canSave ? await fetchSram(romPath, signal) : null
+	if (sramUnread.has(romPath) && typeof onMessage === 'function') {
+		onMessage(t('arcade', 'Could not read the in-game save of this game. It starts without it, and what is played will not be saved over it this time.'), 'warning')
+	}
 	const bios = await fetchBios(system.id, signal)
 	if (bios.length === 0 && biosForSystem(system.id).length > 0 && typeof onMessage === 'function') {
 		// The game starts anyway, just poorer for it -- most cores run
@@ -216,11 +278,16 @@ export async function launchRom({ element, romUrl, romName, settings = {}, syste
 			system: systemLabel(system.id),
 		}), 'warning')
 	}
+	// The core has to be in before it can start, and on a slow line it
+	// takes longer than the game: the bar keeps counting until it is,
+	// rather than saying the emulator is starting while it is not.
+	const coreFiles = await coreFetched
 	if (signal?.aborted === true) {
 		// Closed while the files were still coming in: no core is started
 		// for a game nobody is waiting for any more.
 		throw new DOMException('The launch was abandoned', 'AbortError')
 	}
+	tell({ phase: 'start' })
 	const runahead = Number(settings.runahead_frames ?? 0)
 
 	return await Nostalgist.launch({
@@ -235,6 +302,14 @@ export async function launchRom({ element, romUrl, romName, settings = {}, syste
 		...(sram === null ? {} : { sram }),
 		respondToGlobalEvents: settings.respond_to_global_events !== false,
 		retroarchConfig: {
+			// RetroArch prints nothing at all unless asked to, and what it
+			// prints is how the player hears of a save state the core
+			// turned down, or anything else gone wrong (see corelog.js).
+			// Errors only: its warnings at every launch are about the
+			// graphics driver of the browser, nothing a player can act on.
+			log_verbosity: true,
+			frontend_log_level: 3,
+			libretro_log_level: 3,
 			...inputConfig(settings.buttons),
 			...rewindConfig(settings),
 			// Run-ahead runs the core past the shown frame to hide input
@@ -248,10 +323,10 @@ export async function launchRom({ element, romUrl, romName, settings = {}, syste
 		},
 		retroarchCoreConfig: settings.core_options?.[coreForSystem(system.id)] ?? {},
 		resolveCoreJs(coreName) {
-			return coreUrl(`${coreName}_libretro.js`)
+			return coreFile(coreFiles, `${coreName}_libretro.js`)
 		},
 		resolveCoreWasm(coreName) {
-			return coreUrl(`${coreName}_libretro.wasm`)
+			return coreFile(coreFiles, `${coreName}_libretro.wasm`)
 		},
 		emscriptenModule: coreOutput(onMessage),
 	})
@@ -356,21 +431,48 @@ async function fetchBios(systemId, signal = null) {
 }
 
 /**
- * Ask for the files of a core without waiting for them.
+ * Fetch the files of a core, counting them into the progress bar on the
+ * way, and keep what came: Nostalgist is handed these very bytes, where
+ * it used to fetch the core again -- twice over the line wherever the
+ * browser would not keep the first.
  *
  * @param {string} core name of the libretro core
  * @param {?AbortSignal} [signal] abandons the requests when it fires
+ * @param {?object} [progress] the tracker to count the bytes into
+ * @return {Promise<Object<string, Blob>>} what came, by file name; a file
+ *   that could not be had is left out, for Nostalgist to fetch itself
  */
-function prefetchCore(core, signal = null) {
-	for (const file of [`${core}_libretro.js`, `${core}_libretro.wasm`]) {
+async function prefetchCore(core, signal = null, progress = null) {
+	const files = {}
+	await Promise.all([`${core}_libretro.js`, `${core}_libretro.wasm`].map((file) =>
 		// Not through api(): a static file under the app's own img/, not a
-		// route, and nothing waits on it -- only a warm cache is at stake,
-		// so there is no caller for a deadline to release.
+		// route, and a failure here only means Nostalgist asks again.
 		fetch(coreUrl(file), { credentials: 'same-origin', priority: 'high', signal })
-			.catch(() => {
-				// Only a warm cache was at stake.
+			.then(async (response) => {
+				if (!response.ok) {
+					return
+				}
+				progress?.track(file, lengthOf(response))
+				files[file] = await readWithProgress(response, (bytes) => progress?.advance(file, bytes))
 			})
-	}
+			.catch(() => {
+				// Nostalgist fetches it itself.
+			})))
+	return files
+}
+
+/**
+ * A file of the core as Nostalgist takes it: the bytes already fetched,
+ * or where to fetch them.
+ *
+ * @param {Object<string, Blob>} fetched what prefetchCore brought in
+ * @param {string} file name of the core file
+ * @return {object|string} the file, or its URL
+ */
+function coreFile(fetched, file) {
+	return fetched[file] !== undefined
+		? { fileName: file, fileContent: fetched[file] }
+		: coreUrl(file)
 }
 
 /**
@@ -420,8 +522,8 @@ export function recordRecent(romPath) {
  * @param {number} seconds how long it was played, 0 when starting
  */
 function report(romPath, seconds) {
-	api(generateUrl('/apps/arcade/arcade/recent?file={file}&seconds={seconds}', {
-		file: romPath,
+	api(generateUrl('/apps/arcade/arcade/recent?f={f}&seconds={seconds}', {
+		f: encodePath(romPath),
 		seconds,
 	}), {
 		method: 'POST',
@@ -440,24 +542,85 @@ function report(romPath, seconds) {
  * @param {?AbortSignal} [signal] abandons the request when it fires
  * @return {Promise<?Blob>} the SRAM, or null
  */
-async function fetchSram(romPath, signal = null) {
+export async function fetchSram(romPath, signal = null) {
 	if (!romPath || getCurrentUser() === null) {
 		return null
 	}
+	sramUnread.delete(romPath)
 	try {
 		// A game with no battery save yet answers 404, which api() throws
 		// on and the catch below reads as the same "nothing stored".
 		const response = await api(stateUrl('/sram', romPath), { signal })
 		const blob = await response.blob()
-		return blob.size > 0 ? blob : null
+		if (blob.size === 0) {
+			return null
+		}
+		sramOnServer.set(romPath, new Uint8Array(await blob.arrayBuffer()))
+		return blob
 	} catch (error) {
 		// A game that has never written one answers 404, which is an
 		// answer rather than a fault: it starts with a fresh cartridge.
-		if (error?.status !== 404) {
+		if (error?.status !== 404 && signal?.aborted !== true) {
 			console.error('Could not fetch the SRAM', error)
+			sramUnread.add(romPath)
 		}
 		return null
 	}
+}
+
+/**
+ * Read the battery save out of the core, or null when it writes none --
+ * which a game without one never does.
+ *
+ * Done here rather than through Nostalgist's saveSRAM(), which waits a
+ * minute for a file that may never come. It reaches into Nostalgist's
+ * emulator for the path it reads from, which the pinned version keeps;
+ * should that ever give way, saveSRAM() is still there to fall back on.
+ *
+ * @param {import('nostalgist').Nostalgist} instance the running emulator,
+ *                                                   from the core queue
+ * @return {Promise<?Blob>} the battery save, or null
+ */
+async function readSram(instance) {
+	let FS
+	let path
+	let module
+	try {
+		FS = instance.getEmscriptenFS()
+		path = instance.getEmulator().sramFilePath
+		module = instance.getEmscriptenModule()
+	} catch {
+		return await instance.saveSRAM()
+	}
+	// Without the command that has RetroArch write its save files, there is
+	// nothing to wait for here: the file would never come, and a game with
+	// a battery save would look like one without. Nostalgist's own way
+	// round is slower, but it gets there.
+	if (typeof module?._cmd_savefiles !== 'function') {
+		return await instance.saveSRAM()
+	}
+	try {
+		FS.unlink(path)
+	} catch {
+		// Not written yet, which is what is wanted.
+	}
+	module._cmd_savefiles()
+	let lastSize = -1
+	for (let waited = 0; waited < SRAM_APPEAR_WAIT; waited += SRAM_POLL) {
+		await new Promise((resolve) => setTimeout(resolve, SRAM_POLL))
+		let size = -1
+		try {
+			size = FS.stat(path).size
+		} catch {
+			// Not there yet.
+		}
+		// Written in full once two looks in a row find it the same size.
+		if (size > 0 && size === lastSize) {
+			return new Blob([FS.readFile(path)], { type: 'application/octet-stream' })
+		}
+		lastSize = size
+	}
+	return null
 }
 
 /**
@@ -470,19 +633,37 @@ async function fetchSram(romPath, signal = null) {
  *                    upload is through or has been given up on
  */
 export function startSramSync(instance, romPath, canSave = true) {
-	if (!romPath || !canSave || getCurrentUser() === null) {
+	if (!romPath || !canSave || getCurrentUser() === null || sramUnread.has(romPath)) {
 		return async () => {}
 	}
 	// A fresh launch starts from what the server holds, so it syncs again
 	// even when the battery save was deleted in an earlier session.
 	sramSyncStopped.delete(romPath)
+	// Whether the game keeps a battery save at all: it does if the server
+	// had one for it, and otherwise until it is seen not to.
+	//
+	// Only a look taken while the game is in view counts: hidden, the core
+	// is paused or throttled and may not get round to writing at all,
+	// which says nothing about whether the game keeps a save. A game with
+	// one writes it every time it is asked, so looks in view that found
+	// none settle it -- for the look on the way out too, which would only
+	// hold the close up for a file that never comes.
+	let misses = 0
 	const upload = async () => {
-		if (sramSyncStopped.has(romPath)) {
+		if (sramSyncStopped.has(romPath) || misses >= SRAM_MISSES_TO_STOP) {
 			return
 		}
 		try {
-			const sram = await instance.saveSRAM()
-			if (sram === undefined || sram.size === 0) {
+			const sram = await instance.exclusive(readSram)
+			if (sram === null || sram === undefined || sram.size === 0) {
+				if (!sramOnServer.has(romPath) && !document.hidden) {
+					misses++
+				}
+				return
+			}
+			misses = 0
+			const bytes = new Uint8Array(await sram.arrayBuffer())
+			if (sameBytes(bytes, sramOnServer.get(romPath))) {
 				return
 			}
 			// Asked again, because reading the save out of the core takes
@@ -493,8 +674,7 @@ export function startSramSync(instance, romPath, canSave = true) {
 			}
 			await api(stateUrl('/sram', romPath), {
 				method: 'POST',
-				headers: { 'Content-Type': 'application/octet-stream' },
-				body: sram,
+				body: asUpload(sram, 'save.srm'),
 				signal: deadline(UPLOAD_WAIT),
 				// So the final upload survives the page closing -- but only
 				// where it is allowed to, and a save too big to ask it for
@@ -503,6 +683,7 @@ export function startSramSync(instance, romPath, canSave = true) {
 				// case it cannot outlive, which beats never arriving.
 				keepalive: sram.size <= KEEPALIVE_LIMIT,
 			})
+			sramOnServer.set(romPath, bytes)
 		} catch (error) {
 			console.error('Could not save the SRAM', error)
 		}

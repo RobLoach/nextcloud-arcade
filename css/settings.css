@@ -1,3 +1,15 @@
+/* The spacing steps of the app: the grid baseline of the server, and
+   multiples of it. */
+:root {
+	--arcade-space-1: var(--default-grid-baseline, 4px);
+	--arcade-space-2: calc(var(--default-grid-baseline, 4px) * 2);
+	--arcade-space-3: calc(var(--default-grid-baseline, 4px) * 3);
+	--arcade-space-4: calc(var(--default-grid-baseline, 4px) * 4);
+	--arcade-space-5: calc(var(--default-grid-baseline, 4px) * 5);
+	--arcade-space-6: calc(var(--default-grid-baseline, 4px) * 6);
+	--arcade-space-8: calc(var(--default-grid-baseline, 4px) * 8);
+}
+
 #arcade-settings em {
 	color: var(--color-text-maxcontrast);
 }
@@ -5,19 +17,19 @@
 #arcade-settings .arcade-core-options {
 	border: 1px solid var(--color-border);
 	border-radius: var(--border-radius-large);
-	margin-bottom: calc(var(--default-grid-baseline, 4px) * 2);
+	margin-bottom: var(--arcade-space-2);
 	max-width: 500px;
 }
 
 #arcade-settings .arcade-core-options summary {
-	padding: calc(var(--default-grid-baseline, 4px) * 2) calc(var(--default-grid-baseline, 4px) * 3);
+	padding: var(--arcade-space-2) var(--arcade-space-3);
 	cursor: pointer;
 	font-weight: bold;
 }
 
 #arcade-settings .arcade-core-options summary em {
 	font-weight: normal;
-	margin-inline-start: calc(var(--default-grid-baseline, 4px) * 1.5);
+	margin-inline-start: calc(var(--arcade-space-1) * 1.5);
 }
 
 #arcade-settings .arcade-core-options[open] summary {
@@ -25,19 +37,19 @@
 }
 
 #arcade-settings .arcade-core-options p {
-	padding: 0 calc(var(--default-grid-baseline, 4px) * 3);
+	padding: 0 var(--arcade-space-3);
 }
 
 #arcade-settings .arcade-core-options p:last-child {
-	padding-bottom: calc(var(--default-grid-baseline, 4px) * 3);
+	padding-bottom: var(--arcade-space-3);
 }
 
 #arcade-settings .arcade-keys {
 	display: grid;
 	grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-	gap: var(--default-grid-baseline, 4px) calc(var(--default-grid-baseline, 4px) * 4);
+	gap: var(--arcade-space-1) var(--arcade-space-4);
 	max-width: 700px;
-	margin-bottom: calc(var(--default-grid-baseline, 4px) * 3);
+	margin-bottom: var(--arcade-space-3);
 }
 
 /* The hot keys are named by what they do -- "Pause and resume" against
@@ -59,7 +71,7 @@
 	display: grid;
 	grid-template-columns: minmax(0, 1fr) auto;
 	align-items: center;
-	gap: calc(var(--default-grid-baseline, 4px) * 2);
+	gap: var(--arcade-space-2);
 }
 
 /* What is wrong with a binding, said in the page rather than only in a
@@ -80,7 +92,7 @@
 #arcade-settings .arcade-key-controls {
 	display: flex;
 	align-items: center;
-	gap: var(--default-grid-baseline, 4px);
+	gap: var(--arcade-space-1);
 }
 
 #arcade-settings .arcade-key-binding {
@@ -131,8 +143,8 @@
 /* Said only on a core that carries something, so a row that says nothing
    has nothing set. */
 #arcade-settings .arcade-core-changed {
-	margin-inline-start: calc(var(--default-grid-baseline, 4px) * 2);
-	padding: 0 calc(var(--default-grid-baseline, 4px) * 2);
+	margin-inline-start: var(--arcade-space-2);
+	padding: 0 var(--arcade-space-2);
 	border-radius: var(--border-radius-pill, 100px);
 	background-color: var(--color-primary-element-light);
 	color: var(--color-primary-element-light-text);
@@ -144,7 +156,7 @@
 #arcade-settings .arcade-pictures {
 	display: grid;
 	grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-	gap: 0 calc(var(--default-grid-baseline, 4px) * 4);
+	gap: 0 var(--arcade-space-4);
 	max-width: 900px;
 }
 
@@ -166,7 +178,7 @@
 #arcade-settings .arcade-bios-file {
 	display: flex;
 	align-items: center;
-	gap: calc(var(--default-grid-baseline, 4px) * 2);
+	gap: var(--arcade-space-2);
 	max-width: 700px;
 }
 
@@ -179,23 +191,24 @@
 	color: var(--color-text-maxcontrast);
 }
 
-/* The switch the NcCheckboxRadioSwitch component draws, without needing
-   Vue for a plain template. */
-#arcade-settings .checkbox-radio-switch {
+/* A switch drawn the way the NcCheckboxRadioSwitch component draws one,
+   without needing Vue for a plain template -- under classes of the app's
+   own, so the server's rules for the component's classes stay out of it. */
+#arcade-settings .arcade-switch {
 	display: flex;
 	align-items: center;
 }
 
-#arcade-settings .checkbox-radio-switch__input {
+#arcade-settings .arcade-switch__input {
 	position: absolute;
 	z-index: -1;
 	width: 40px;
 	height: 24px;
 	margin: 0;
-	opacity: 0 !important;
+	opacity: 0;
 }
 
-#arcade-settings .checkbox-radio-switch label {
+#arcade-settings .arcade-switch label {
 	display: flex;
 	align-items: center;
 	gap: 10px;
@@ -203,7 +216,7 @@
 	cursor: pointer;
 }
 
-#arcade-settings .checkbox-radio-switch label::before {
+#arcade-settings .arcade-switch label::before {
 	content: '';
 	box-sizing: border-box;
 	flex-shrink: 0;
@@ -220,13 +233,13 @@
 	transition: background-position ease 250ms, background-color ease 250ms;
 }
 
-#arcade-settings .checkbox-radio-switch__input:checked + label::before {
+#arcade-settings .arcade-switch__input:checked + label::before {
 	background-color: var(--color-primary-element);
 	background-image: radial-gradient(circle closest-side, var(--color-main-background) 96%, transparent);
 	background-position: right 3px center;
 }
 
-#arcade-settings .checkbox-radio-switch__input:focus-visible + label::before {
+#arcade-settings .arcade-switch__input:focus-visible + label::before {
 	outline: 2px solid var(--color-main-text);
 	outline-offset: 2px;
 }
@@ -236,11 +249,11 @@
    other, so on and off would look exactly alike for all seven switches.
    A ring that is only there when checked survives, being a border. */
 @media (forced-colors: active) {
-	#arcade-settings .checkbox-radio-switch label::before {
+	#arcade-settings .arcade-switch label::before {
 		border: 2px solid currentcolor;
 	}
 
-	#arcade-settings .checkbox-radio-switch__input:checked + label::before {
+	#arcade-settings .arcade-switch__input:checked + label::before {
 		outline: 3px solid currentcolor;
 		outline-offset: -7px;
 	}
@@ -249,7 +262,68 @@
 /* The knob sliding across is decoration; the switch says the same thing
    standing still. */
 @media (prefers-reduced-motion: reduce) {
-	#arcade-settings .checkbox-radio-switch label::before {
+	#arcade-settings .arcade-switch label::before {
 		transition: none;
 	}
+}
+
+/* The steps of connecting RetroArch, numbered as the server's own lists
+   are not. */
+#arcade-settings .arcade-cloudsync-steps {
+	list-style: decimal;
+	padding-inline-start: var(--arcade-space-6);
+	margin-block: var(--arcade-space-2);
+}
+
+#arcade-settings .arcade-cloudsync-steps li {
+	margin-block: var(--arcade-space-1);
+}
+
+/* An address to copy, so it can be selected whole and wraps rather than
+   pushing the page wider. */
+#arcade-settings .arcade-cloudsync-url,
+#arcade-settings .arcade-cloudsync-steps code {
+	user-select: all;
+	overflow-wrap: anywhere;
+}
+
+/* Each maintenance task: what it is, how it stands, and its button. */
+#arcade-maintenance .arcade-maintenance-task {
+	margin-block: var(--arcade-space-3);
+}
+
+#arcade-maintenance .arcade-maintenance-task h3 {
+	margin-block: 0 var(--arcade-space-1);
+	font-size: var(--default-font-size);
+	font-weight: bold;
+}
+
+#arcade-maintenance .arcade-maintenance-state {
+	color: var(--color-text-maxcontrast);
+	margin-block-end: var(--arcade-space-1);
+}
+
+#arcade-maintenance .arcade-maintenance-jobs {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+#arcade-maintenance .arcade-maintenance-jobs strong {
+	color: var(--color-main-text);
+	font-weight: normal;
+}
+
+/* A job that went wrong is the line worth finding at a glance. */
+#arcade-maintenance .arcade-maintenance-job-failed {
+	color: var(--color-text-error, var(--color-error-text));
+}
+
+/* Pressed once, and waiting to be pressed again: in the server's own
+   colours for something that cannot be taken back, which pair a light
+   background with a dark text rather than the other way around. */
+#arcade-maintenance .arcade-maintenance-confirm {
+	background-color: var(--color-error);
+	color: var(--color-error-text);
+	border: 2px solid var(--color-error-text);
 }
