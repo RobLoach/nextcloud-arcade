@@ -1,8 +1,7 @@
-import { defaultRootPath } from '@nextcloud/files/dav'
 import { t } from './l10n.js'
 import { generateUrl } from '@nextcloud/router'
 import { ICONS, icon } from './icons.js'
-import { fileIdOf } from './player.js'
+import { davRoot, fileIdOf } from './dav.js'
 
 /**
  * Whether this page can open the Files sidebar. The app page loads it for
@@ -46,7 +45,7 @@ export async function giveTheSidebarAContext(client, resultToNode, getDefaultPro
 	}
 	try {
 		const dir = path.replace(/\/[^/]*$/, '') || '/'
-		const stat = await client.stat(`${defaultRootPath}${dir}`, { details: true, data: getDefaultPropfind() })
+		const stat = await client.stat(`${davRoot()}${dir}`, { details: true, data: getDefaultPropfind() })
 		const folder = resultToNode(stat.data)
 		provider.folder.value = folder
 		provider.view.value ??= {
@@ -78,7 +77,7 @@ export async function openFilesSidebar(path) {
 	// and attributes are what the other tabs go by.
 	const { getClient, getDefaultPropfind, resultToNode } = await import('@nextcloud/files/dav')
 	const client = getClient()
-	const stat = await client.stat(`${defaultRootPath}${path}`, { details: true, data: getDefaultPropfind() })
+	const stat = await client.stat(`${davRoot()}${path}`, { details: true, data: getDefaultPropfind() })
 	await giveTheSidebarAContext(client, resultToNode, getDefaultPropfind, path)
 	window.OCA.Files._sidebar().open(resultToNode(stat.data), 'arcade')
 	return true

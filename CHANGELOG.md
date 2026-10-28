@@ -99,6 +99,10 @@ All notable changes to Nextcloud Arcade. The format follows
   the Files app, so there the button opens the game's details in Files.
 
 ### Changed
+- The games library downloads a third of what it did -- 33 KB gzipped
+  where it was 111 KB. The emulator and the WebDAV client of Nextcloud
+  came along with it for two small helpers; the emulator now waits for a
+  game to start, and the WebDAV client is not loaded at all.
 - The player's text is sized from the server's own font size, so a larger
   one makes the player's larger too.
 - The offer to continue from the last save sits along the bottom of the

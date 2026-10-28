@@ -4,7 +4,6 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 const api = vi.hoisted(() => vi.fn(async () => ({ json: async () => ({}), blob: async () => new Blob([]) })))
 vi.mock('nostalgist', () => ({ Nostalgist: {} }))
 vi.mock('@nextcloud/auth', () => ({ getCurrentUser: () => ({ uid: 'alice' }) }))
-vi.mock('@nextcloud/files/dav', () => ({ defaultRemoteURL: '', defaultRootPath: '' }))
 vi.mock('@nextcloud/l10n', () => ({ translate: (app, text) => text }))
 vi.mock('@nextcloud/router', () => ({ generateUrl: (path) => path, generateFilePath: (path) => path }))
 vi.mock('@nextcloud/initial-state', () => ({ loadState: (app, key, fallback) => fallback }))
