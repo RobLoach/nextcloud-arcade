@@ -1,5 +1,5 @@
 import { defaultRootPath } from '@nextcloud/files/dav'
-import { translate as t } from '@nextcloud/l10n'
+import { t } from './l10n.js'
 import { generateUrl } from '@nextcloud/router'
 import { ICONS, icon } from './icons.js'
 import { fileIdOf } from './player.js'

@@ -1,5 +1,5 @@
 import { getCurrentUser } from '@nextcloud/auth'
-import { translate as t } from '@nextcloud/l10n'
+import { t } from './l10n.js'
 import { generateUrl } from '@nextcloud/router'
 import { AUTO_SLOT, dav } from './api.js'
 import { ICONS, icon } from './icons.js'

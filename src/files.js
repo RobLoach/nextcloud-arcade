@@ -1,5 +1,5 @@
 import { loadState } from '@nextcloud/initial-state'
-import { translate as t, translatePlural as n } from '@nextcloud/l10n'
+import { t, n } from './l10n.js'
 import { generateUrl } from '@nextcloud/router'
 import { AUTO_SLOT, api, encodePath, stateUrl } from './api.js'
 import { formatPlayTime } from './format.js'

@@ -1,4 +1,4 @@
-import { translate as t } from '@nextcloud/l10n'
+import { t } from '../l10n.js'
 import { AUTO_SLOT, api, stateUrl, wasGivenUpOn } from '../api.js'
 import { disableSramSync, enableSramSync } from '../player.js'
 import { watchCoreLog } from '../corelog.js'

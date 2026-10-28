@@ -1,4 +1,4 @@
-import { translate as t } from '@nextcloud/l10n'
+import { t } from './l10n.js'
 import { registerPlayAction } from './fileaction.js'
 import { isPlayable, romMimes } from './systems.js'
 

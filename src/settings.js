@@ -1,4 +1,4 @@
-import { translate as t, translatePlural as n } from '@nextcloud/l10n'
+import { t, n } from './l10n.js'
 import { generateUrl } from '@nextcloud/router'
 import { UPLOAD_WAIT, api, asUpload, deadline } from './api.js'
 import { formatSize } from './format.js'

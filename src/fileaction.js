@@ -1,5 +1,5 @@
 import { loadState } from '@nextcloud/initial-state'
-import { translate as t } from '@nextcloud/l10n'
+import { t } from './l10n.js'
 import { ICONS, icon } from './icons.js'
 import { playGame } from './play.js'
 import { isPlayable, systemForFolderPath } from './systems.js'

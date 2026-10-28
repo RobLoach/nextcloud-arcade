@@ -1,6 +1,6 @@
 import { getCurrentUser } from '@nextcloud/auth'
 import { loadState } from '@nextcloud/initial-state'
-import { translate as t } from '@nextcloud/l10n'
+import { t } from './l10n.js'
 import { generateUrl } from '@nextcloud/router'
 import { api } from './api.js'
 import { uploadFailed } from './panels/states.js'

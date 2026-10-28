@@ -1,4 +1,4 @@
-import { translate as t } from '@nextcloud/l10n'
+import { t } from './l10n.js'
 import { formatSize } from './format.js'
 
 // Enough to tell two bars apart, should a page ever carry two players.
