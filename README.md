@@ -6,16 +6,6 @@ compiled to WebAssembly. ROMs are streamed from your files, and run in the brows
 
 [![Nextcloud Arcade](img/screenshot.png)](img/screenshot.png)
 
-![A game running](screenshots/game.png)
-
-![The games library](screenshots/games-library.png)
-
-![The library as a list](screenshots/games-list.png)
-
-![The personal settings](screenshots/configuration.png)
-
-![The administration settings](screenshots/administration.png)
-
 ## Features
 
 - Seventeen systems, from the ColecoVision to the PlayStation
@@ -27,6 +17,18 @@ compiled to WebAssembly. ROMs are streamed from your files, and run in the brows
 - Gamepad, touch, and keyboard controls
 - Plays ROMs straight from your Files
 - Personal Arcade settings for each user
+
+## Screenshots
+
+![A game running](screenshots/game.png)
+
+![The games library](screenshots/games-library.png)
+
+![The library as a list](screenshots/games-list.png)
+
+![The personal settings](screenshots/configuration.png)
+
+![The administration settings](screenshots/administration.png)
 
 ## Dependencies
 
