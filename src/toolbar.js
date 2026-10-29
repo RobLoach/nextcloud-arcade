@@ -6,7 +6,7 @@ import { ICONS, icon } from './icons.js'
 import { createGalleryPanel } from './panels/gallery.js'
 import { offerResume } from './panels/resume.js'
 import { createStatesPanel, databaseBroken, whyFailed } from './panels/states.js'
-import { davUrl, makeFolder } from './player.js'
+import { davUrl, makeFolder } from './dav.js'
 import { hasFilesSidebar, showDetails } from './sidebar.js'
 import { takeStartSlot } from './startslot.js'
 import { shortNameForPath } from './systems.js'
@@ -455,9 +455,9 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 		actionsMenu = document.createElement('div')
 		actionsMenu.className = 'arcade-actions-menu hidden'
 
-		const item = (iconPath, label, onClick) => {
-			const element = document.createElement('button')
-			element.type = 'button'
+		// What every entry of the menu has: its icon and words, and a click
+		// that closes the menu before anything else happens.
+		const entry = (element, iconPath, label, onClick = () => {}) => {
 			element.className = 'arcade-actions-item'
 			element.innerHTML = icon(iconPath)
 			element.appendChild(document.createTextNode(label))
@@ -470,25 +470,23 @@ export function attachToolbar({ container, instance, romPath, romName, settings 
 			return element
 		}
 
+		const item = (iconPath, label, onClick) => {
+			const element = document.createElement('button')
+			element.type = 'button'
+			return entry(element, iconPath, label, onClick)
+		}
+
 		// The same entry for what leads somewhere rather than doing
 		// something: an anchor, so it can be opened in a tab or copied the
 		// way any other link can. Closing the menu is all the click does;
 		// the browser follows the link itself.
 		const linkItem = (iconPath, label, href, attributes = {}) => {
 			const element = document.createElement('a')
-			element.className = 'arcade-actions-item'
 			element.href = href
 			for (const [name, value] of Object.entries(attributes)) {
 				element.setAttribute(name, value)
 			}
-			element.innerHTML = icon(iconPath)
-			element.appendChild(document.createTextNode(label))
-			element.addEventListener('click', (event) => {
-				event.stopPropagation()
-				closeActionsMenu()
-			})
-			actionsMenu.appendChild(element)
-			return element
+			return entry(element, iconPath, label)
 		}
 
 		item(ICONS.fullscreen, t('arcade', 'Full screen'), () => fullscreenButton.click())

@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace OCA\Arcade\Db;
 
-use OCP\AppFramework\Db\QBMapper;
-use OCP\DB\Exception;
 use OCP\DB\QueryBuilder\IQueryBuilder;
 use OCP\IDBConnection;
 
@@ -14,9 +12,9 @@ use OCP\IDBConnection;
  * the states. That is what tells apart a state whose game is gone from one
  * whose game is merely not being played.
  *
- * @template-extends QBMapper<Game>
+ * @template-extends UniqueRowMapper<Game>
  */
-class GameMapper extends QBMapper {
+class GameMapper extends UniqueRowMapper {
 	public function __construct(IDBConnection $db) {
 		parent::__construct($db, 'arcade_games', Game::class);
 	}
@@ -103,9 +101,6 @@ class GameMapper extends QBMapper {
 	 * has nothing to say about them. An empty name clears the one noted.
 	 */
 	public function set(string $userId, string $key, int $fileId, string $path, string $checksum, string $core = '', ?string $name = null): void {
-		if ($this->replace($userId, $key, $fileId, $path, $checksum, $core, $name) > 0) {
-			return;
-		}
 		$game = new Game();
 		$game->setUserId($userId);
 		$game->setGameKey($key);
@@ -114,17 +109,7 @@ class GameMapper extends QBMapper {
 		$game->setChecksum($checksum);
 		$game->setCore($core === '' ? null : $core);
 		$game->setName($name === null || $name === '' ? null : $name);
-		try {
-			$this->insert($game);
-		} catch (Exception $e) {
-			if ($e->getReason() !== Exception::REASON_UNIQUE_CONSTRAINT_VIOLATION) {
-				throw $e;
-			}
-			// Another request noted it first. An update that changes nothing
-			// counts no rows on some databases, so this one may too; either
-			// way the entry is there.
-			$this->replace($userId, $key, $fileId, $path, $checksum, $core, $name);
-		}
+		$this->updateOrInsert(fn (): int => $this->replace($userId, $key, $fileId, $path, $checksum, $core, $name), $game);
 	}
 
 	private function replace(string $userId, string $key, int $fileId, string $path, string $checksum, string $core, ?string $name): int {
@@ -155,13 +140,7 @@ class GameMapper extends QBMapper {
 		$game->setFileId($fileId);
 		$game->setLastPath($path);
 		$game->setChecksum($checksum);
-		try {
-			$this->insert($game);
-		} catch (Exception $e) {
-			if ($e->getReason() !== Exception::REASON_UNIQUE_CONSTRAINT_VIOLATION) {
-				throw $e;
-			}
-		}
+		$this->insertUnlessThere($game);
 	}
 
 	/**

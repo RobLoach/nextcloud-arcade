@@ -42,6 +42,7 @@ class LoadSidebarListener implements IEventListener {
 			'libraryFolder',
 			$userId === null ? '' : $this->settingsService->getUserSettings($userId)['library_folder'],
 		);
+		Util::addStyle(Application::APP_ID, 'variables');
 		Util::addStyle(Application::APP_ID, 'files');
 		// Load after the Files app script so OCA.Files.Sidebar is there.
 		Util::addScript(Application::APP_ID, 'arcade-files', 'files');

@@ -1,4 +1,5 @@
 <?php
+style('arcade', 'variables');
 style('arcade', 'css');
 style('arcade', 'player');
 script('arcade', 'arcade-main');

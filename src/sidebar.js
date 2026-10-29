@@ -2,7 +2,7 @@ import { defaultRootPath } from '@nextcloud/files/dav'
 import { t } from './l10n.js'
 import { generateUrl } from '@nextcloud/router'
 import { ICONS, icon } from './icons.js'
-import { fileIdOf } from './player.js'
+import { fileIdOf } from './dav.js'
 
 /**
  * Whether this page can open the Files sidebar. The app page loads it for

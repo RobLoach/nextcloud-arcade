@@ -34,6 +34,7 @@ class LoadViewerListener implements IEventListener {
 			$this->initialState,
 			$this->userSession->getUser()?->getUID(),
 		);
+		Util::addStyle(Application::APP_ID, 'variables');
 		Util::addStyle(Application::APP_ID, 'player');
 		// Load after the viewer script so OCA.Viewer is available.
 		Util::addScript(Application::APP_ID, 'arcade-viewer', 'viewer');

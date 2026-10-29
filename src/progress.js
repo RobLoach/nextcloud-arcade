@@ -104,6 +104,40 @@ export async function readWithProgress(response, onBytes) {
 }
 
 /**
+ * The box the loading and the closing of a game show over the player:
+ * what is going on in words, a progress bar, and a line for the detail.
+ *
+ * The words change rarely, so they are what is read out; the detail
+ * beneath can change on every piece that arrives, and is not.
+ *
+ * @param {HTMLElement} container the player, to lay the box over
+ * @param {string} className the classes of the box
+ * @param {string} text what is going on
+ * @return {{element: HTMLElement, label: HTMLElement, bar: HTMLProgressElement, detail: HTMLElement}} its parts
+ */
+function box(container, className, text) {
+	const element = document.createElement('div')
+	element.className = className
+
+	const label = document.createElement('span')
+	label.className = 'arcade-loading-label'
+	label.setAttribute('role', 'status')
+	label.id = `arcade-loading-label-${++bars}`
+	label.textContent = text
+
+	const bar = document.createElement('progress')
+	bar.className = 'arcade-loading-bar'
+	bar.setAttribute('aria-labelledby', label.id)
+
+	const detail = document.createElement('span')
+	detail.className = 'arcade-loading-detail'
+
+	element.append(label, bar, detail)
+	container.appendChild(element)
+	return { element, label, bar, detail }
+}
+
+/**
  * What a game shows while it is on its way: a progress bar over the
  * player, the native one, which Nextcloud styles the way its own
  * progress bars look.
@@ -118,27 +152,8 @@ export async function readWithProgress(response, onBytes) {
  * @return {{update: Function, remove: Function}} the bar
  */
 export function showLoading(container, name) {
-	const element = document.createElement('div')
-	element.className = 'arcade-loading'
-
-	// The words change twice, so they are what is read out; the figures
-	// beneath change on every piece that arrives, and are not.
-	const label = document.createElement('span')
-	label.className = 'arcade-loading-label'
-	label.setAttribute('role', 'status')
-	label.id = `arcade-loading-label-${++bars}`
-	label.textContent = t('arcade', 'Downloading {name} …', { name })
-
-	const bar = document.createElement('progress')
-	bar.className = 'arcade-loading-bar'
+	const { element, label, bar, detail } = box(container, 'arcade-loading', t('arcade', 'Downloading {name} …', { name }))
 	bar.max = 1
-	bar.setAttribute('aria-labelledby', label.id)
-
-	const detail = document.createElement('span')
-	detail.className = 'arcade-loading-detail'
-
-	element.append(label, bar, detail)
-	container.appendChild(element)
 
 	let starting = false
 	let latest = null
@@ -208,26 +223,9 @@ export function showLoading(container, name) {
  *   and takes the box away
  */
 export function showClosing(container, name) {
-	const element = document.createElement('div')
-	element.className = 'arcade-loading arcade-closing'
-
-	const label = document.createElement('span')
-	label.className = 'arcade-loading-label'
-	label.setAttribute('role', 'status')
-	label.id = `arcade-loading-label-${++bars}`
-	label.textContent = t('arcade', 'Closing {name} …', { name })
-
 	// Nothing here can be counted, so the bar only says that something
 	// is going on.
-	const bar = document.createElement('progress')
-	bar.className = 'arcade-loading-bar'
-	bar.setAttribute('aria-labelledby', label.id)
-
-	const detail = document.createElement('span')
-	detail.className = 'arcade-loading-detail'
-
-	element.append(label, bar, detail)
-	container.appendChild(element)
+	const { element, detail } = box(container, 'arcade-loading arcade-closing', t('arcade', 'Closing {name} …', { name }))
 
 	return {
 		/**

@@ -3,18 +3,6 @@
    The overlay sits on the game picture itself, so it keeps a fixed dark
    scrim in every theme; sizes and radii follow the Nextcloud variables. */
 
-/* The spacing steps of the app: the grid baseline of the server, and
-   multiples of it. */
-:root {
-	--arcade-space-1: var(--default-grid-baseline, 4px);
-	--arcade-space-2: calc(var(--default-grid-baseline, 4px) * 2);
-	--arcade-space-3: calc(var(--default-grid-baseline, 4px) * 3);
-	--arcade-space-4: calc(var(--default-grid-baseline, 4px) * 4);
-	--arcade-space-5: calc(var(--default-grid-baseline, 4px) * 5);
-	--arcade-space-6: calc(var(--default-grid-baseline, 4px) * 6);
-	--arcade-space-8: calc(var(--default-grid-baseline, 4px) * 8);
-}
-
 .arcade-player-container {
 	position: relative;
 	/* The player is black wherever the game does not draw, and before it
