@@ -9,7 +9,11 @@ use OCP\IL10N;
 use OCP\IURLGenerator;
 use OCP\Settings\IIconSection;
 
-class AdminSection implements IIconSection {
+/**
+ * The Arcade section, of the administration settings and of the personal
+ * ones alike: the two are the same entry in the navigation.
+ */
+class Section implements IIconSection {
 	public function __construct(
 		private IURLGenerator $urlGenerator,
 		private IL10N $l,

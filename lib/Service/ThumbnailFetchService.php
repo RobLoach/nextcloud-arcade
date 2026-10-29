@@ -8,7 +8,6 @@ use OCA\Arcade\AppInfo\Application;
 use OCA\Arcade\CoreMap;
 use OCP\Files\File;
 use OCP\Files\Folder;
-use OCP\Files\NotFoundException;
 use OCP\Config\IUserConfig;
 use OCP\Http\Client\IClientService;
 use OCP\Files\AppData\IAppDataFactory;
@@ -246,7 +245,11 @@ class ThumbnailFetchService {
 	 */
 	private function store(Folder $thumbnails, string $platform, string $basename, string $image): ?File {
 		try {
-			$folder = $this->folder($this->folder($thumbnails, $platform), self::TYPE_FOLDER);
+			$folder = Folders::make($thumbnails, $platform . '/' . self::TYPE_FOLDER);
+			if ($folder === null) {
+				$this->logger->warning('Could not store the box art: a file is where its folder would be', ['platform' => $platform]);
+				return null;
+			}
 			$name = pathinfo($basename, PATHINFO_FILENAME) . '.png';
 			$existing = $folder->nodeExists($name) ? $folder->get($name) : null;
 			if ($existing instanceof File) {
@@ -260,17 +263,5 @@ class ThumbnailFetchService {
 			$this->logger->warning('Could not store the box art', ['exception' => $e]);
 		}
 		return null;
-	}
-
-	private function folder(Folder $parent, string $name): Folder {
-		try {
-			$node = $parent->get($name);
-			if ($node instanceof Folder) {
-				return $node;
-			}
-		} catch (NotFoundException) {
-			// Created below.
-		}
-		return $parent->newFolder($name);
 	}
 }

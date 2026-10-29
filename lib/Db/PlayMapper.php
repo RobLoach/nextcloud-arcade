@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace OCA\Arcade\Db;
 
-use OCP\AppFramework\Db\QBMapper;
-use OCP\DB\Exception;
 use OCP\DB\QueryBuilder\IQueryBuilder;
 use OCP\IDBConnection;
 
@@ -16,9 +14,9 @@ use OCP\IDBConnection;
  * seconds = seconds + n -- so two sessions ending at the same moment both
  * count, where a read-modify-write of a JSON blob would keep only one.
  *
- * @template-extends QBMapper<Play>
+ * @template-extends UniqueRowMapper<Play>
  */
-class PlayMapper extends QBMapper {
+class PlayMapper extends UniqueRowMapper {
 	public function __construct(IDBConnection $db) {
 		parent::__construct($db, 'arcade_plays', Play::class);
 	}
@@ -108,24 +106,13 @@ class PlayMapper extends QBMapper {
 	 * A game was started: one more play, and it moves to the front.
 	 */
 	public function recordPlay(string $userId, int $fileId, int $time): void {
-		if ($this->countPlay($userId, $fileId, $time) > 0) {
-			return;
-		}
 		$play = new Play();
 		$play->setUserId($userId);
 		$play->setFileId($fileId);
 		$play->setPlays(1);
 		$play->setSeconds(0);
 		$play->setLastPlayed($time);
-		try {
-			$this->insert($play);
-		} catch (Exception $e) {
-			if ($e->getReason() !== Exception::REASON_UNIQUE_CONSTRAINT_VIOLATION) {
-				throw $e;
-			}
-			// Another session inserted the row first; count on top of it.
-			$this->countPlay($userId, $fileId, $time);
-		}
+		$this->updateOrInsert(fn (): int => $this->countPlay($userId, $fileId, $time), $play);
 	}
 
 	private function countPlay(string $userId, int $fileId, int $time): int {
@@ -151,9 +138,6 @@ class PlayMapper extends QBMapper {
 	 * not playing it again.
 	 */
 	public function addSeconds(string $userId, int $fileId, int $seconds, int $time): void {
-		if ($this->countSeconds($userId, $fileId, $seconds) > 0) {
-			return;
-		}
 		// A game whose start was never recorded still counts.
 		$play = new Play();
 		$play->setUserId($userId);
@@ -161,14 +145,7 @@ class PlayMapper extends QBMapper {
 		$play->setPlays(0);
 		$play->setSeconds($seconds);
 		$play->setLastPlayed($time);
-		try {
-			$this->insert($play);
-		} catch (Exception $e) {
-			if ($e->getReason() !== Exception::REASON_UNIQUE_CONSTRAINT_VIOLATION) {
-				throw $e;
-			}
-			$this->countSeconds($userId, $fileId, $seconds);
-		}
+		$this->updateOrInsert(fn (): int => $this->countSeconds($userId, $fileId, $seconds), $play);
 	}
 
 	private function countSeconds(string $userId, int $fileId, int $seconds): int {
@@ -218,12 +195,6 @@ class PlayMapper extends QBMapper {
 		$play->setPlays($plays);
 		$play->setSeconds($seconds);
 		$play->setLastPlayed($time);
-		try {
-			$this->insert($play);
-		} catch (Exception $e) {
-			if ($e->getReason() !== Exception::REASON_UNIQUE_CONSTRAINT_VIOLATION) {
-				throw $e;
-			}
-		}
+		$this->insertUnlessThere($play);
 	}
 }

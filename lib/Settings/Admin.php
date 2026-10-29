@@ -28,6 +28,7 @@ class Admin implements ISettings {
 
 	public function getForm(): TemplateResponse {
 		Util::addScript(Application::APP_ID, 'arcade-settings');
+		Util::addStyle(Application::APP_ID, 'variables');
 		Util::addStyle(Application::APP_ID, 'settings');
 
 		return new TemplateResponse(Application::APP_ID, 'admin', [
