@@ -91,10 +91,9 @@ personal settings. Upload some games and rescan if it finds nothing.
   shows the system and the emulator that plays it, what the cartridge
   calls itself — title, region, mapper, checksums — and for a zip, the
   game inside; how long it was played; the pictures of its save state
-  slots, each with a button that starts the game from it; its thumbnails
-  and screenshots; and the BIOS files the system wants, and whether you
-  have them. **Play** starts the game; on the library page,
-  **Show in Files** opens it in the Files app.
+  slots, each with a button that starts the game from it; and its
+  thumbnails and screenshots. **Play** starts the game; on the library
+  page, **Show in Files** opens it in the Files app.
 - Games are given their box art as their Nextcloud preview, so a folder
   of ROMs looks like a shelf of games. The picture is the one already in
   your thumbnails folder, only scaled; a game without one keeps the icon

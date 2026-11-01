@@ -73,10 +73,9 @@ All notable changes to Nextcloud Arcade. The format follows
   weekly cleanup, fetching thumbnails, reading game details -- and when,
   so one that failed shows there rather than only in the log.
 - The Arcade tab of the sidebar -- in the Files app, and opened from the
-  library -- shows more of a game: the emulator that runs it, the BIOS
-  files its system asks for and whether they are found, a picture of
-  each save state with a Load button that starts the game in it, and the
-  latest screenshots. Opened from the library, it links to the game in
+  library -- shows more of a game: the emulator that runs it, a picture
+  of each save state with a Load button that starts the game in it, and
+  the latest screenshots. Opened from the library, it links to the game in
   Files. A game the background pass has not read yet is read there and
   then, so its title and region show straight away.
 - Zipped games get the Arcade tab too: a zip, .bin or .rom in the games
@@ -89,7 +88,7 @@ All notable changes to Nextcloud Arcade. The format follows
   appears.
 - The Arcade tab shows the game's pictures from the thumbnails folder --
   box art, title screen, snap and logo -- under Thumbnails, below the
-  screenshots. The BIOS files come last.
+  screenshots.
 - Screenshots and thumbnails picked in the sidebar on the library page
   open in the Viewer, over the library.
 - A Details button on every game of the library -- in the corner of a
