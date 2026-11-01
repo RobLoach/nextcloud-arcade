@@ -140,12 +140,6 @@ function render(game, file, mime, fileId) {
 		container.appendChild(renderThumbnails(thumbnails))
 	}
 
-	// Last: something to see to once, not every time the game is looked at.
-	const bios = Array.isArray(game.bios) ? game.bios : []
-	if (bios.length > 0) {
-		container.appendChild(renderBios(bios))
-	}
-
 	return container
 }
 
@@ -229,43 +223,6 @@ function renderThumbnails(thumbnails) {
 		list.appendChild(item)
 	}
 	section.appendChild(list)
-	return section
-}
-
-/**
- * The BIOS files the emulator asks for, and whether the player finds them.
- *
- * @param {Array<{name: string, present: boolean, source: ?string}>} bios the files
- * @return {HTMLElement} the section
- */
-function renderBios(bios) {
-	const section = document.createElement('div')
-	section.appendChild(heading(t('arcade', 'BIOS')))
-	const files = document.createElement('ul')
-	files.className = 'arcade-sidebar-bios'
-	for (const file of bios) {
-		const item = document.createElement('li')
-		const name = document.createElement('strong')
-		name.textContent = file.name
-		const where = document.createElement('span')
-		where.textContent = !file.present
-			? t('arcade', 'Missing')
-			: (file.source === 'folder'
-				? t('arcade', 'In your system folder')
-				: t('arcade', 'Provided by the server'))
-		item.append(name, where)
-		if (!file.present) {
-			item.classList.add('arcade-sidebar-bios-missing')
-		}
-		files.appendChild(item)
-	}
-	section.appendChild(files)
-	if (bios.some((file) => !file.present)) {
-		const hint = document.createElement('p')
-		hint.className = 'arcade-sidebar-hint'
-		hint.textContent = t('arcade', 'Games may run worse without them. Add them to the system folder chosen in the personal Arcade settings.')
-		section.appendChild(hint)
-	}
 	return section
 }
 

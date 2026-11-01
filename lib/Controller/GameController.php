@@ -6,7 +6,6 @@ namespace OCA\Arcade\Controller;
 
 use OCA\Arcade\CoreMap;
 use OCA\Arcade\Listener\MetadataListener;
-use OCA\Arcade\Service\BiosService;
 use OCA\Arcade\Service\LibraryService;
 use OCA\Arcade\Service\SettingsService;
 use OCA\Arcade\Service\RecentService;
@@ -41,7 +40,6 @@ class GameController extends ArcadeController {
 		private IFilesMetadataManager $metadataManager,
 		private RecentService $recentService,
 		private StateService $stateService,
-		private BiosService $biosService,
 		private LibraryService $libraryService,
 		private SettingsService $settingsService,
 		private LoggerInterface $logger,
@@ -118,7 +116,6 @@ class GameController extends ArcadeController {
 			'states' => $this->stateService->list($userId, $file, false),
 			'emulator' => CoreMap::CORE_NAMES[$core] ?? '',
 			'thumbnails' => $this->thumbnailsOf($userId, $file, $system, $known['title']),
-			'bios' => $system === '' ? [] : $this->biosOf($userId, $system),
 		]);
 	}
 
@@ -182,32 +179,6 @@ class GameController extends ArcadeController {
 			$ordered[$kind] = ['fileId' => $found[$kind], 'path' => $path ?? ''];
 		}
 		return $ordered;
-	}
-
-	/**
-	 * The BIOS files the system's core asks for, and whether the player
-	 * would find each: the user's own system folder first, then the store
-	 * of the instance.
-	 *
-	 * @return list<array{name: string, present: bool, source: ?string}>
-	 */
-	private function biosOf(string $userId, string $system): array {
-		if ((CoreMap::SYSTEMS[$system]['bios'] ?? []) === []) {
-			return [];
-		}
-		try {
-			foreach ($this->biosService->statusFor($userId)['systems'] ?? [] as $entry) {
-				if ($entry['system']['id'] === $system) {
-					return array_map(
-						static fn (array $file): array => ['name' => $file['name'], 'present' => $file['present'], 'source' => $file['source']],
-						$entry['files'],
-					);
-				}
-			}
-		} catch (\Throwable $e) {
-			$this->logger->debug('Could not look for the BIOS files of a system', ['exception' => $e]);
-		}
-		return [];
 	}
 
 	/**
