@@ -287,28 +287,12 @@ msgstr ""
 msgid "Thumbnails"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:243
 #: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:97
 msgid "BIOS"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:252
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:720
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:714
 msgid "Missing"
-msgstr ""
-
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:254
-msgid "In your system folder"
-msgstr ""
-
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:255
-msgid "Provided by the server"
-msgstr ""
-
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:266
-msgid ""
-"Games may run worse without them. Add them to the system folder chosen in "
-"the personal Arcade settings."
 msgstr ""
 
 #: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:315
