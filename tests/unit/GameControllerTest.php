@@ -6,7 +6,6 @@ namespace OCA\Arcade\Tests\Unit;
 
 use OCA\Arcade\Controller\GameController;
 use OCA\Arcade\Listener\MetadataListener;
-use OCA\Arcade\Service\BiosService;
 use OCA\Arcade\Service\LibraryService;
 use OCA\Arcade\Service\SettingsService;
 use OCA\Arcade\Service\RecentService;
@@ -74,7 +73,6 @@ class GameControllerTest extends TestCase {
 			$metadataManager,
 			$recentService,
 			$stateService,
-			$this->createStub(BiosService::class),
 			$this->createStub(LibraryService::class),
 			$this->createStub(SettingsService::class),
 			$this->createStub(LoggerInterface::class),
@@ -122,7 +120,6 @@ class GameControllerTest extends TestCase {
 			'states' => $states,
 			'emulator' => 'FCEUmm',
 			'thumbnails' => [],
-			'bios' => [],
 		], $response->getData());
 	}
 
@@ -153,20 +150,6 @@ class GameControllerTest extends TestCase {
 		$this->assertTrue($read);
 		$this->assertSame('CHRONO TRIGGER', $data['title']);
 		$this->assertSame('Snes9x', $data['emulator']);
-	}
-
-	public function testTheBiosFilesOfTheSystemAreSaidFoundOrNot(): void {
-		$bios = $this->createStub(BiosService::class);
-		$bios->method('statusFor')->willReturn(['systems' => [
-			['system' => ['id' => 'gb', 'name' => 'Game Boy'], 'files' => [['name' => 'gb_bios.bin', 'present' => false, 'source' => null, 'size' => 0]]],
-			['system' => ['id' => 'gba', 'name' => 'Game Boy Advance'], 'files' => [['name' => 'gba_bios.bin', 'present' => true, 'source' => 'folder', 'size' => 16384]]],
-		]]);
-		$metadataManager = $this->createStub(IFilesMetadataManager::class);
-		$metadataManager->method('getMetadata')->willThrowException(new \Exception('nothing filed'));
-
-		$data = $this->controllerWith($metadataManager, $this->rom('/alice/files/Games/Zelda.gba'), $bios)->game('/Games/Zelda.gba')->getData();
-
-		$this->assertSame([['name' => 'gba_bios.bin', 'present' => true, 'source' => 'folder']], $data['bios']);
 	}
 
 	public function testAGameReadAlreadyIsNotReadAgainForSayingNothing(): void {
@@ -254,7 +237,6 @@ class GameControllerTest extends TestCase {
 			$metadataManager,
 			$this->createStub(RecentService::class),
 			$this->nothingNoted(),
-			$this->createStub(BiosService::class),
 			$library,
 			$this->createStub(SettingsService::class),
 			$this->createStub(LoggerInterface::class),
@@ -273,7 +255,7 @@ class GameControllerTest extends TestCase {
 		return $states;
 	}
 
-	private function controllerWith(IFilesMetadataManager $metadataManager, File $node, ?BiosService $bios = null, ?StateService $states = null, ?LibraryService $library = null): GameController {
+	private function controllerWith(IFilesMetadataManager $metadataManager, File $node, ?StateService $states = null, ?LibraryService $library = null): GameController {
 		$userFolder = $this->createStub(Folder::class);
 		$userFolder->method('get')->willReturn($node);
 		// Pictures found by id are where their id says.
@@ -294,7 +276,6 @@ class GameControllerTest extends TestCase {
 			$metadataManager,
 			$this->createStub(RecentService::class),
 			$states ?? $this->nothingNoted(),
-			$bios ?? $this->createStub(BiosService::class),
 			$library ?? $this->createStub(LibraryService::class),
 			$this->createStub(SettingsService::class),
 			$this->createStub(LoggerInterface::class),
@@ -347,7 +328,6 @@ class GameControllerTest extends TestCase {
 			$this->createStub(IFilesMetadataManager::class),
 			$this->createStub(RecentService::class),
 			$this->createStub(StateService::class),
-			$this->createStub(BiosService::class),
 			$this->createStub(LibraryService::class),
 			$this->createStub(SettingsService::class),
 			$this->createStub(LoggerInterface::class),
