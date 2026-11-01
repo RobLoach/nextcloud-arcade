@@ -8,7 +8,6 @@ use OCP\Files\File;
 use OCP\Files\Folder;
 use OCP\Files\IRootFolder;
 use OCP\Files\NotFoundException;
-use OCP\Files\NotPermittedException;
 
 /**
  * Finding a folder among a user's files, the way every caller wants it:
@@ -34,47 +33,6 @@ final class Folders {
 			return null;
 		}
 		return $node instanceof Folder ? $node : null;
-	}
-
-	/** What is wrong with a folder setting, for the settings to say. */
-	public const OK = 'ok';
-	public const INVALID = 'invalid';
-	public const MISSING = 'missing';
-	public const NOT_A_FOLDER = 'file';
-	public const UNREADABLE = 'unreadable';
-	public const UNAVAILABLE = 'unavailable';
-
-	/**
-	 * How a folder setting stands in a user's files: OK, or what is
-	 * wrong with it. An empty path is OK -- it turns the feature off, or
-	 * leaves the default in force -- and a path with ".." in it is one
-	 * the settings would refuse to save at all.
-	 */
-	public static function check(IRootFolder $rootFolder, string $userId, string $path): string {
-		$path = trim(trim($path), '/');
-		if ($path === '') {
-			return self::OK;
-		}
-		if (str_contains($path, '..')) {
-			return self::INVALID;
-		}
-		try {
-			$node = $rootFolder->getUserFolder($userId)->get($path);
-		} catch (NotFoundException) {
-			return self::MISSING;
-		} catch (NotPermittedException) {
-			return self::UNREADABLE;
-		} catch (\Throwable) {
-			return self::UNAVAILABLE;
-		}
-		if (!$node instanceof Folder) {
-			return self::NOT_A_FOLDER;
-		}
-		try {
-			return $node->isReadable() ? self::OK : self::UNREADABLE;
-		} catch (\Throwable) {
-			return self::UNAVAILABLE;
-		}
 	}
 
 	/**

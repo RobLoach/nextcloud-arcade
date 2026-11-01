@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Nextcloud 3.14159\n"
 "Report-Msgid-Bugs-To: translations\\@example.com\n"
-"POT-Creation-Date: 2026-11-01 00:57-0400\n"
+"POT-Creation-Date: 2026-11-01 15:55-0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -49,7 +49,7 @@ msgstr ""
 #: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/lib/Notification/Notifier.php:39
 #: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/lib/Settings/Section.php:28
 #: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/specialAppInfoFakeDummyForL10nScript.php:2
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:545
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:502
 #: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/sidebar.js:54
 msgid "Arcade"
 msgstr ""
@@ -73,7 +73,7 @@ msgid ""
 msgstr ""
 
 #: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/lib/Settings/DeclarativeAdmin.php:62
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:198
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:192
 msgid "Box art"
 msgstr ""
 
@@ -271,109 +271,62 @@ msgstr ""
 msgid "Save states"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:199
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:193
 msgid "Title screen"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:200
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:194
 msgid "Snap"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:201
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:195
 msgid "Logo"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:215
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:209
 msgid "Thumbnails"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:97
-msgid "BIOS"
-msgstr ""
-
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:714
-msgid "Missing"
-msgstr ""
-
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:315
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:272
 #: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:419
 msgid "made from another copy of this game"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:316
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:273
 #: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:420
 msgid ""
 "The ROM has changed since this state was saved, so loading it may go wrong."
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:325
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:282
 #: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/states.js:435
 msgid "Load"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:326
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:283
 msgid "Play from {slot}"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:358
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:315
 #: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/panels/gallery.js:21
 #: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/toolbar.js:403
 msgid "Screenshots"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:397
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:354
 msgid "Reading the game …"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:421
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:378
 msgid "Nothing is known about this game yet"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:428
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:385
 msgid "Could not ask the server about this game."
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:431
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/files.js:388
 msgid "Try again"
-msgstr ""
-
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/foldercheck.js:27
-msgid ""
-"You have no such folder in your files. It is made for each user the first "
-"time they save a game."
-msgstr ""
-
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/foldercheck.js:28
-msgid ""
-"There is no such folder in your files yet. It is made the first time a game "
-"is saved."
-msgstr ""
-
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/foldercheck.js:34
-msgid ""
-"You have no such folder in your files. Every user needs one of their own at "
-"this path."
-msgstr ""
-
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/foldercheck.js:35
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:427
-msgid "There is no such folder in your files."
-msgstr ""
-
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/foldercheck.js:39
-msgid "This is a file, not a folder."
-msgstr ""
-
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/foldercheck.js:41
-msgid "This folder cannot be read."
-msgstr ""
-
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/foldercheck.js:43
-msgid "The storage this folder is on cannot be reached right now."
-msgstr ""
-
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/foldercheck.js:45
-msgid "A folder path cannot contain \"..\", so this one is not saved."
 msgstr ""
 
 #: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/format.js:26
@@ -864,142 +817,154 @@ msgstr ""
 msgid "Stopping the emulator …"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:46
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:45
 msgid "Choose a folder"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:51
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:50
 msgid "Choose"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:106
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:103
+msgid "There is no such folder yet. The first save makes it."
+msgstr ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:104
+msgid "There is no folder at this path in your files."
+msgstr ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:145
 msgid "Saving …"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:119
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:759
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:158
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:796
 msgid "Saved"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:122
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:161
 msgid "Could not save the settings"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:219
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:256
 msgid "Press a key, or Escape to leave it be"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:257
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:294
 msgid "The emulator has no name for that key, try another one"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:261
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:298
 msgid "The player leaves Control, Alt and Meta to the browser, try another one"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:278
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:315
 msgid "No key was pressed, so this one was left as it was"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:354
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:391
 msgid ""
 "Another button of the controller has this key too, so both are pressed at "
 "once"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:355
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:392
 msgid "Another hotkey has this key too, so only one of the two ever runs"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:357
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:394
 msgid "This key works a button of the controller, so the game gets it instead"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:373
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:410
 msgid "Starting …"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:378
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:415
 msgid "The settings could not be saved, so nothing was started."
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:384
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:421
 msgid "Looking for box art in the background. It carries on without this page."
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:387
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:424
 msgid "Could not start looking. A thumbnails folder has to be set first."
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:403
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:440
 msgid "Scanning …"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:406
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:443
 msgid "The settings could not be saved, so nothing was scanned."
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:414
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:451
 msgid "Scanning the games library of every user in the background."
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:415
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:452
 msgid "A scan of every games library is already waiting to run."
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:422
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:459
 msgid "Found %n game in {folder}."
 msgid_plural "Found %n games in {folder}."
 msgstr[0] ""
 msgstr[1] ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:428
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:464
+msgid "There is no such folder in your files."
+msgstr ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:465
 msgid "Could not scan the games library."
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:458
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:495
 msgid "Removed the saves of %n deleted game."
 msgid_plural "Removed the saves of %n deleted games."
 msgstr[0] ""
 msgstr[1] ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:459
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:496
 msgid "The saves of %n deleted game are left behind."
 msgid_plural "The saves of %n deleted games are left behind."
 msgstr[0] ""
 msgstr[1] ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:463
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:500
 msgid "Removed the saves of %n deleted user."
 msgid_plural "Removed the saves of %n deleted users."
 msgstr[0] ""
 msgstr[1] ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:464
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:501
 msgid "The saves of %n deleted user are left behind."
 msgid_plural "The saves of %n deleted users are left behind."
 msgstr[0] ""
 msgstr[1] ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:466
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:503
 msgid "Nothing was left behind."
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:471
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:508
 msgid "The database tables are in order."
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:475
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:512
 msgid ""
 "ROMs uploaded before Arcade was enabled can still be plain files to "
 "Nextcloud, and do not play from the Files app."
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:485
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:522
 msgid "Nothing is left."
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:488
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:525
 msgid ""
 "%n file ({size}) left in the app data by versions before 0.48.8, which "
 "nothing reads any more."
@@ -1009,148 +974,152 @@ msgid_plural ""
 msgstr[0] ""
 msgstr[1] ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:499
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:536
 msgid "Scanning every library"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:500
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:537
 msgid "Weekly cleanup"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:501
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:538
 msgid "Fetching thumbnails"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:502
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:539
 msgid "Reading game details"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:506
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:543
 msgid "Running now"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:509
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:546
 msgid "Has not run yet"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:514
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:551
 msgid "Failed on {when}. The Nextcloud log says why."
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:516
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:553
 msgid "Stopped partway on {when}. The Nextcloud log says why."
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:518
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:555
 msgid "Finished on {when}"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:537
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:574
 msgid "Nextcloud keeps no record of them."
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:550
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:587
 #: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/maintenance.php:20
 msgid "Remove them"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:554
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:591
 msgid "Repair the database first."
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:558
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:595
 msgid ""
 "Not looked for yet. Looking goes through the saves of every user, which "
 "takes a while on a large instance."
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:562
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:599
 msgid "Nothing is left behind."
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:573
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:610
 msgid "Looking …"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:580
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:592
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:617
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:629
 msgid "Could not be checked."
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:601
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:638
 msgid "Working …"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:610
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:647
 msgid "Could not be done. The server log says why."
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:622
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:651
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:659
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:688
 msgid "Really remove?"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:637
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:674
 msgid "Repaired: the database tables are in order."
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:638
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:675
 msgid "Still wrong: {problems}."
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:640
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:677
 msgid "Every ROM already had its file type."
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:641
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:678
 msgid "Gave %n file its ROM file type."
 msgid_plural "Gave %n files their ROM file type."
 msgstr[0] ""
 msgstr[1] ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:662
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:699
 msgid "Removed %n file."
 msgid_plural "Removed %n files."
 msgstr[0] ""
 msgstr[1] ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:679
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:716
 msgid "{message}, still going"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:722
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:757
+msgid "Missing"
+msgstr ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:759
 msgid "Present ({size}, instance store, managed with occ arcade:bios)"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:725
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:762
 msgid "Present ({size})"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:746
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:783
 msgid "That file is too big to be a BIOS"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:750
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:787
 msgid "Uploading …"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:762
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:799
 msgid "Could not upload the file"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:777
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:814
 msgid "Removing …"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:782
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:819
 msgid "Removed"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:787
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:824
 msgid "This file comes from the instance store; manage it with occ arcade:bios"
 msgstr ""
 
-#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:790
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/src/settings.js:827
 msgid "Could not remove the file"
 msgstr ""
 
@@ -1302,6 +1271,10 @@ msgstr ""
 
 #: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:80
 msgid "Folders deep at most"
+msgstr ""
+
+#: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:97
+msgid "BIOS"
 msgstr ""
 
 #: /home/rob/workspace/project/ba2786fa00ca4df58be1bebfb7106afe/templates/admin.php:98

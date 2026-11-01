@@ -31,10 +31,8 @@ Personal settings → Arcade:
 | System folder | empty | Where BIOS files are read from |
 | Screenshots folder | empty | Where the screenshot button saves images; left empty, they are downloaded |
 
-Every folder is checked when the page opens and whenever it changes. One
-that is not there, is a file, cannot be read or is on a storage that is
-away is highlighted, with the reason under it. A saves folder that is not
-there yet is only noted: the first save makes it.
+A folder that is not there, or is a file, is highlighted. A saves folder
+not made yet is only noted: the first save makes it.
 
 ## Where saves are kept
 
@@ -124,7 +122,7 @@ Administration settings → Arcade holds what is the same for everybody:
 
 | Setting | Default | Description |
 | --- | --- | --- |
-| Folder defaults | as above | What new users start with, and each can still change. Scan, beside the library folder, scans every user's library afresh in the background. Each is checked in the administrator's own files, the only ones the page can look in, and highlighted when it is not a folder there |
+| Folder defaults | as above | What new users start with, and each can still change. Scan, beside the library folder, scans every user's library afresh in the background. Each is checked in the administrator's own files, and highlighted when it is not a folder there |
 | Look up box art | On | Whether the server may ask the libretro thumbnail server at all |
 | Work out ROM checksums | Off | Whether to read a whole ROM to hash it, when the upload brought no checksum |
 | Games listed at most | 5000 | How many games one library scan lists |

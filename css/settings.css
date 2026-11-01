@@ -316,9 +316,7 @@
 	border: 2px solid var(--color-error-text);
 }
 
-/* A folder setting that leads nowhere useful: the field in the server's
-   own error colour, and a line under it saying why. A note, such as a
-   saves folder not made yet, is said in the muted colour of a hint. */
+/* A folder field that leads to no folder, and the line saying so. */
 #arcade-settings input.arcade-setting.error {
 	border-color: var(--color-border-error, var(--color-error));
 }
@@ -328,10 +326,6 @@
 	color: var(--color-text-maxcontrast);
 }
 
-#arcade-settings .arcade-folder-problem:empty {
-	display: none;
-}
-
-#arcade-settings .arcade-folder-problem--error {
+#arcade-settings .arcade-setting.error ~ .arcade-folder-problem {
 	color: var(--color-text-error, var(--color-error-text));
 }

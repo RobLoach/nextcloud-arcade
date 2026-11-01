@@ -7,12 +7,8 @@ All notable changes to Nextcloud Arcade. The format follows
 ## [Unreleased]
 
 ### Added
-- The folder settings, personal and administration, say what is wrong
-  with a folder: not there, a file rather than a folder, unreadable, on a
-  storage that cannot be reached, or a path with `..` the settings
-  refuse. The field is highlighted and the reason is given under it, on
-  opening the page and whenever a folder is changed. A saves folder not
-  made yet is only noted, since the first save makes it.
+- The folder settings, personal and administration, highlight a folder
+  that is not there, or is a file, when the page opens and when it changes.
 - The saves of earlier versions are moved to the new layout: each game's
   folder of `Auto.state`, `Slot N.state` and its battery save becomes
   `states/<core>/<game>.state.auto`, `.stateN` and
