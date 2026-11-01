@@ -2,6 +2,7 @@ import { t, n } from './l10n.js'
 import { generateUrl } from '@nextcloud/router'
 import { UPLOAD_WAIT, api, asUpload, deadline } from './api.js'
 import { formatSize } from './format.js'
+import { checkFolders } from './foldercheck.js'
 import { UNBOUND, keyLabel, retroarchKey } from './keys.js'
 
 const container = document.getElementById('arcade-settings')
@@ -122,6 +123,11 @@ async function save(source) {
 		saved = false
 	}
 	flashStatus(status)
+	// A folder changed is a folder to look at again, saved or not: one
+	// the server refused to save is the one most worth a word.
+	if (source instanceof Element && source.matches('input.arcade-setting[data-setting$="_folder"]')) {
+		checkFolders(container)
+	}
 	return saved
 }
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace OCA\Arcade\Controller;
 
+use OCA\Arcade\Service\Folders;
 use OCA\Arcade\Service\LibraryScanner;
 use OCA\Arcade\Service\SettingsService;
 use OCP\AppFramework\Http;
@@ -12,6 +13,7 @@ use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\AppFramework\Http\Attribute\OpenAPI;
 use OCP\AppFramework\Http\Attribute\UserRateLimit;
 use OCP\AppFramework\Http\JSONResponse;
+use OCP\Files\IRootFolder;
 use OCP\IRequest;
 
 /**
@@ -24,6 +26,7 @@ class SettingsController extends ArcadeController {
 		IRequest $request,
 		private SettingsService $settingsService,
 		private LibraryScanner $libraryScanner,
+		private IRootFolder $rootFolder,
 		protected ?string $userId,
 	) {
 		parent::__construct($appName, $request);
@@ -53,6 +56,30 @@ class SettingsController extends ArcadeController {
 		}
 		$settings = $this->request->getParams();
 		return new JSONResponse($this->settingsService->setUserSettings($this->userId, $settings));
+	}
+
+	/**
+	 * How each folder setting named in the query stands in the files of
+	 * whoever asks -- the paths as typed, saved or not, so the settings
+	 * can say what is wrong with a folder before anything goes looking
+	 * in it. The administration page asks with the administrator's own
+	 * files, which is all there is to go on for a path every user reads
+	 * in their own.
+	 */
+	#[NoAdminRequired]
+	#[FrontpageRoute(verb: 'GET', url: '/arcade/settings/folders')]
+	public function checkFolders(): JSONResponse {
+		if (($error = $this->requireUser()) !== null) {
+			return $error;
+		}
+		$result = [];
+		foreach (SettingsService::FOLDER_SETTINGS as $key) {
+			$path = $this->request->getParam($key);
+			if (is_string($path)) {
+				$result[$key] = Folders::check($this->rootFolder, (string)$this->userId, $path);
+			}
+		}
+		return new JSONResponse($result);
 	}
 
 	/**

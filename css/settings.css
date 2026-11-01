@@ -315,3 +315,23 @@
 	color: var(--color-error-text);
 	border: 2px solid var(--color-error-text);
 }
+
+/* A folder setting that leads nowhere useful: the field in the server's
+   own error colour, and a line under it saying why. A note, such as a
+   saves folder not made yet, is said in the muted colour of a hint. */
+#arcade-settings input.arcade-setting.error {
+	border-color: var(--color-border-error, var(--color-error));
+}
+
+#arcade-settings .arcade-folder-problem {
+	display: block;
+	color: var(--color-text-maxcontrast);
+}
+
+#arcade-settings .arcade-folder-problem:empty {
+	display: none;
+}
+
+#arcade-settings .arcade-folder-problem--error {
+	color: var(--color-text-error, var(--color-error-text));
+}
