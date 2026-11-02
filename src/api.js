@@ -1,5 +1,5 @@
-import { getRequestToken } from '@nextcloud/auth'
-import { generateUrl } from '@nextcloud/router'
+import { getCurrentUser, getRequestToken } from '@nextcloud/auth'
+import { generateRemoteUrl, generateUrl } from '@nextcloud/router'
 import { encodePath } from './paths.js'
 
 export { encodePath }
@@ -199,4 +199,29 @@ export async function dav(url, options = {}) {
 		credentials: 'same-origin',
 		signal: bounded(options.signal),
 	})
+}
+
+/**
+ * Whether there is a folder at a path in the user's own files.
+ *
+ * Here rather than beside davUrl(), whose @nextcloud/files would make the
+ * settings page load the weight of the file picker on opening.
+ *
+ * @param {string} path the path, relative to the user's files
+ * @return {Promise<boolean>} false for nothing there, or a file
+ */
+export async function isFolder(path) {
+	const encoded = path.split('/').filter(Boolean).map(encodeURIComponent).join('/')
+	const user = encodeURIComponent(getCurrentUser()?.uid ?? '')
+	const response = await dav(`${generateRemoteUrl('dav')}/files/${user}/${encoded}`, {
+		method: 'PROPFIND',
+		headers: { Depth: '0' },
+	})
+	if (response.status === 404) {
+		return false
+	}
+	if (!response.ok) {
+		throw new Error(`${response.status} ${response.statusText}`)
+	}
+	return /<([\w-]+:)?collection\s*\/?>/.test(await response.text())
 }

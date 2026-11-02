@@ -1,11 +1,12 @@
-import { describe, expect, test, vi } from 'vitest'
+import { afterEach, describe, expect, test, vi } from 'vitest'
 
-vi.mock('@nextcloud/auth', () => ({ getRequestToken: () => 'token' }))
+vi.mock('@nextcloud/auth', () => ({ getRequestToken: () => 'token', getCurrentUser: () => ({ uid: 'alice' }) }))
 vi.mock('@nextcloud/router', () => ({
+	generateRemoteUrl: (service) => `/remote.php/${service}`,
 	generateUrl: (url, params = {}) => url.replace(/\{(\w+)\}/g, (whole, key) => encodeURIComponent(params[key])),
 }))
 
-const { asUpload, encodePath, stateUrl, useCore } = await import('../../src/api.js')
+const { asUpload, encodePath, isFolder, stateUrl, useCore } = await import('../../src/api.js')
 
 describe('the address of a save', () => {
 	test('names the game, and the slot when there is one', () => {
@@ -42,5 +43,37 @@ describe('the address of a save', () => {
 
 		expect(stateUrl('/sram', '/Games/SSF2.zip')).toBe(
 			'/apps/arcade/arcade/sram?f=' + encodePath('/Games/SSF2.zip') + '&core=snes9x&n=' + encodePath('Super Street Fighter II (USA)'))
+	})
+})
+
+describe('isFolder', () => {
+	afterEach(() => vi.unstubAllGlobals())
+	const answer = (status, body = '') => {
+		const fetch = vi.fn(async () => new Response(body, { status }))
+		vi.stubGlobal('fetch', fetch)
+		return fetch
+	}
+	const resourcetype = (type) => `<?xml version="1.0"?><d:multistatus xmlns:d="DAV:"><d:response><d:propstat><d:prop><d:resourcetype>${type}</d:resourcetype></d:prop></d:propstat></d:response></d:multistatus>`
+
+	test('asks the user\'s own files, and a folder is a folder', async () => {
+		const fetch = answer(207, resourcetype('<d:collection/>'))
+		expect(await isFolder('/Games/Tom & Jerry/')).toBe(true)
+		expect(fetch.mock.calls[0][0]).toBe('/remote.php/dav/files/alice/Games/Tom%20%26%20Jerry')
+		expect(fetch.mock.calls[0][1].method).toBe('PROPFIND')
+	})
+
+	test('a file is not', async () => {
+		answer(207, resourcetype(''))
+		expect(await isFolder('/notes.txt')).toBe(false)
+	})
+
+	test('nor is nothing at all', async () => {
+		answer(404)
+		expect(await isFolder('/Nope')).toBe(false)
+	})
+
+	test('a server that cannot say throws rather than guess', async () => {
+		answer(503)
+		await expect(isFolder('/Games')).rejects.toThrow('503')
 	})
 })

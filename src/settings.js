@@ -1,6 +1,6 @@
 import { t, n } from './l10n.js'
 import { generateUrl } from '@nextcloud/router'
-import { UPLOAD_WAIT, api, asUpload, deadline } from './api.js'
+import { UPLOAD_WAIT, api, asUpload, deadline, isFolder } from './api.js'
 import { formatSize } from './format.js'
 import { UNBOUND, keyLabel, retroarchKey } from './keys.js'
 
@@ -66,6 +66,46 @@ async function pickFolder(input) {
 	}
 }
 
+const FOLDER_INPUT = 'input.arcade-setting[data-setting$="_folder"]'
+
+/**
+ * Flag a folder field that leads to no folder in the user's own files --
+ * on the administration page, the administrator's. A saves folder not
+ * there yet is only noted, since the first save makes it.
+ *
+ * @param {HTMLInputElement} input the folder field
+ */
+async function checkFolder(input) {
+	const path = input.value.trim()
+	let found
+	try {
+		found = path === '' || (!path.includes('..') && await isFolder(path))
+	} catch (error) {
+		// Could not be checked, which says nothing about the folder.
+		return
+	}
+	if (input.value.trim() !== path) {
+		return
+	}
+	let line = document.getElementById(`${input.id}-problem`)
+	if (line === null) {
+		line = document.createElement('span')
+		line.id = `${input.id}-problem`
+		line.className = 'arcade-folder-problem'
+		line.setAttribute('aria-live', 'polite')
+		input.parentElement.append(line)
+		input.setAttribute('aria-describedby', line.id)
+	}
+	const saves = input.dataset.setting === 'saves_folder'
+	line.textContent = found
+		? ''
+		: (saves
+			? t('arcade', 'There is no such folder yet. The first save makes it.')
+			: t('arcade', 'There is no folder at this path in your files.'))
+	input.classList.toggle('error', !found && !saves)
+	input.setAttribute('aria-invalid', String(!found && !saves))
+}
+
 /**
  * Save all the settings, saying so next to the section that changed.
  *
@@ -122,6 +162,9 @@ async function save(source) {
 		saved = false
 	}
 	flashStatus(status)
+	if (source instanceof Element && source.matches(FOLDER_INPUT)) {
+		checkFolder(source)
+	}
 	return saved
 }
 
@@ -849,6 +892,7 @@ if (container !== null) {
 		button.addEventListener('click', () => removeBios(button))
 	})
 	refreshBios()
+	container.querySelectorAll(FOLDER_INPUT).forEach(checkFolder)
 }
 
 // A form of its own, last on the administration page, so it is looked for

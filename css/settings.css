@@ -315,3 +315,17 @@
 	color: var(--color-error-text);
 	border: 2px solid var(--color-error-text);
 }
+
+/* A folder field that leads to no folder, and the line saying so. */
+#arcade-settings input.arcade-setting.error {
+	border-color: var(--color-border-error, var(--color-error));
+}
+
+#arcade-settings .arcade-folder-problem {
+	display: block;
+	color: var(--color-text-maxcontrast);
+}
+
+#arcade-settings .arcade-setting.error ~ .arcade-folder-problem {
+	color: var(--color-text-error, var(--color-error-text));
+}
