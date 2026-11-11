@@ -38,6 +38,8 @@ class FetchThumbnailsTest extends TestCase {
 	private ?int $tally = null;
 	/** @var array<string, mixed> */
 	private array $settings = [];
+	/** @var array<string, string> the kind of picture each system is shown with */
+	private array $thumbnailTypes = [];
 	/** @var list<array<string, mixed>> */
 	private array $games = [];
 	private bool $libraryExists = true;
@@ -48,6 +50,7 @@ class FetchThumbnailsTest extends TestCase {
 			'thumbnails_folder' => '/Thumbs',
 		];
 		$this->games = [];
+		$this->thumbnailTypes = [];
 		$this->libraryExists = true;
 		$this->status = '';
 		$this->tally = null;
@@ -68,6 +71,7 @@ class FetchThumbnailsTest extends TestCase {
 	private function job(): FetchThumbnails {
 		$settingsService = $this->createStub(SettingsService::class);
 		$settingsService->method('getUserSettings')->willReturnCallback(fn (): array => $this->settings);
+		$settingsService->method('getThumbnailTypes')->willReturnCallback(fn (): array => $this->thumbnailTypes);
 
 		$libraryService = $this->createStub(LibraryService::class);
 		$libraryService->method('getGames')->willReturnCallback(fn (): array => $this->games);
@@ -170,6 +174,26 @@ class FetchThumbnailsTest extends TestCase {
 				self::USER,
 				$this->callback(static fn (array $games): bool => count($games) === 1
 					&& $games[0]['basename'] === 'Has none.nes'),
+			)
+			->willReturn(['fetched' => 1, 'missing' => 0, 'tried' => 1]);
+
+		$this->runJob();
+	}
+
+	public function testAGameWithoutThePictureItsSystemIsShownWithIsLookedFor(): void {
+		$this->thumbnailTypes = ['nes' => 'snap'];
+		$this->games = [
+			['path' => '/Games/Box.nes', 'basename' => 'Box.nes', 'system' => 'nes', 'thumbnails' => ['boxart' => 1]],
+			['path' => '/Games/Snap.nes', 'basename' => 'Snap.nes', 'system' => 'nes', 'thumbnails' => ['snap' => 2]],
+			['path' => '/Games/Own.nes', 'basename' => 'Own.nes', 'system' => 'nes', 'thumbnails' => ['plain' => 3]],
+		];
+
+		$this->fetchService->expects($this->once())
+			->method('fetch')
+			->with(
+				self::USER,
+				$this->callback(static fn (array $games): bool => count($games) === 1
+					&& $games[0]['basename'] === 'Box.nes'),
 			)
 			->willReturn(['fetched' => 1, 'missing' => 0, 'tried' => 1]);
 

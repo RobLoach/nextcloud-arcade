@@ -35,6 +35,8 @@ class ThumbnailFetchTest extends TestCase {
 	private array $stored = [];
 	/** The games that were looked for in vain before. */
 	private array $misses = [];
+	/** The kind of picture each system is shown with. */
+	private array $types = [];
 
 	private function service(): ThumbnailFetchService {
 		$response = $this->createStub(IResponse::class);
@@ -125,6 +127,7 @@ class ThumbnailFetchTest extends TestCase {
 	private function settingsService(): SettingsService {
 		$settings = $this->createStub(SettingsService::class);
 		$settings->method('getDefaults')->willReturn(['fetch_enabled' => true]);
+		$settings->method('getThumbnailTypes')->willReturnCallback(fn (): array => $this->types);
 		return $settings;
 	}
 
@@ -221,5 +224,14 @@ class ThumbnailFetchTest extends TestCase {
 
 		$this->assertStringContainsString('Sega%20-%20Mega%20Drive%20-%20Genesis', $this->asked[0]);
 		$this->assertArrayHasKey('Sega - Mega Drive - Genesis/Named_Boxarts/Sonic.png', $this->stored);
+	}
+
+	public function testThePictureASystemIsShownWithIsTheOneLookedFor(): void {
+		$this->types = ['nes' => 'snap'];
+		$this->server['Mario (USA)'] = self::PICTURE;
+		$this->service()->fetch(self::USER, [$this->game('Mario.nes')], $this->folder(), 10);
+
+		$this->assertStringContainsString('/Named_Snaps/', $this->asked[0]);
+		$this->assertArrayHasKey('Nintendo - Nintendo Entertainment System/Named_Snaps/Mario.png', $this->stored);
 	}
 }
