@@ -37,6 +37,8 @@ use Psr\Log\LoggerInterface;
 class RomPreview implements IProviderV2 {
 	/** The index of a thumbnails folder is reused across previews. */
 	private const INDEX_TTL = 300;
+	/** Bumped when the shape of a cached index changes. */
+	private const INDEX_VERSION = 2;
 
 	/** The cache this provider reads and writes, opened once per request. */
 	private ?ICache $cache = null;
@@ -180,7 +182,7 @@ class RomPreview implements IProviderV2 {
 	 */
 	private function index(string $userId, Folder $userFolder, string $thumbnailsPath): array {
 		$cache = $this->cache();
-		$key = 'index|' . $userId . '|' . $thumbnailsPath;
+		$key = 'index|' . self::INDEX_VERSION . '|' . $userId . '|' . $thumbnailsPath;
 		$cached = CachePacker::unpack($cache->get($key));
 		if ($cached !== null) {
 			return $cached;
