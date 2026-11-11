@@ -12,7 +12,7 @@ use OCP\Notification\INotifier;
 use OCP\Notification\UnknownNotificationException;
 
 /**
- * Puts the word of a finished box art run under the notification bell.
+ * Puts the word of a finished picture run under the notification bell.
  *
  * The looking runs in the background, batch after batch, precisely so a
  * player can start it and walk away -- which means the settings page and
@@ -48,8 +48,8 @@ class Notifier implements INotifier {
 		$l = $this->l10nFactory->get(Application::APP_ID, $languageCode);
 		$found = (int)($notification->getSubjectParameters()['found'] ?? 0);
 		$subject = $found > 0
-			? str_replace('{found}', (string)$found, $l->t('Looked for box art: found {found}'))
-			: $l->t('Looked for box art: none was found');
+			? str_replace('{found}', (string)$found, $l->t('Looked for pictures: found {found}'))
+			: $l->t('Looked for pictures: none was found');
 
 		return $notification
 			->setParsedSubject($subject)

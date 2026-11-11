@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace OCA\Arcade\BackgroundJob;
 
 use OCA\Arcade\AppInfo\Application;
+use OCA\Arcade\CoreMap;
 use OCA\Arcade\Notification\Notifier;
 use OCA\Arcade\Service\Folders;
 use OCA\Arcade\Service\LibraryService;
@@ -21,7 +22,8 @@ use OCP\Notification\IManager as INotificationManager;
 use Psr\Log\LoggerInterface;
 
 /**
- * Looks for the box art of a user's games, away from the browser.
+ * Looks for the pictures of a user's games, away from the browser: box
+ * art, title screens, snaps or logos, whichever each system is shown with.
  *
  * A library can hold thousands of games and every one of them is a request
  * to the thumbnail server, so the work is done a batch at a time: the job
@@ -81,8 +83,8 @@ class FetchThumbnails extends QueuedJob {
 		try {
 			$this->fetchFor($userId);
 		} catch (\Throwable $e) {
-			$this->logger->error('Could not look for box art', ['exception' => $e]);
-			$this->fetchService->report($userId, 'Something went wrong while looking for box art');
+			$this->logger->error('Could not look for pictures', ['exception' => $e]);
+			$this->fetchService->report($userId, 'Something went wrong while looking for pictures');
 			// A broken run is over too; its half-made tally must not leak
 			// into the next one.
 			$this->clearTally($userId);
@@ -94,7 +96,7 @@ class FetchThumbnails extends QueuedJob {
 		// An administrator can turn the looking up off for the instance,
 		// and a job queued before that must not go anyway.
 		if (!$this->fetchService->isAllowed()) {
-			$this->fetchService->report($userId, 'Looking up box art is turned off for this instance');
+			$this->fetchService->report($userId, 'Looking up pictures is turned off for this instance');
 			$this->clearTally($userId);
 			return;
 		}
@@ -127,12 +129,14 @@ class FetchThumbnails extends QueuedJob {
 		// Missing is without the kind of picture its system is shown with:
 		// box art alone would stand in for a title screen, a screenshot or
 		// a logo chosen in the administration settings, and the choice
-		// would never show. An image of the game's own is left alone.
+		// would never show. An image of the game's own is left alone, and
+		// so is a game of a system the server keeps nothing for.
 		$types = $this->settingsService->getThumbnailTypes();
 		$missing = array_values(array_filter(
 			$games,
 			static fn (array $game): bool => !isset($game['thumbnails']['plain'])
-				&& !isset($game['thumbnails'][$types[$game['system']] ?? 'boxart']),
+				&& !isset($game['thumbnails'][$types[$game['system']] ?? 'boxart'])
+				&& isset(CoreMap::SYSTEMS[$game['system']]['platform']),
 		));
 		if ($missing === []) {
 			// Also the end of a run whose last batch fetched everything
@@ -145,6 +149,17 @@ class FetchThumbnails extends QueuedJob {
 
 		$result = $this->fetchService->fetch($userId, $missing, $thumbnails, self::BATCH);
 		$this->warm($result['written'] ?? []);
+		if ($result['stopped'] ?? false) {
+			// The thumbnails folder took nothing -- full, locked, not
+			// writable -- and every other game would fare the same, so the
+			// run is over instead of downloading what cannot be kept.
+			$this->fetchService->report($userId, sprintf(
+				'Found pictures for %d games, then the thumbnails folder could not take any more',
+				$result['fetched'],
+			));
+			$this->finishRun($userId, $this->tally($userId) + $result['fetched']);
+			return;
+		}
 		if ($result['tried'] >= self::BATCH) {
 			// There is more to look for; carry on in the next run. Only
 			// the finds are put by -- the one notification at the end
@@ -156,14 +171,14 @@ class FetchThumbnails extends QueuedJob {
 				$this->tally($userId) + $result['fetched'],
 			);
 			$this->fetchService->report($userId, sprintf(
-				'Looking for box art, %d still to go',
-				max(0, count($missing) - $result['fetched']),
+				'Looking for pictures, %d still to go',
+				$result['remaining'] ?? 0,
 			));
 			$this->jobList->add(self::class, ['userId' => $userId]);
 			return;
 		}
 		$this->fetchService->report($userId, sprintf(
-			'Found box art for %d games, %d were nowhere to be found',
+			'Found pictures for %d games, %d were nowhere to be found',
 			$result['fetched'],
 			$result['missing'],
 		));
@@ -175,7 +190,8 @@ class FetchThumbnails extends QueuedJob {
 	 * the player who started it, and forget the tally.
 	 *
 	 * A notification is a nicety, so trouble sending one is only logged;
-	 * the box art itself is already on disk either way.
+	 * the pictures themselves are already on disk either way. The object
+	 * type stays 'boxart-run', as notifications already sent carry it.
 	 */
 	private function finishRun(string $userId, int $found): void {
 		$this->clearTally($userId);
@@ -188,7 +204,7 @@ class FetchThumbnails extends QueuedJob {
 				->setSubject(Notifier::SUBJECT_FETCH_FINISHED, ['found' => $found]);
 			$this->notificationManager->notify($notification);
 		} catch (\Throwable $e) {
-			$this->logger->warning('Could not tell about the finished box art run', ['exception' => $e]);
+			$this->logger->warning('Could not tell about the finished picture run', ['exception' => $e]);
 		}
 	}
 
@@ -207,7 +223,7 @@ class FetchThumbnails extends QueuedJob {
 	 * generator.
 	 *
 	 * Done right here, one file after the other: a run writes at most
-	 * BATCH images, and a preview of a small box art PNG is cheap, so a
+	 * BATCH images, and a preview of a small PNG is cheap, so a
 	 * handful of them is no reason for sub-jobs. Only the files written
 	 * this run are warmed, never the whole folder.
 	 *
@@ -234,7 +250,7 @@ class FetchThumbnails extends QueuedJob {
 		}
 		if ($failed > 0) {
 			$this->logger->debug(
-				"Could not warm $failed box art previews",
+				"Could not warm $failed picture previews",
 				['exception' => $first],
 			);
 		}

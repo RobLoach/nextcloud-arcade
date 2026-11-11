@@ -103,6 +103,16 @@ All notable changes to Nextcloud Arcade. The format follows
   the Files app, so there the button opens the game's details in Files.
 
 ### Changed
+- Looking for missing pictures says pictures rather than box art, in its
+  button, its progress and its notification: what it fetches is the kind
+  each system is shown with. Its count of games still to go leaves out
+  those looked for in vain lately, and games of a system the thumbnail
+  server keeps nothing for are no longer looked for, so a library can
+  reach "Every game has a picture".
+- Rescanning a library no longer walks the whole thumbnails folder each
+  time: the index of it is kept until the folder changes, and taken
+  afresh on a forced rescan, a run looking for pictures, or a scan of
+  every library.
 - The games library no longer loads the emulator before a game is
   started: 88 KB gzipped where it was 111 KB. It came along for two small
   WebDAV helpers, which have a module of their own now.
@@ -176,6 +186,16 @@ All notable changes to Nextcloud Arcade. The format follows
   what each limit is currently set to.
 
 ### Fixed
+- Looking for missing pictures could run forever when a picture could not
+  be saved: the game was downloaded again in every batch. A game whose
+  picture has a file or folder in its way is now left alone like one that
+  was not found, and a thumbnails folder that takes nothing -- full,
+  locked, not writable -- ends the run and says so.
+- A game's battery save could be lost on a phone: it was sent only when
+  the page was closed, which mobile browsers often never say. It is now
+  also sent when the tab is hidden, at once where the save is ready.
+- Starting a large disc image copied all of it in memory up to three
+  times to read its header; now only the header is read.
 - `occ arcade:uninstall` dropped the tables of the app but not the record
   of the migrations that made them, so installing the app again made no
   tables, and every page that counts plays or keeps saves failed.

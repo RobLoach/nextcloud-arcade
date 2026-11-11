@@ -48,7 +48,7 @@ class ThumbnailController extends ArcadeController {
 		$settings = $this->settingsService->getUserSettings($this->userId);
 		if (!$this->fetchService->isAllowed()) {
 			return new JSONResponse(
-				['message' => 'Looking up box art is turned off for this instance'],
+				['message' => 'Looking up pictures is turned off for this instance'],
 				Http::STATUS_FORBIDDEN,
 			);
 		}
@@ -63,7 +63,7 @@ class ThumbnailController extends ArcadeController {
 		if (!$this->jobList->has(FetchThumbnails::class, $argument)) {
 			$this->jobList->add(FetchThumbnails::class, $argument);
 		}
-		$this->fetchService->report($this->userId, 'Looking for box art in the background');
+		$this->fetchService->report($this->userId, 'Looking for pictures in the background');
 		return new JSONResponse($this->status());
 	}
 

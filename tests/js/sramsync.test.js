@@ -147,3 +147,71 @@ describe('a battery save that could not be read as the game started', () => {
 		expect(uploads()).toHaveLength(1)
 	})
 })
+
+describe('a game going out of view', () => {
+	const hide = () => {
+		Object.defineProperty(document, 'visibilityState', { value: 'hidden', configurable: true })
+		Object.defineProperty(document, 'hidden', { value: true, configurable: true })
+		document.dispatchEvent(new Event('visibilitychange'))
+	}
+
+	// Closed the way the player closes it, with the clock let run.
+	const close = async (stop) => {
+		const stopping = stop()
+		await vi.advanceTimersByTimeAsync(5000)
+		await stopping
+	}
+
+	afterEach(() => {
+		Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true })
+	})
+
+	test('sends the battery save at once, without waiting on a timer', async () => {
+		const game = core()
+		game.saved = new Uint8Array([1, 1, 2])
+		const stop = startSramSync(game, '/Games/Wario.gb')
+		hide()
+		// Microtasks only: a page frozen as it hides runs no timers.
+		await vi.advanceTimersByTimeAsync(0)
+		expect(uploads()).toHaveLength(1)
+		expect(uploads()[0][1].keepalive).toBe(true)
+		await close(stop)
+	})
+
+	test('and then leaving the page sends it only the once', async () => {
+		const game = core()
+		game.saved = new Uint8Array([3, 5, 8])
+		const stop = startSramSync(game, '/Games/Yoshi.gb')
+		hide()
+		window.dispatchEvent(new Event('pagehide'))
+		await vi.advanceTimersByTimeAsync(5000)
+		hide()
+		await vi.advanceTimersByTimeAsync(5000)
+		expect(uploads()).toHaveLength(1)
+		await close(stop)
+		expect(uploads()).toHaveLength(1)
+	})
+
+	test('a save too big to outlive the page goes as an ordinary request', async () => {
+		const game = core()
+		game.saved = new Uint8Array(128 * 1024).fill(7)
+		const stop = startSramSync(game, '/Games/Golden Sun.gba')
+		hide()
+		await vi.advanceTimersByTimeAsync(0)
+		expect(uploads()).toHaveLength(1)
+		expect(uploads()[0][1].keepalive).toBe(false)
+		await close(stop)
+	})
+
+	test('is no longer listened for once the game is closed', async () => {
+		const game = core()
+		const stop = startSramSync(game, '/Games/Mario.gb')
+		const stopping = stop()
+		await vi.advanceTimersByTimeAsync(5000)
+		await stopping
+		game.saved = new Uint8Array([9, 9, 9])
+		hide()
+		await vi.advanceTimersByTimeAsync(5000)
+		expect(uploads()).toHaveLength(0)
+	})
+})

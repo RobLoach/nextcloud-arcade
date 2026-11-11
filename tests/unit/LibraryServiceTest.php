@@ -941,6 +941,54 @@ class LibraryServiceTest extends TestCase {
 		);
 	}
 
+	/**
+	 * A cache that keeps what it is given, as a real one would.
+	 */
+	private function keepingCache(): ICache {
+		$kept = [];
+		$cache = $this->createStub(ICache::class);
+		$cache->method('get')->willReturnCallback(static function (string $key) use (&$kept): mixed {
+			return $kept[$key] ?? null;
+		});
+		$cache->method('set')->willReturnCallback(static function (string $key, mixed $value) use (&$kept): bool {
+			$kept[$key] = $value;
+			return true;
+		});
+		return $cache;
+	}
+
+	public function testARescanTakesTheThumbnailsIndexFromTheCache(): void {
+		$walks = 0;
+		$thumbnails = $this->createStub(Folder::class);
+		$thumbnails->method('getEtag')->willReturn('etag-thumbs');
+		$thumbnails->method('getDirectoryListing')->willReturnCallback(static function () use (&$walks): array {
+			$walks++;
+			return [];
+		});
+		$userFolder = $this->userFolder();
+		$userFolder->method('get')->willReturn($thumbnails);
+		$library = $this->libraryFolder([$this->file(1, '/alice/files/Games/mario.nes')]);
+		$service = $this->buildService($this->cacheFactory($this->keepingCache()));
+		$scan = function (array $settings, bool $refresh = false) use ($service, $library, $userFolder): void {
+			$service->getGames('alice', $library, $userFolder, '/Games', $settings, $refresh);
+		};
+
+		$scan(['thumbnails_folder' => '/Thumbs', 'max_games' => 100]);
+		$walked = $walks;
+		$this->assertGreaterThan(0, $walked, 'the first scan walks the thumbnails folder');
+
+		// A scan the cache does not hold, of an unchanged thumbnails folder.
+		$scan(['thumbnails_folder' => '/Thumbs', 'max_games' => 200]);
+		$this->assertSame($walked, $walks, 'the thumbnails folder is not walked again');
+
+		$scan(['thumbnails_folder' => '/Thumbs', 'max_games' => 200], true);
+		$this->assertGreaterThan($walked, $walks, 'a forced rescan, as the picture run makes, walks it afresh');
+
+		$walked = $walks;
+		$scan(['thumbnails_folder' => '/Pictures', 'max_games' => 200]);
+		$this->assertGreaterThan($walked, $walks, 'another thumbnails folder is another index');
+	}
+
 	public function testThumbnailsVersionIsTheEtagOfTheThumbnailsFolder(): void {
 		$thumbnails = $this->createStub(Folder::class);
 		$thumbnails->method('getEtag')->willReturn('etag-thumbs');

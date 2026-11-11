@@ -161,6 +161,12 @@ export function isPlayable(basename, mime = '') {
 	return systemForFile(basename, mime) !== null || isAmbiguous(basename)
 }
 
+// How much of the front of a file systemFromBytes looks at: up to the far
+// end of the last place a Super Nintendo header can be, the one at 0xFFC0
+// pushed along by a copier's 512 bytes. Reading this much is enough to tell,
+// so a disc image need not be read whole just to be told it is not a cartridge.
+export const HEADER_BYTES = 0xFFC0 + 0x200 + 32
+
 /**
  * Which machine a file is for, going by what is written in it.
  *

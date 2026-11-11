@@ -73,9 +73,11 @@ the underscores libretro-thumbnails replaces them with.
 
 ### Fetching what is missing
 
-The thumbnails folder setting has a button that goes looking for the box
-art of the games that have none, downloading it from the libretro
-thumbnail server into that folder. It runs as a background job, so it
+The thumbnails folder setting has a button that goes looking for the
+pictures of the games that have none — of the kind each system is shown
+with, box art, title screen, screenshot or logo — downloading them from
+the libretro thumbnail server into that folder. Games of a system the
+server keeps nothing for are left out of the count. It runs as a background job, so it
 carries on after the page is closed, says how it went when the page is
 opened again, and leaves [a word under the bell](library.md#in-the-files-app)
 when it is done. The button is only there while an administrator allows

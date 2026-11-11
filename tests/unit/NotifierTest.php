@@ -14,7 +14,7 @@ use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 
 /**
- * The notifier that words a finished box art run: what it says for its own
+ * The notifier that words a finished picture run: what it says for its own
  * subjects, and that it keeps its hands off everyone else's.
  */
 class NotifierTest extends TestCase {
@@ -55,7 +55,7 @@ class NotifierTest extends TestCase {
 		$notification = $this->notification('arcade', Notifier::SUBJECT_FETCH_FINISHED, ['found' => 12]);
 		$notification->expects($this->once())
 			->method('setParsedSubject')
-			->with('Looked for box art: found 12');
+			->with('Looked for pictures: found 12');
 		$notification->expects($this->once())
 			->method('setLink')
 			->with('https://cloud.example/apps/arcade/');
@@ -67,7 +67,7 @@ class NotifierTest extends TestCase {
 		$notification = $this->notification('arcade', Notifier::SUBJECT_FETCH_FINISHED, ['found' => 0]);
 		$notification->expects($this->once())
 			->method('setParsedSubject')
-			->with('Looked for box art: none was found');
+			->with('Looked for pictures: none was found');
 
 		$this->notifier()->prepare($notification, 'en');
 	}
