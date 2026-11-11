@@ -142,6 +142,27 @@ class ThumbnailService {
 	}
 
 	/**
+	 * One picture of each kind for every system the index has a platform
+	 * folder for: the first one found of it, to show what the system looks
+	 * like with that kind chosen.
+	 *
+	 * @param Index $index
+	 * @return array<string, array<string, int>> system => type => file id
+	 */
+	public function samples(array $index): array {
+		$samples = [];
+		foreach ($index['systems'] as $system => $path) {
+			foreach ($index['paths'][$path] ?? [] as $type => $images) {
+				$first = reset($images['exact']);
+				if ($first !== false) {
+					$samples[$system][$type] = $first;
+				}
+			}
+		}
+		return $samples;
+	}
+
+	/**
 	 * @param Index $index
 	 */
 	private function indexFolder(Folder $folder, string $path, array &$index, int $depth): void {

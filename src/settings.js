@@ -3,6 +3,7 @@ import { generateUrl } from '@nextcloud/router'
 import { UPLOAD_WAIT, api, asUpload, deadline, isFolder } from './api.js'
 import { formatSize } from './format.js'
 import { UNBOUND, keyLabel, retroarchKey } from './keys.js'
+import { previewUrl } from './play.js'
 
 const container = document.getElementById('arcade-settings')
 
@@ -831,11 +832,46 @@ async function removeBios(button) {
 	flashStatus(status)
 }
 
+/**
+ * Show the sample picture of the kind a system's picture setting is on,
+ * or say there is none.
+ *
+ * @param {HTMLSelectElement} select the picture type of a system
+ */
+export function showPictureSample(select) {
+	const sample = select.parentElement?.querySelector('.arcade-thumbnail-sample')
+	if (!sample) {
+		return
+	}
+	let samples = {}
+	try {
+		samples = JSON.parse(sample.dataset.samples ?? '{}')
+	} catch {
+		// Nothing to show, said as such below.
+	}
+	// A folder of images named after the games, without the kinds sorted
+	// apart, is what the library falls back on, whichever kind is chosen.
+	const fileId = samples[select.value] ?? samples.plain
+	const image = sample.querySelector('img')
+	const none = sample.querySelector('em')
+	image.hidden = fileId === undefined
+	none.hidden = fileId !== undefined
+	if (fileId !== undefined) {
+		image.src = previewUrl(fileId, 128, 128, sample.dataset.version ?? '')
+	} else {
+		image.removeAttribute('src')
+	}
+}
+
 if (container !== null) {
+	container.querySelectorAll('.arcade-thumbnail-type').forEach(showPictureSample)
 	// No save button: any change is saved right away.
 	container.addEventListener('change', (event) => {
 		if (event.target.matches('.arcade-setting, .arcade-thumbnail-type, .arcade-core-option')) {
 			save(event.target)
+		}
+		if (event.target.matches('.arcade-thumbnail-type')) {
+			showPictureSample(event.target)
 		}
 	})
 	document.getElementById('arcade-fetch-thumbnails')?.addEventListener('click', fetchThumbnails)

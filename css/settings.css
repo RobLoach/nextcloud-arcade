@@ -148,6 +148,37 @@
 	max-width: 900px;
 }
 
+/* What a system looks like with the kind chosen: a box of one size, so
+   the rows stay in line whether there is a picture to show or not. */
+#arcade-settings .arcade-thumbnail-sample {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 128px;
+	height: 128px;
+	margin-top: var(--arcade-space-2);
+	border-radius: var(--border-radius-large, 10px);
+	background-color: var(--color-background-dark);
+	overflow: hidden;
+}
+
+#arcade-settings .arcade-thumbnail-sample img {
+	width: 100%;
+	height: 100%;
+	object-fit: contain;
+}
+
+#arcade-settings .arcade-thumbnail-sample em {
+	padding: var(--arcade-space-2);
+	color: var(--color-text-maxcontrast);
+	font-size: 0.85em;
+	text-align: center;
+}
+
+#arcade-settings .arcade-thumbnail-sample [hidden] {
+	display: none;
+}
+
 /* The server dresses a section's h2 down to 20px and leaves h3 at the
    theme's own 24px, so a console under BIOS came out larger than the
    BIOS heading above it. And the app's sections were heavier than the

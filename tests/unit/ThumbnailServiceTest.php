@@ -88,6 +88,25 @@ class ThumbnailServiceTest extends TestCase {
 		$this->assertSame($expected, $thumbnails[$type] ?? null);
 	}
 
+	public function testTheFirstPictureOfEachKindIsTheSampleOfItsSystem(): void {
+		$index = $this->service->buildIndex($this->folder('Thumbs', [
+			$this->folder('Nintendo - Super Nintendo Entertainment System', [
+				$this->folder('Named_Boxarts', [
+					$this->file('Chrono Trigger (USA).png', 201),
+					$this->file('NHL 96 (USA).png', 202),
+				]),
+				$this->folder('Named_Titles', [$this->file('NHL 96 (USA).png', 203)]),
+				$this->folder('Named_Logos', []),
+			]),
+			$this->folder('NES', [$this->file('Super Mario Bros. 3.png', 204)]),
+			$this->folder('Not a system', [$this->file('Tetris.png', 205)]),
+		]));
+		$this->assertSame([
+			'snes' => ['boxart' => 201, 'title' => 203],
+			'nes' => ['plain' => 204],
+		], $this->service->samples($index));
+	}
+
 	public function testExactNamesWinOverLooseOnes(): void {
 		$index = $this->service->buildIndex($this->thumbnailsFolder());
 		$thumbnails = $this->service->forGame(
