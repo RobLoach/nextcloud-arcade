@@ -101,4 +101,4 @@ personal settings. Upload some games and rescan if it finds nothing.
 - What you play lands in your own Activity stream: that a game was
   played, for how long, and when a slot was saved.
 - A notification appears under the bell when
-  [a box art run](usage.md#fetching-what-is-missing) finishes.
+  [a run looking for pictures](usage.md#fetching-what-is-missing) finishes.

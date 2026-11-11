@@ -401,7 +401,7 @@ function showShadowedHotkeys() {
 }
 
 /**
- * Ask for the box art of the games that have none. The looking itself runs
+ * Ask for the pictures of the games that have none. The looking itself runs
  * as a background job, so this only starts it and reports what it says.
  */
 async function fetchThumbnails() {
@@ -419,9 +419,9 @@ async function fetchThumbnails() {
 	}
 	try {
 		await api(generateUrl('/apps/arcade/arcade/thumbnails/fetch'), { method: 'POST' })
-		status.textContent = t('arcade', 'Looking for box art in the background. It carries on without this page.')
+		status.textContent = t('arcade', 'Looking for pictures in the background. It carries on without this page.')
 	} catch (error) {
-		console.error('Could not look for box art', error)
+		console.error('Could not look for pictures', error)
 		status.textContent = t('arcade', 'Could not start looking. A thumbnails folder has to be set first.')
 	}
 	button.disabled = false

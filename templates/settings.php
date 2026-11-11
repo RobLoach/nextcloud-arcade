@@ -207,7 +207,7 @@ $cloudSyncUrl = $_['cloudSyncUrl'];
 					<span class="arcade-library-scan-status" aria-live="polite"></span>
 				<?php endif; ?>
 				<?php if ($key === 'thumbnails_folder' && $settings['fetch_enabled']): ?>
-					<button type="button" id="arcade-fetch-thumbnails"><?php p($l->t('Look for missing box art')); ?></button>
+					<button type="button" id="arcade-fetch-thumbnails"><?php p($l->t('Look for missing pictures')); ?></button>
 					<span id="arcade-fetch-status" aria-live="polite"></span>
 				<?php endif; ?>
 			</p>

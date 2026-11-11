@@ -346,7 +346,7 @@ class LibraryService {
 		];
 		$this->findRoms($folder, $userFolder, $extensionMap, $games, $limits);
 		$this->addWhatWasRead($games);
-		$this->addThumbnails($games, $userFolder, $settings['thumbnails_folder'], $folderPath);
+		$this->addThumbnails($games, $userId, $userFolder, $settings, $folderPath, $refresh);
 
 		// Only what the list draws is worth keeping, and it is kept small:
 		// memcached drops anything over a megabyte without a word, and a
@@ -500,19 +500,18 @@ class LibraryService {
 	}
 
 	/**
-	 * Attach the matching images to each game, by type.
+	 * Attach the matching images to each game, by type. The index of the
+	 * thumbnails folder comes from the cache unless the scan is a refresh,
+	 * which walks the folder again: a fetch run has to see what it wrote.
 	 *
 	 * @param list<array<string, mixed>> $games
+	 * @param array<string, mixed> $settings
 	 */
-	private function addThumbnails(array &$games, Folder $userFolder, string $thumbnailsPath, string $libraryPath): void {
-		if ($thumbnailsPath === '') {
+	private function addThumbnails(array &$games, string $userId, Folder $userFolder, array $settings, string $libraryPath, bool $refresh): void {
+		$index = $this->thumbnailIndex($userId, $userFolder, $settings, $refresh);
+		if ($index === null) {
 			return;
 		}
-		$thumbnails = Folders::folderAt($userFolder, $thumbnailsPath);
-		if ($thumbnails === null) {
-			return;
-		}
-		$index = $this->thumbnailService->buildIndex($thumbnails);
 		foreach ($games as &$game) {
 			$found = $this->thumbnailService->forGameNamed(
 				$index,
@@ -567,19 +566,20 @@ class LibraryService {
 
 	/**
 	 * The index of the user's thumbnails folder, kept until anything in it
-	 * changes, or null without a thumbnails folder.
+	 * changes, or null without a thumbnails folder. A refresh walks the
+	 * folder again and keeps what it found.
 	 *
 	 * @param array<string, mixed> $settings
 	 */
-	private function thumbnailIndex(string $userId, Folder $userFolder, array $settings): ?array {
+	private function thumbnailIndex(string $userId, Folder $userFolder, array $settings, bool $refresh = false): ?array {
 		$thumbnailsPath = (string)($settings['thumbnails_folder'] ?? '');
 		$folder = $thumbnailsPath === '' ? null : Folders::folderAt($userFolder, $thumbnailsPath);
 		if ($folder === null) {
 			return null;
 		}
 		$cache = $this->cache();
-		$key = implode('|', ['thumbnail-index', self::CACHE_VERSION, $userId, $thumbnailsPath, $folder->getEtag()]);
-		$index = CachePacker::unpack($cache->get($key));
+		$key = implode('|', ['thumbnail-index', self::CACHE_VERSION, $this->generation(), $userId, $thumbnailsPath, $folder->getEtag()]);
+		$index = $refresh ? null : CachePacker::unpack($cache->get($key));
 		if ($index === null) {
 			$index = $this->thumbnailService->buildIndex($folder);
 			$cache->set($key, CachePacker::pack($index), (int)($settings['cache_ttl'] ?? self::CACHE_TTL));

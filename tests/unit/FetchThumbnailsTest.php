@@ -23,7 +23,7 @@ use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
 
 /**
- * The job that goes looking for box art: what it hands to the looking, how
+ * The job that goes looking for pictures: what it hands to the looking, how
  * it reports, and when it asks to be run again.
  */
 class FetchThumbnailsTest extends TestCase {
@@ -214,14 +214,14 @@ class FetchThumbnailsTest extends TestCase {
 	public function testTheJobCarriesOnWhileThereIsMoreToLookFor(): void {
 		$this->games = $this->gamesWithout(50);
 		$this->fetchService->method('fetch')
-			->willReturn(['fetched' => 2, 'missing' => 48, 'tried' => FetchThumbnails::BATCH]);
+			->willReturn(['fetched' => 2, 'missing' => 48, 'tried' => FetchThumbnails::BATCH, 'remaining' => 40]);
 
 		$this->jobList->expects($this->once())
 			->method('add')
 			->with(FetchThumbnails::class, ['userId' => self::USER]);
 
 		$this->runJob();
-		$this->assertStringContainsString('still to go', $this->status);
+		$this->assertStringContainsString('40 still to go', $this->status, 'the games left for later, not the misses');
 	}
 
 	public function testItStopsOnceItHasBeenThroughEverything(): void {
@@ -232,7 +232,7 @@ class FetchThumbnailsTest extends TestCase {
 		$this->jobList->expects($this->never())->method('add');
 
 		$this->runJob();
-		$this->assertStringContainsString('Found box art for 2 games', $this->status);
+		$this->assertStringContainsString('Found pictures for 2 games', $this->status);
 	}
 
 	public function testNothingToDoIsSaidRatherThanDone(): void {
@@ -304,7 +304,7 @@ class FetchThumbnailsTest extends TestCase {
 
 		$this->runJob();
 		$this->assertContains($two, $warmed, 'the next file is still warmed');
-		$this->assertStringContainsString('Found box art for 2 games', $this->status);
+		$this->assertStringContainsString('Found pictures for 2 games', $this->status);
 	}
 
 	public function testTroubleIsReportedRatherThanThrown(): void {
@@ -384,6 +384,33 @@ class FetchThumbnailsTest extends TestCase {
 			->willThrowException(new \RuntimeException('the bell is broken'));
 
 		$this->runJob();
-		$this->assertStringContainsString('Found box art for 1 games', $this->status);
+		$this->assertStringContainsString('Found pictures for 1 games', $this->status);
+	}
+
+	public function testAThumbnailsFolderThatTakesNothingEndsTheRun(): void {
+		$this->games = $this->gamesWithout(50);
+		$this->fetchService->method('fetch')
+			->willReturn(['fetched' => 1, 'missing' => 1, 'tried' => FetchThumbnails::BATCH, 'remaining' => 40, 'stopped' => true]);
+		$seen = [];
+		$this->notifications->method('createNotification')
+			->willReturn($this->chainingNotification($seen));
+
+		$this->jobList->expects($this->never())->method('add');
+		$this->notifications->expects($this->once())->method('notify');
+
+		$this->runJob();
+		$this->assertStringContainsString('could not take any more', $this->status);
+		$this->assertSame(1, $seen['found']);
+	}
+
+	public function testGamesOfASystemWithNothingOnTheServerAreNotLookedFor(): void {
+		$this->games = [
+			['path' => '/Games/Mario.nes', 'basename' => 'Mario.nes', 'system' => 'nes', 'thumbnails' => ['boxart' => 1]],
+			['path' => '/Games/Mystery.zip', 'basename' => 'Mystery.zip', 'system' => 'zip'],
+		];
+		$this->fetchService->expects($this->never())->method('fetch');
+
+		$this->runJob();
+		$this->assertStringContainsString('Every game has a picture', $this->status);
 	}
 }

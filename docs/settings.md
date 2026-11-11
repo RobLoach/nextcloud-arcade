@@ -201,7 +201,7 @@ while a page waits:
 - Reading what a game says about itself — system, title, region,
   checksum — when a ROM is written, and for the whole library when it is
   rescanned.
-- Fetching missing box art, when the button in the personal settings asks
+- Fetching missing pictures, when the button in the personal settings asks
   for it.
 - Scanning every user's library, when the Scan button of the
   administration settings asks for it.

@@ -9,7 +9,7 @@ import { davUrl } from './dav.js'
 import { createProgressTracker, lengthOf, readWithProgress } from './progress.js'
 import { inputConfig, retroarchKey } from './keys.js'
 import { volumeInDecibels } from './volume.js'
-import { biosForSystem, coreForSystem, systemForFile, systemFromBytes, systemLabel } from './systems.js'
+import { biosForSystem, coreForSystem, HEADER_BYTES, systemForFile, systemFromBytes, systemLabel } from './systems.js'
 import { waitAtMost } from './wait.js'
 
 const SRAM_SYNC_INTERVAL = 60 * 1000
@@ -107,16 +107,21 @@ export function enableSramSync(romPath) {
  * @param {?object} systemHint system detected from the folder the game is in
  * @return {Promise<{rom: File, system: object}>} the ROM and its system
  */
-async function resolveRom(blob, romName, systemHint) {
+export async function resolveRom(blob, romName, systemHint) {
 	if (!romName.toLowerCase().endsWith('.zip')) {
-		const bytes = new Uint8Array(await blob.arrayBuffer())
 		// The name first. Failing that the cartridge itself, whose mark is
 		// worth more than the folder it happens to sit in, and the folder
-		// last, for a dump that carries no mark at all.
+		// last, for a dump that carries no mark at all. Only the front of
+		// the file is read for the mark: a disc image is hundreds of
+		// megabytes, and copying all of it to look at a header was two
+		// more copies of the game in memory than playing it needs.
 		const system = systemForFile(romName)
-			?? systemFromBytes(bytes)
+			?? systemFromBytes(new Uint8Array(await blob.slice(0, HEADER_BYTES).arrayBuffer()))
 			?? systemHint
-		return { rom: new File([bytes], romName), system }
+		// A File over the Blob refers to the same bytes rather than copying
+		// them; it is only there to carry the name.
+		const rom = blob instanceof File && blob.name === romName ? blob : new File([blob], romName)
+		return { rom, system }
 	}
 	// Listing the entries takes the whole archive: unzipSync reads from a
 	// buffer, and the file was fetched in full above anyway, since playing
@@ -513,9 +518,11 @@ export async function fetchSram(romPath, signal = null) {
  *
  * @param {import('nostalgist').Nostalgist} instance the running emulator,
  *                                                   from the core queue
+ * @param {boolean} [now] look straight away before polling: for a page
+ *   going out of view, which may not live to see a timer fire
  * @return {Promise<?Blob>} the battery save, or null
  */
-async function readSram(instance) {
+async function readSram(instance, now = false) {
 	let FS
 	let path
 	let module
@@ -539,6 +546,19 @@ async function readSram(instance) {
 		// Not written yet, which is what is wanted.
 	}
 	module._cmd_savefiles()
+	if (now) {
+		// RetroArch writes the file during that call when it can, so it
+		// is often there already. A mobile browser hiding the page may
+		// freeze it before the first poll below, and then the upload
+		// would never start at all.
+		try {
+			if (FS.stat(path).size > 0) {
+				return new Blob([FS.readFile(path)], { type: 'application/octet-stream' })
+			}
+		} catch {
+			// Not there yet: poll for it as usual.
+		}
+	}
 	let lastSize = -1
 	for (let waited = 0; waited < SRAM_APPEAR_WAIT; waited += SRAM_POLL) {
 		await new Promise((resolve) => setTimeout(resolve, SRAM_POLL))
@@ -583,12 +603,12 @@ export function startSramSync(instance, romPath, canSave = true) {
 	// none settle it -- for the look on the way out too, which would only
 	// hold the close up for a file that never comes.
 	let misses = 0
-	const upload = async () => {
+	const send = async (now = false) => {
 		if (sramSyncStopped.has(romPath) || misses >= SRAM_MISSES_TO_STOP) {
 			return
 		}
 		try {
-			const sram = await instance.exclusive(readSram)
+			const sram = await instance.exclusive((core) => readSram(core, now))
 			if (sram === null || sram === undefined || sram.size === 0) {
 				if (!sramOnServer.has(romPath) && !document.hidden) {
 					misses++
@@ -622,20 +642,44 @@ export function startSramSync(instance, romPath, canSave = true) {
 			console.error('Could not save the SRAM', error)
 		}
 	}
+	// One upload at a time. Leaving a page fires visibilitychange and then
+	// pagehide, a moment apart, and both ask for one: the second joins the
+	// one already under way rather than reading the core a second time.
+	// One that does run again finds the save unchanged and sends nothing.
+	let running = null
+	const upload = (now = false) => {
+		running ??= send(now).finally(() => {
+			running = null
+		})
+		return running
+	}
 	// Two tabs on the same game still write over one another: each holds
 	// its own copy of the save and uploads it on this timer, so the last
 	// tick wins. Coordinating them is not attempted here.
-	const timer = setInterval(upload, SRAM_SYNC_INTERVAL)
+	const timer = setInterval(() => upload(), SRAM_SYNC_INTERVAL)
 	const onPageHide = () => {
-		upload()
+		upload(true)
+	}
+	// A mobile browser often never fires pagehide: switching to another
+	// app, or the system ending the tab while it is in the background,
+	// only ever hides it. Going out of view is the last word it is sure
+	// to get, so the save goes then too.
+	const onVisibilityChange = () => {
+		if (document.visibilityState === 'hidden') {
+			upload(true)
+		}
 	}
 	window.addEventListener('pagehide', onPageHide)
+	document.addEventListener('visibilitychange', onVisibilityChange)
 	return async () => {
 		clearInterval(timer)
 		window.removeEventListener('pagehide', onPageHide)
+		document.removeEventListener('visibilitychange', onVisibilityChange)
 		// Everything played since the last tick lives only in this upload,
 		// so the caller waits for it before tearing the emulator down --
-		// an exit takes the core, and with it the save, away mid-read.
-		await waitAtMost(upload(), SRAM_FINAL_WAIT, undefined)
+		// an exit takes the core, and with it the save, away mid-read. One
+		// already under way read the core before now, so this one follows it.
+		const final = (running ?? Promise.resolve()).then(() => upload())
+		await waitAtMost(final, SRAM_FINAL_WAIT, undefined)
 	}
 }

@@ -15,8 +15,9 @@ use OCP\ICacheFactory;
 use Psr\Log\LoggerInterface;
 
 /**
- * Downloads box art from the libretro thumbnail server into the thumbnails
- * folder of a user.
+ * Downloads pictures -- box art, title screens, snaps or logos, whichever
+ * each system is shown with -- from the libretro thumbnail server into the
+ * thumbnails folder of a user.
  *
  * The server keeps one file per No-Intro name, so a game is looked for
  * under a handful of spellings of its name: as it is called, with the
@@ -91,17 +92,21 @@ class ThumbnailFetchService {
 	}
 
 	/**
-	 * Look for the box art of games that have no image yet.
+	 * Look for the pictures of games that have no image yet.
 	 *
 	 * The files written this run are handed back so the caller can warm
-	 * their previews without going over the whole folder.
+	 * their previews without going over the whole folder. Remaining is
+	 * how many were left for a later batch; stopped is whether saving
+	 * failed in a way no other game would fare better with, such as a
+	 * full quota, so the run is over rather than asking the server for
+	 * pictures that cannot be kept.
 	 *
 	 * @param list<array<string, mixed>> $games
-	 * @return array{fetched: int, missing: int, tried: int, written: list<File>}
+	 * @return array{fetched: int, missing: int, tried: int, remaining: int, stopped: bool, written: list<File>}
 	 */
 	public function fetch(string $userId, array $games, Folder $thumbnails, int $limit): array {
 		if (!$this->isAllowed()) {
-			return ['fetched' => 0, 'tried' => 0, 'missing' => count($games), 'written' => []];
+			return ['fetched' => 0, 'tried' => 0, 'missing' => count($games), 'remaining' => 0, 'stopped' => false, 'written' => []];
 		}
 		$cache = Caches::create($this->cacheFactory, Application::CACHE_FETCH, $this->appDataFactory);
 		$client = $this->clientService->newClient();
@@ -110,6 +115,8 @@ class ThumbnailFetchService {
 		$fetched = 0;
 		$tried = 0;
 		$missing = 0;
+		$remaining = 0;
+		$stopped = false;
 		$written = [];
 		foreach ($games as $game) {
 			$platform = CoreMap::SYSTEMS[$game['system']]['platform'] ?? null;
@@ -125,6 +132,7 @@ class ThumbnailFetchService {
 			}
 			if ($tried >= $limit) {
 				$missing++;
+				$remaining++;
 				continue;
 			}
 			$tried++;
@@ -141,13 +149,32 @@ class ThumbnailFetchService {
 				$missing++;
 				continue;
 			}
-			$file = $this->store($thumbnails, $platform, $typeFolder, $game['basename'], $image);
-			if ($file !== null) {
-				$written[] = $file;
+			try {
+				$file = $this->store($thumbnails, $platform, $typeFolder, $game['basename'], $image);
+			} catch (\Throwable $e) {
+				// The storage said no -- a full quota, a lock, no
+				// permission -- and the next game would hear the same.
+				$this->logger->warning('Could not store the picture', ['exception' => $e]);
+				$file = null;
+				$stopped = true;
 			}
+			if ($stopped) {
+				// The run ends here, so the game is tried again once the
+				// storage takes files, not marked a miss for days.
+				$missing++;
+				break;
+			}
+			if ($file === null) {
+				// Not kept is not found: left alone for a while like a
+				// miss, or the next batch would download it all over again.
+				$cache->set($key, true, self::MISS_TTL);
+				$missing++;
+				continue;
+			}
+			$written[] = $file;
 			$fetched++;
 		}
-		return ['fetched' => $fetched, 'missing' => $missing, 'tried' => $tried, 'written' => $written];
+		return ['fetched' => $fetched, 'missing' => $missing, 'tried' => $tried, 'remaining' => $remaining, 'stopped' => $stopped, 'written' => $written];
 	}
 
 	/**
@@ -253,27 +280,26 @@ class ThumbnailFetchService {
 	 * Store the image the way a libretro thumbnail pack would, but under
 	 * the name of the game as the user has it.
 	 *
-	 * @return File|null the stored file, so its previews can be warmed
+	 * @return File|null the stored file, so its previews can be warmed, or
+	 *                   null when something other than a file is in the way
+	 * @throws \Throwable when the storage will not take it
 	 */
 	private function store(Folder $thumbnails, string $platform, string $typeFolder, string $basename, string $image): ?File {
-		try {
-			$folder = Folders::make($thumbnails, $platform . '/' . $typeFolder);
-			if ($folder === null) {
-				$this->logger->warning('Could not store the box art: a file is where its folder would be', ['platform' => $platform]);
-				return null;
-			}
-			$name = pathinfo($basename, PATHINFO_FILENAME) . '.png';
-			$existing = $folder->nodeExists($name) ? $folder->get($name) : null;
-			if ($existing instanceof File) {
-				$existing->putContent($image);
-				return $existing;
-			}
-			if ($existing === null) {
-				return $folder->newFile($name, $image);
-			}
-		} catch (\Throwable $e) {
-			$this->logger->warning('Could not store the box art', ['exception' => $e]);
+		$folder = Folders::make($thumbnails, $platform . '/' . $typeFolder);
+		if ($folder === null) {
+			$this->logger->warning('Could not store the picture: a file is where its folder would be', ['platform' => $platform]);
+			return null;
 		}
+		$name = pathinfo($basename, PATHINFO_FILENAME) . '.png';
+		$existing = $folder->nodeExists($name) ? $folder->get($name) : null;
+		if ($existing instanceof File) {
+			$existing->putContent($image);
+			return $existing;
+		}
+		if ($existing === null) {
+			return $folder->newFile($name, $image);
+		}
+		$this->logger->warning('Could not store the picture: a folder is where it would be', ['name' => $name]);
 		return null;
 	}
 }

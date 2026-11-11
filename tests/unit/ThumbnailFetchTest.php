@@ -37,6 +37,8 @@ class ThumbnailFetchTest extends TestCase {
 	private array $misses = [];
 	/** The kind of picture each system is shown with. */
 	private array $types = [];
+	/** Whether the thumbnails folder refuses whatever is written to it. */
+	private bool $full = false;
 
 	private function service(): ThumbnailFetchService {
 		$response = $this->createStub(IResponse::class);
@@ -105,6 +107,9 @@ class ThumbnailFetchTest extends TestCase {
 		);
 		$folder->method('newFile')->willReturnCallback(
 			function (string $name, $content = null) use ($path): File {
+				if ($this->full) {
+					throw new \RuntimeException('Not enough free space');
+				}
 				$this->stored[$this->join($path, $name)] = (string)$content;
 				return $this->createStub(File::class);
 			},
@@ -233,5 +238,53 @@ class ThumbnailFetchTest extends TestCase {
 
 		$this->assertStringContainsString('/Named_Snaps/', $this->asked[0]);
 		$this->assertArrayHasKey('Nintendo - Nintendo Entertainment System/Named_Snaps/Mario.png', $this->stored);
+	}
+
+	public function testAPictureThatCannotBeSavedEndsTheRunAndIsTriedOnceThereIsRoom(): void {
+		$this->full = true;
+		$this->server['Mario (USA)'] = self::PICTURE;
+		$this->server['Zelda (USA)'] = self::PICTURE;
+		$service = $this->service();
+		$games = [$this->game('Mario.nes'), $this->game('Zelda.nes')];
+
+		$result = $service->fetch(self::USER, $games, $this->folder(), 10);
+		$this->assertTrue($result['stopped'], 'a full folder ends the run');
+		$this->assertSame(0, $result['fetched'], 'what was not kept was not fetched');
+		$this->assertSame(1, $result['tried'], 'the next game is not downloaded only to be refused');
+		$this->assertSame([], $result['written']);
+
+		$this->full = false;
+		$result = $service->fetch(self::USER, [$this->game('Mario.nes')], $this->folder(), 10);
+		$this->assertSame(1, $result['fetched'], 'the refused game is not marked a miss');
+		$this->assertArrayHasKey('Nintendo - Nintendo Entertainment System/Named_Boxarts/Mario.png', $this->stored);
+	}
+
+	public function testAFileInTheWayOfItsFolderIsAMissNotAStop(): void {
+		// A file stands where the platform folder would be.
+		$this->stored['Nintendo - Nintendo Entertainment System'] = 'not a folder';
+		$this->server['Mario (USA)'] = self::PICTURE;
+		$service = $this->service();
+
+		$result = $service->fetch(self::USER, [$this->game('Mario.nes')], $this->folder(), 10);
+		$this->assertFalse($result['stopped'], 'other systems can still be saved');
+		$this->assertSame(0, $result['fetched']);
+		$this->assertSame(1, $result['missing']);
+
+		$asked = count($this->asked);
+		$service->fetch(self::USER, [$this->game('Mario.nes')], $this->folder(), 10);
+		$this->assertCount($asked, $this->asked, 'not downloaded again in the next batch');
+	}
+
+	public function testOnlyTheGamesLeftForALaterBatchAreStillToGo(): void {
+		$games = [];
+		for ($i = 1; $i <= 5; $i++) {
+			$games[] = $this->game("Game $i.nes");
+		}
+		$service = $this->service();
+		// Looked for in vain already.
+		$service->fetch(self::USER, [$games[0]], $this->folder(), 10);
+
+		$result = $service->fetch(self::USER, $games, $this->folder(), 2);
+		$this->assertSame(2, $result['remaining'], 'neither the earlier miss nor the batch itself');
 	}
 }
