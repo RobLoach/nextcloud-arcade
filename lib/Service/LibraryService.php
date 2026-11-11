@@ -50,7 +50,7 @@ class LibraryService {
 	/** How many folders are worth offering. */
 	public const SUGGEST_TOP = 3;
 	/** Bumped when the shape of a cached entry changes. */
-	private const CACHE_VERSION = 7;
+	private const CACHE_VERSION = 8;
 	/** In the app config: goes up each time every scan is to be taken afresh. */
 	private const GENERATION = 'library_generation';
 	/** Bumped when the shape of a cached fallbacks entry changes. */

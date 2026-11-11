@@ -28,7 +28,7 @@ use OCP\Files\Node;
  * }
  * @psalm-type Index = array{
  *     paths: array<string, array<string, Images>>,
- *     systems: array<string, string>
+ *     systems: array<string, list<string>>
  * }
  */
 class ThumbnailService {
@@ -112,12 +112,9 @@ class ThumbnailService {
 		$exact = $this->stemToKey($stem);
 		$loose = $this->looseStem($stem);
 
-		// The platform folder of the system first, then the folder the game
+		// The platform folders of the system first, then the folder the game
 		// itself is in, then the root of the thumbnails folder.
-		$candidates = [];
-		if (isset($index['systems'][$systemId])) {
-			$candidates[] = $index['systems'][$systemId];
-		}
+		$candidates = $index['systems'][$systemId] ?? [];
 		$path = $this->normalize(trim($subfolder, '/'));
 		while ($path !== '') {
 			$candidates[] = $path;
@@ -151,11 +148,13 @@ class ThumbnailService {
 	 */
 	public function samples(array $index): array {
 		$samples = [];
-		foreach ($index['systems'] as $system => $path) {
-			foreach ($index['paths'][$path] ?? [] as $type => $images) {
-				$first = reset($images['exact']);
-				if ($first !== false) {
-					$samples[$system][$type] = $first;
+		foreach ($index['systems'] as $system => $paths) {
+			foreach ($paths as $path) {
+				foreach ($index['paths'][$path] ?? [] as $type => $images) {
+					$first = reset($images['exact']);
+					if ($first !== false) {
+						$samples[$system][$type] ??= $first;
+					}
 				}
 			}
 		}
@@ -188,10 +187,10 @@ class ThumbnailService {
 
 			$childPath = $path === '' ? $this->normalize($name) : $path . '/' . $this->normalize($name);
 			// "Nintendo - Super Nintendo Entertainment System" and "SNES"
-			// both point at the same system.
+			// both point at the same system, and both are looked in.
 			$system = CoreMap::systemForFolderName($name);
-			if ($system !== null && !isset($index['systems'][$system])) {
-				$index['systems'][$system] = $childPath;
+			if ($system !== null) {
+				$index['systems'][$system][] = $childPath;
 			}
 			$this->indexFolder($node, $childPath, $index, $depth + 1);
 		}

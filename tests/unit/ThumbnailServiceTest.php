@@ -107,6 +107,19 @@ class ThumbnailServiceTest extends TestCase {
 		], $this->service->samples($index));
 	}
 
+	public function testEveryPlatformFolderOfASystemIsLookedIn(): void {
+		// The short name listed first, the folder fetched pictures go to
+		// after it.
+		$index = $this->service->buildIndex($this->folder('Thumbs', [
+			$this->folder('NES', [$this->file('Bar.png', 301)]),
+			$this->folder('Nintendo - Nintendo Entertainment System', [
+				$this->folder('Named_Titles', [$this->file('Foo.png', 302)]),
+			]),
+		]));
+		$this->assertSame(['title' => 302], $this->service->forGame($index, 'nes', 'NES', 'Foo.nes'));
+		$this->assertSame(['nes' => ['plain' => 301, 'title' => 302]], $this->service->samples($index));
+	}
+
 	public function testExactNamesWinOverLooseOnes(): void {
 		$index = $this->service->buildIndex($this->thumbnailsFolder());
 		$thumbnails = $this->service->forGame(
