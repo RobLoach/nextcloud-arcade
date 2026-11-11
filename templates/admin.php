@@ -10,6 +10,7 @@ $settings = ['core_options' => $_['storedCoreOptions']];
 $systems = $_['systems'];
 $thumbnailTypes = $_['thumbnailTypes'];
 $storedTypes = $_['storedThumbnailTypes'];
+$pictureSamples = $_['pictureSamples'];
 $systemFolder = $_['systemFolder'];
 ?>
 
@@ -183,7 +184,7 @@ $systemFolder = $_['systemFolder'];
 	<div class="section">
 		<?php print_unescaped($this->inc('part.sectionhead', [
 			'title' => $l->t('Pictures'),
-			'hint' => $l->t('What a game of each system is shown with, for everybody on this instance. Which file each kind comes out of is in the usage guide.'),
+			'hint' => $l->t('What a game of each system is shown with, for everybody on this instance. Which file each kind comes out of is in the usage guide. The samples come out of your own thumbnails folder.'),
 		])); ?>
 		<div class="arcade-pictures">
 			<?php foreach ($systems as $systemId => $system): ?>
@@ -198,6 +199,16 @@ $systemFolder = $_['systemFolder'];
 							</option>
 						<?php endforeach; ?>
 					</select>
+					<?php if ($pictureSamples !== null): ?>
+						<?php /* The first picture of each kind found for the
+						        system, swapped for the kind chosen above. */ ?>
+						<span class="arcade-thumbnail-sample"
+							data-samples="<?php p(json_encode((object)($pictureSamples['samples'][$systemId] ?? []))); ?>"
+							data-version="<?php p($pictureSamples['version']); ?>">
+							<img alt="" hidden>
+							<em><?php p($l->t('No picture of this kind found')); ?></em>
+						</span>
+					<?php endif; ?>
 				</p>
 			<?php endforeach; ?>
 		</div>

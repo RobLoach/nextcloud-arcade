@@ -157,6 +157,9 @@ alongside the core options, rather than by each user. Box art, title
 screen, screenshot and logo name the kind of picture a system is drawn
 with; which file each comes out of is [box art
 matching](usage.md#box-art).
+Beside each system is a sample: the first picture of the chosen kind
+found for it in your own thumbnails folder, or one not sorted by kind
+when there is none of it.
 
 ## BIOS files
 

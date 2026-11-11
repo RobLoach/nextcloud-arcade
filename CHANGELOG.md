@@ -7,6 +7,9 @@ All notable changes to Nextcloud Arcade. The format follows
 ## [Unreleased]
 
 ### Added
+- The Pictures section of the administration settings shows a sample of
+  each system: the first picture of the kind chosen found in your own
+  thumbnails folder, changing with the choice.
 - The folder settings, personal and administration, highlight a folder
   that is not there, or is a file, when the page opens and when it changes.
 - The saves of earlier versions are moved to the new layout: each game's

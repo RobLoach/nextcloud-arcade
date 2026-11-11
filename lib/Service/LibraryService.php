@@ -537,17 +537,9 @@ class LibraryService {
 	 * @return array<string, int> kind => file id
 	 */
 	public function thumbnailsOf(string $userId, Folder $userFolder, array $settings, string $path, string $system, string $title = ''): array {
-		$thumbnailsPath = (string)($settings['thumbnails_folder'] ?? '');
-		$folder = $thumbnailsPath === '' ? null : Folders::folderAt($userFolder, $thumbnailsPath);
-		if ($folder === null) {
-			return [];
-		}
-		$cache = $this->cache();
-		$key = implode('|', ['thumbnail-index', self::CACHE_VERSION, $userId, $thumbnailsPath, $folder->getEtag()]);
-		$index = CachePacker::unpack($cache->get($key));
+		$index = $this->thumbnailIndex($userId, $userFolder, $settings);
 		if ($index === null) {
-			$index = $this->thumbnailService->buildIndex($folder);
-			$cache->set($key, CachePacker::pack($index), (int)($settings['cache_ttl'] ?? self::CACHE_TTL));
+			return [];
 		}
 		/** @psalm-suppress MixedArgumentTypeCoercion the index is what buildIndex made */
 		return $this->thumbnailService->forGameNamed(
@@ -557,6 +549,42 @@ class LibraryService {
 			basename($path),
 			$title,
 		);
+	}
+
+	/**
+	 * One picture of each kind per system in the thumbnails folder, the
+	 * first found of it, for the administration settings to show what
+	 * choosing that kind looks like.
+	 *
+	 * @param array<string, mixed> $settings
+	 * @return array<string, array<string, int>> system => kind => file id
+	 */
+	public function thumbnailSamples(string $userId, Folder $userFolder, array $settings): array {
+		$index = $this->thumbnailIndex($userId, $userFolder, $settings);
+		/** @psalm-suppress MixedArgumentTypeCoercion the index is what buildIndex made */
+		return $index === null ? [] : $this->thumbnailService->samples($index);
+	}
+
+	/**
+	 * The index of the user's thumbnails folder, kept until anything in it
+	 * changes, or null without a thumbnails folder.
+	 *
+	 * @param array<string, mixed> $settings
+	 */
+	private function thumbnailIndex(string $userId, Folder $userFolder, array $settings): ?array {
+		$thumbnailsPath = (string)($settings['thumbnails_folder'] ?? '');
+		$folder = $thumbnailsPath === '' ? null : Folders::folderAt($userFolder, $thumbnailsPath);
+		if ($folder === null) {
+			return null;
+		}
+		$cache = $this->cache();
+		$key = implode('|', ['thumbnail-index', self::CACHE_VERSION, $userId, $thumbnailsPath, $folder->getEtag()]);
+		$index = CachePacker::unpack($cache->get($key));
+		if ($index === null) {
+			$index = $this->thumbnailService->buildIndex($folder);
+			$cache->set($key, CachePacker::pack($index), (int)($settings['cache_ttl'] ?? self::CACHE_TTL));
+		}
+		return $index;
 	}
 
 	/**
