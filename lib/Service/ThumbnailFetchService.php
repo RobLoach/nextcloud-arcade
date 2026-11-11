@@ -26,7 +26,17 @@ use Psr\Log\LoggerInterface;
  */
 class ThumbnailFetchService {
 	private const SERVER = 'https://thumbnails.libretro.com';
-	private const TYPE_FOLDER = 'Named_Boxarts';
+	/**
+	 * The folder of the server each kind of picture is kept in. The kind
+	 * looked for is the one the administration settings show a system
+	 * with, or a fetched box art would hide the choice of anything else.
+	 */
+	private const TYPE_FOLDERS = [
+		'boxart' => 'Named_Boxarts',
+		'title' => 'Named_Titles',
+		'snap' => 'Named_Snaps',
+		'logo' => 'Named_Logos',
+	];
 	/** Regions to try for a game whose name carries none. */
 	private const REGIONS = ['(USA)', '(Europe)', '(World)', '(Japan)'];
 	/** A game that was looked for in vain is left alone for a while. */
@@ -95,6 +105,7 @@ class ThumbnailFetchService {
 		}
 		$cache = Caches::create($this->cacheFactory, Application::CACHE_FETCH, $this->appDataFactory);
 		$client = $this->clientService->newClient();
+		$types = $this->settingsService->getThumbnailTypes();
 
 		$fetched = 0;
 		$tried = 0;
@@ -106,7 +117,8 @@ class ThumbnailFetchService {
 				// Zipped ROMs of an unknown system have nowhere to look.
 				continue;
 			}
-			$key = $userId . '|' . $game['path'];
+			$typeFolder = self::TYPE_FOLDERS[$types[$game['system']] ?? 'boxart'] ?? self::TYPE_FOLDERS['boxart'];
+			$key = $userId . '|' . $game['path'] . '|' . $typeFolder;
 			if ($cache->get($key) !== null) {
 				$missing++;
 				continue;
@@ -119,7 +131,7 @@ class ThumbnailFetchService {
 
 			$image = null;
 			foreach ($this->candidates($game['basename'], $game['region'] ?? '') as $candidate) {
-				$image = $this->download($client, $platform, $candidate);
+				$image = $this->download($client, $platform, $typeFolder, $candidate);
 				if ($image !== null) {
 					break;
 				}
@@ -129,7 +141,7 @@ class ThumbnailFetchService {
 				$missing++;
 				continue;
 			}
-			$file = $this->store($thumbnails, $platform, $game['basename'], $image);
+			$file = $this->store($thumbnails, $platform, $typeFolder, $game['basename'], $image);
 			if ($file !== null) {
 				$written[] = $file;
 			}
@@ -181,12 +193,12 @@ class ThumbnailFetchService {
 		return array_values(array_unique(array_filter($names)));
 	}
 
-	private function download(\OCP\Http\Client\IClient $client, string $platform, string $name): ?string {
+	private function download(\OCP\Http\Client\IClient $client, string $platform, string $typeFolder, string $name): ?string {
 		$url = sprintf(
 			'%s/%s/%s/%s.png',
 			self::SERVER,
 			rawurlencode($platform),
-			self::TYPE_FOLDER,
+			$typeFolder,
 			rawurlencode($name),
 		);
 		try {
@@ -243,9 +255,9 @@ class ThumbnailFetchService {
 	 *
 	 * @return File|null the stored file, so its previews can be warmed
 	 */
-	private function store(Folder $thumbnails, string $platform, string $basename, string $image): ?File {
+	private function store(Folder $thumbnails, string $platform, string $typeFolder, string $basename, string $image): ?File {
 		try {
-			$folder = Folders::make($thumbnails, $platform . '/' . self::TYPE_FOLDER);
+			$folder = Folders::make($thumbnails, $platform . '/' . $typeFolder);
 			if ($folder === null) {
 				$this->logger->warning('Could not store the box art: a file is where its folder would be', ['platform' => $platform]);
 				return null;

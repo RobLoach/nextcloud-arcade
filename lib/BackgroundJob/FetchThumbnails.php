@@ -124,9 +124,15 @@ class FetchThumbnails extends QueuedJob {
 			$settings,
 			true,
 		);
+		// Missing is without the kind of picture its system is shown with:
+		// box art alone would stand in for a title screen, a screenshot or
+		// a logo chosen in the administration settings, and the choice
+		// would never show. An image of the game's own is left alone.
+		$types = $this->settingsService->getThumbnailTypes();
 		$missing = array_values(array_filter(
 			$games,
-			static fn (array $game): bool => empty($game['thumbnails']),
+			static fn (array $game): bool => !isset($game['thumbnails']['plain'])
+				&& !isset($game['thumbnails'][$types[$game['system']] ?? 'boxart']),
 		));
 		if ($missing === []) {
 			// Also the end of a run whose last batch fetched everything
